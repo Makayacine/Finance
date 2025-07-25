@@ -59,10 +59,8 @@ pip (Python package installer) or conda (Anaconda/Miniconda)
 Installation
 Clone the Repository:
 
-
-   git clone https://github.com/Makayacine/Finance.git
-   cd Bulls,Banks & Bollinger
-
+git clone https://github.com/Makayacine/Finance.git
+cd "Finance/Bulls,Banks & Bollinger" # Navigate to the correct subdirectory
 
 Create a Virtual Environment (Recommended):
 Using conda:
@@ -115,3 +113,9 @@ Portfolio Construction: Investigate building diversified portfolios of these ban
 Alternative Data Sources: Explore using data sources that reliably provide Adjusted Close prices for more accurate long-term return analysis.
 
 Out-of-Sample Testing: Validate strategy performance on unseen data to prevent overfitting.
+
+Author
+Vince Mbanze
+
+License
+This project is open-source and available under the MIT License.
