@@ -1,8 +1,8 @@
-````markdown
+
 # 🐂 Bulls, Banks & Bollinger 📈  
 **Quantitative Analysis of South African Bank Stocks**
 
----
+
 
 ## 🔗 Contents  
 1. [Project Overview](#project-overview)  
