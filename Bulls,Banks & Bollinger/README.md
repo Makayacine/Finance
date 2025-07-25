@@ -1,15 +1,38 @@
 🐂 Bulls, Banks & Bollinger 📈
 Quantitative Analysis of South African Bank Stocks
 
+🔗 Contents
 Project Overview
+
+Objectives
+
+Key Findings & Conclusions
+
+How to Run the Notebook
+
+Project Structure
+
+Future Work
+
+Author
+
+License
+
+📝 Project Overview
 This project provides a comprehensive quantitative analysis of five major South African bank stocks listed on the JSE: Standard Bank (SBK.JO), FirstRand (FSR.JO), Nedbank (NED.JO), Absa Group (ABG.JO), and Capitec (CPI.JO). The analysis covers data acquisition, exploratory data analysis (EDA) including statistical and visual insights, and the backtesting of classical technical trading strategies. A key focus is on understanding return distributions, assessing risk metrics, and evaluating strategy performance with the crucial inclusion of transaction costs.
 
 The notebook is designed to be a clear, step-by-step narrative, making the complex financial analysis accessible and easy to follow.
 
-Objectives
-Data Acquisition & Cleaning: Download 10 years of historical stock data (Close prices and Volume) from Yahoo Finance and perform robust cleaning to handle missing values, spurious zeros/negatives, and extreme outliers.
+🎯 Objectives
+Our primary goals for this analysis are:
 
-Exploratory Data Analysis (EDA):
+📊 Data Acquisition & Cleaning:
+
+Download 10 years of historical stock data (Close prices and Volume) from Yahoo Finance.
+
+Perform robust cleaning to handle missing values, spurious zeros/negatives, and extreme outliers.
+
+🔍 Exploratory Data Analysis (EDA):
 
 Analyze daily return distributions (mean, standard deviation, skewness, kurtosis).
 
@@ -21,7 +44,7 @@ Compute and visualize the correlation matrix between bank stock returns.
 
 Calculate key risk metrics: Value at Risk (VaR), Conditional Value at Risk (CVaR), and Annualized Sharpe Ratios.
 
-Strategy Backtesting:
+📈 Strategy Backtesting:
 
 Implement and backtest two classical technical trading strategies:
 
@@ -33,12 +56,12 @@ Evaluate strategy performance using metrics such as total return, annualized ret
 
 Crucially, incorporate realistic transaction costs (0.10% per round-trip trade) into all strategy performance calculations for a practical assessment.
 
-Performance Comparison: Compare the performance of the active trading strategies against a passive Buy & Hold benchmark.
+⚖️ Performance Comparison: Compare the performance of the active trading strategies against a passive Buy & Hold benchmark.
 
-Key Findings & Conclusions
-Capitec's Outperformance: Capitec consistently demonstrated a unique profile with significantly higher annualized mean returns and the only positive Sharpe Ratio under a Buy & Hold strategy. Its high kurtosis indicates frequent extreme movements, but its returns historically compensated for this risk. It also showed lower correlation with other banks, suggesting diversification benefits.
+✅ Key Findings & Conclusions
+Capitec's Remarkable Outperformance: Capitec consistently demonstrated a unique profile with significantly higher annualized mean returns and the only positive Sharpe Ratio under a Buy & Hold strategy. Its high kurtosis indicates frequent extreme movements, but its returns historically compensated for this risk. It also showed lower correlation with other banks, suggesting diversification benefits.
 
-Active Strategies Underperformed: Both the Moving Average Crossover and Bollinger Bands strategies generally failed to outperform the Buy & Hold benchmark for most banks, especially after accounting for transaction costs.
+Active Strategies Generally Underperformed: Both the Moving Average Crossover and Bollinger Bands strategies generally failed to outperform the Buy & Hold benchmark for most banks, especially after accounting for transaction costs.
 
 The MA Crossover often resulted in substantial negative net returns and Sharpe Ratios, indicating it's not well-suited for these assets or market conditions with the chosen parameters.
 
@@ -46,17 +69,17 @@ The Bollinger Bands strategy, while sometimes better than MA, also struggled to 
 
 Critical Impact of Transaction Costs: The analysis vividly highlights how even a small transaction cost (0.10%) can severely erode profitability, turning theoretically positive returns into negative net results. This underscores the necessity of robust strategies with high win rates and/or low trading frequency to overcome real-world trading expenses.
 
-Non-Normal Returns: The Jarque-Bera tests and QQ-plots confirmed that the daily returns for all bank stocks are not normally distributed, exhibiting "fat tails." This emphasizes the importance of using risk metrics like CVaR, which provide a more conservative view of potential losses in extreme market conditions.
+Non-Normal Returns & Tail Risk: The Jarque-Bera tests and QQ-plots confirmed that the daily returns for all bank stocks are not normally distributed, exhibiting "fat tails." This emphasizes the importance of using risk metrics like CVaR, which provide a more conservative view of potential losses in extreme market conditions.
 
-How to Run the Notebook
+🚀 How to Run the Notebook
 To run this analysis on your local machine, follow these steps:
 
-Prerequisites
+🛠️ Prerequisites
 Python 3.8+
 
 pip (Python package installer) or conda (Anaconda/Miniconda)
 
-Installation
+⬇️ Installation
 Clone the Repository:
 
 git clone https://github.com/Makayacine/Finance.git
@@ -79,7 +102,7 @@ Install all required Python libraries using pip:
 
 pip install pandas numpy yfinance matplotlib seaborn scipy statsmodels tabulate
 
-Running the Notebook
+▶️ Running the Notebook
 Start Jupyter Notebook:
 
 jupyter notebook
@@ -90,7 +113,7 @@ Your web browser will open, showing the Jupyter interface. Navigate to the direc
 Run Cells:
 Execute the notebook cells sequentially from top to bottom. You can do this by clicking Cell -> Run All or by pressing Shift + Enter on each cell.
 
-Project Structure
+📁 Project Structure
 Bulls, Banks & Bollinger.ipynb: The main Jupyter Notebook containing all the analysis.
 
 ma_crossover_performance.csv: Exported performance summary for the MA Crossover strategy.
@@ -103,7 +126,7 @@ risk_metrics_summary.csv: Exported summary of VaR, CVaR, and Sharpe Ratios.
 
 README.md: This file.
 
-Future Work
+🔭 Future Work
 Parameter Optimization: Conduct a systematic grid search or use optimization algorithms to find optimal parameters for both strategies that maximize risk-adjusted returns.
 
 Advanced Strategy Variations: Explore dynamic exit conditions, volatility filters, or combining multiple indicators for more robust signals.
