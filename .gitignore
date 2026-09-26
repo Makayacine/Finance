@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# local Spark job output
+_localrun/
+__verify/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# credentials — never commit
+.env
+*.pem
+
+# crypto-ticks: raw Binance archives (2.85 GB zipped, 23.9 GB unzipped) and their extracts
+crypto-ticks-refinery-glue-dynamo/data/raw/
+crypto-ticks-refinery-glue-dynamo/data/unzipped/
+crypto-ticks-refinery-glue-dynamo/__profile_*.json
