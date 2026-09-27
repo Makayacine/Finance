@@ -1,0 +1,24 @@
+# The three Azure clients, and everything the local run needs besides.
+#
+# System prerequisite, not pip-installable: Microsoft ODBC Driver 18 for SQL Server (msodbcsql18)
+# and the unixODBC headers, from packages.microsoft.com. pyodbc is a thin binding over the ODBC
+# driver manager and imports nothing useful without it. The README has the apt commands.
+pyodbc                # the warehouse: SQL Server locally, Azure SQL Database deployed
+azure-storage-blob    # the landing zone
+azure-data-tables     # the watermark
+numpy                 # the refinery's arithmetic
+
+# Local path. The MySQL source's local stand-in is the AWS sibling's DuckDB file, built by its
+# build_source_db.py -- which is why duckdb and pandas are here although no Azure job imports
+# either. The duckdb floor is the sibling's: the parity test runs the AWS jobs themselves, and
+# their MERGE needs DuckDB 1.4.
+duckdb>=1.4
+pandas
+pytest
+
+# Deployed path -- NOT installed by this file, for the reason the AWS sibling gives for the same
+# driver: nothing on the local path opens a MySQL connection, and a dependency installed but
+# never imported rots quietly.
+#
+#   pymysql   the source connection in python-jobs/mysql-extraction.py when --source-db is not
+#             given. The source database is unchanged by the port, so its driver is too.
