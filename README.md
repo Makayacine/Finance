@@ -8,6 +8,7 @@ A curated collection of quantitative finance analyses, featuring exploratory dat
 * **`bank-marketing-cleaning-emr-redshift`**: PySpark cleaning and feature-preparation pipeline for 41,188 Portuguese bank term-deposit campaign records, submitted to EMR Serverless by Airflow, with KPIs upserted into Redshift.
 * **`crypto-ticks-refinery-glue-dynamo`**: A ten-step statistical refinery over 340,971,834 Binance spot trades, aggregated into 5-second OHLCV bars and forked into continuous, categorical and Thompson Sampling bandit paths, landing in DynamoDB.
 * **`credit-mailer-watermark-glue-redshift`**: Incremental ETL with a DynamoDB watermark over 58,168 randomised loan offers from a South African lender, orchestrated by Step Functions into a Redshift star, with an off-policy bandit evaluation.
+* **`credit-mailer-watermark-azure-sql`**: The credit-mailer pipeline ported to Azure — a Blob Storage landing zone, a Table Storage watermark and an Azure SQL Database star in T-SQL — tested offline against Azurite and SQL Server 2022, and matched row for row against the AWS version's own local run.
 
 *(More projects coming soon.)*
 
