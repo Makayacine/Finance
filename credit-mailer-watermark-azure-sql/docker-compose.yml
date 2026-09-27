@@ -1,0 +1,61 @@
+# Local stand-ins for the two Azure services this pipeline writes to, both Microsoft's own images.
+#
+#   azurite    Azure Blob Storage (the landing zone) and Azure Table Storage (the watermark)
+#   sqlserver  SQL Server 2022, running the same T-SQL DDL and MERGE text that Azure SQL Database
+#              receives
+#
+# The MySQL source is not here: the AWS sibling's DuckDB stand-in is reused unchanged, built by
+# ../credit-mailer-watermark-glue-redshift/local-development/build_source_db.py.
+#
+#   docker compose up -d --wait        # returns once both healthchecks pass
+#   docker compose down                # both hold their data in memory; this discards it
+#
+# Every credential below is local-only. Azurite's account key is not in this file at all -- it is
+# Microsoft's published development key, built into Azurite and into the SDKs'
+# `UseDevelopmentStorage=true` shorthand. The SA password is a test value with a default here so
+# `up` works on a fresh clone; override it through .env (see .env.example) and nothing else changes.
+name: credit-mailer-azure-sql
+
+services:
+  azurite:
+    # Pinned rather than :latest so the emulator's API surface is the one the tests were written
+    # against. 3.37.0 is the version the suite was run on.
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+    # --skipApiVersionCheck: the Python SDKs send the newest storage API version they know, which
+    #   can be ahead of the emulator's; without it Azurite refuses every request from a newer SDK
+    #   with a version error rather than a storage one.
+    # --inMemoryPersistence: a test run should start from nothing and leave nothing behind.
+    # Hosts bound to 0.0.0.0 inside the container so the published ports reach them.
+    command: ["azurite", "--blobHost", "0.0.0.0", "--tableHost", "0.0.0.0",
+              "--skipApiVersionCheck", "--inMemoryPersistence"]
+    # Loopback only: an emulator with a published key has no business listening on a LAN.
+    ports:
+      - "127.0.0.1:10000:10000"   # Blob
+      - "127.0.0.1:10002:10002"   # Table
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 10000 && nc -z 127.0.0.1 10002"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  sqlserver:
+    # Pinned to a cumulative update, not 2022-latest, for the same reason as Azurite: the T-SQL
+    # behaviour the port relies on (MERGE's terminator, CAST('' AS SMALLINT), transactional
+    # TRUNCATE) was measured on this build, 16.0.4295.3.
+    image: mcr.microsoft.com/mssql/server:2022-CU27-ubuntu-22.04
+    environment:
+      ACCEPT_EULA: "Y"          # the Developer Edition licence terms
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-CreditMailer-Local-2003}
+    ports:
+      - "127.0.0.1:1433:1433"
+    # Ready means "accepts a login and runs a query", not "the process started": SQL Server takes
+    # several seconds to recover its system databases after the port opens. -C trusts the
+    # container's self-signed certificate, which ODBC Driver 18 would otherwise refuse.
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa \
+               -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+      start_period: 10s

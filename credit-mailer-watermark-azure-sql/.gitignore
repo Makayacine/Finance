@@ -1,0 +1,12 @@
+# Everything the local pipeline produces. _localrun/ holds the DuckDB source database the AWS
+# sibling's builder writes for the four-run demo; the landing zone, the watermark and the warehouse
+# live in the containers, not on disk.
+_localrun/
+
+# A copy of .env.example with a changed SA password. Local-only, but a password all the same.
+.env
+
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
