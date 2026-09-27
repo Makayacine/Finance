@@ -4,7 +4,9 @@
 # and the unixODBC headers, from packages.microsoft.com. pyodbc is a thin binding over the ODBC
 # driver manager and imports nothing useful without it. The README has the apt commands.
 pyodbc                # the warehouse: SQL Server locally, Azure SQL Database deployed
-azure-storage-blob    # the landing zone
+azure-storage-blob>=12.28.0   # the landing zone. 12.28.0 is the first release that accepts
+                              # UseDevelopmentStorage=true (12.27.1 refuses it: "Connection
+                              # string missing required connection details")
 azure-data-tables     # the watermark
 numpy                 # the refinery's arithmetic
 

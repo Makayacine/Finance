@@ -26,10 +26,12 @@ Every statement the AWS job sends was checked against T-SQL, because a statement
 means something slightly different is the failure a port produces:
 
 *   The one aggregate is ``SUM(took_up)`` over SMALLINT with ``COUNT(*)`` beside it, and the rate
-    is divided in Python. There is no ``AVG`` anywhere. That matters on this engine specifically:
-    T-SQL's ``AVG`` over an integer column returns an integer -- measured, ``AVG`` of 1 and 2 is 1
-    -- so a take-up rate computed as ``AVG(took_up)`` would be 0 for every arm and every band, and
-    the posterior would still be a valid Beta.
+    is divided in Python. There is no ``AVG`` anywhere, and that is not a T-SQL change: T-SQL's
+    ``AVG`` over an integer column returns an integer -- measured, ``AVG`` of 1 and 2 is 1 -- and
+    Redshift's does the same. DuckDB, the sibling's local warehouse, returns a double, so a local
+    rehearsal there would never have shown that a take-up rate computed as ``AVG(took_up)`` is 0
+    for every arm and every band on either production engine, with the posterior still a valid
+    Beta.
 *   ``information_schema.columns`` answers Step 6 in lower case because the database's default
     collation is case-insensitive; its ``data_type`` values are SQL Server's (``smallint``,
     ``decimal``, ``bigint``, ``varchar``), and none of them contains a time token, so Step 6 is
@@ -194,10 +196,10 @@ def main():
                  "posterior and its off-policy evaluation are in processed_zone under run_id %s, "
                  "DELETE and INSERT committed together", run_id)
     except Exception:
-        # pyodbc's rollback with nothing open is a no-op rather than the error DuckDB raises, so
-        # the AWS job's guard around this call has nothing to guard against here.
-        if conn is not None:
-            conn.rollback()
+        # Guarded, as the AWS job guards its own: pyodbc's rollback with nothing open is a no-op,
+        # but a rollback on a connection that has itself failed can raise, and a raise here would
+        # replace the error being handled. See azure_common.rollback().
+        az.rollback(conn, log=LOG)
         raise
     finally:
         if conn is not None:

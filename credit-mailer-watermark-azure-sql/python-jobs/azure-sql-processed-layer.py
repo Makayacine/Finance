@@ -50,10 +50,12 @@ The MERGE text is the AWS generator's unchanged: it already ends in ``;``, which
 
 WHAT SQL SERVER ADDS
 --------------------
-The fact's NOT NULL columns and its ``(client_id, wave)`` key are enforced here and were not on
-Redshift. The pre-MERGE checks -- the arm count, the staged-versus-source parity, the arm-miss
-count -- still run first and still name the cause; the constraints are now a second line behind
-them rather than a declaration the planner reads.
+The fact's ``(client_id, wave)`` PRIMARY KEY is enforced here. On Redshift it is informational --
+the planner reads it and nothing checks it -- so a duplicate mailer would have merged in silently.
+The NOT NULL columns are enforced on both engines, so a mailer with no arm fails the MERGE in
+either place. The pre-MERGE checks -- the arm count, the staged-versus-source parity, the arm-miss
+count -- still run first and still name the cause; the key is now a second line behind them
+rather than a declaration the planner reads.
 
     python python-jobs/azure-sql-processed-layer.py --self-check
     python python-jobs/azure-sql-processed-layer.py --dry-run
@@ -240,8 +242,7 @@ def main():
         LOG.info("committed: dim_client merged from %s staged clients, fact_mailer merged from "
                  "%s staged mailers, both in one transaction", clients, staged)
     except Exception:
-        if conn is not None:
-            conn.rollback()
+        az.rollback(conn, log=LOG)
         # Re-raised: a non-zero exit is what stops the chain before the refinery reads a
         # half-merged fact.
         raise

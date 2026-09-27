@@ -108,10 +108,11 @@ CREATE TABLE raw_zone.client_attributes (
 );
 
 -- Staging copies. T-SQL: Redshift's `CREATE TABLE ... AS SELECT *` becomes `SELECT ... INTO ...`,
--- and `WHERE 1 = 0` makes the copy empty. What carries across is what the Redshift CTAS carries:
--- column names, order, types and nullability, so `client_id` stays NOT NULL in staging. What does
--- not is the PRIMARY KEY, on both engines -- and that matters more here than it did there,
--- because SQL Server ENFORCES the key on the target. A staging table holding one (client_id, wave)
+-- and `WHERE 1 = 0` makes the copy empty. SELECT ... INTO carries column names, order, types and
+-- nullability, so `client_id` and `wave` stay NOT NULL in staging; Redshift's CTAS carries names,
+-- order and types but not NOT NULL, so its staging columns were all nullable. Neither engine
+-- carries the PRIMARY KEY -- and that matters more here than it did there, because SQL Server
+-- ENFORCES the key on the target. A staging table holding one (client_id, wave)
 -- twice therefore reaches the MERGE, and the MERGE's insert of the second copy fails with error
 -- 2627 instead of landing a duplicate. On Redshift the same file would load both.
 SELECT * INTO raw_zone.tmp_mail_offers       FROM raw_zone.mail_offers       WHERE 1 = 0;
@@ -194,10 +195,11 @@ VALUES
 -- bad_account is NULL unless took_up = 1, and is never coalesced to 0. In the source, badacct_last
 -- is non-null on exactly the 4,381 rows where tookup = 1.
 --
--- T-SQL: the NOT NULL declarations below are enforced here, as is the PRIMARY KEY. On Redshift
--- both are accepted and not enforced, so the processed-layer job's pre-MERGE checks were the only
--- thing standing between a bad join and a bad fact. Here they are the first line, and the
--- constraints are a second one the Redshift star never had.
+-- T-SQL: the PRIMARY KEY below is enforced here. On Redshift it is informational -- accepted,
+-- read by the planner, never checked -- while NOT NULL is enforced on both engines. So a
+-- duplicate (client_id, wave) that got past the processed-layer job's pre-MERGE checks would have
+-- merged into the Redshift fact without a word; here the key is a second line behind those
+-- checks, one the Redshift star never had.
 CREATE TABLE processed_zone.fact_mailer (
   client_id            BIGINT   NOT NULL,
   wave                 SMALLINT NOT NULL,

@@ -51,13 +51,26 @@ back as NULL for every type, and DuckDB does the same without being asked. T-SQL
 ``CAST('' AS SMALLINT)`` is **0** -- measured on the container -- and ``CAST('' AS DECIMAL(5,2))``
 is an error. So every empty field is turned into ``None`` in Python before it is bound as a
 parameter, for every column, which is ``EMPTYASNULL`` applied by hand. Get this wrong in the
-direction T-SQL leans and wave 1's fourteen NULL treatment flags -- 69,636 cells of "this arm did
-not exist yet" -- load as zeros, and every count downstream still adds up.
+direction T-SQL leans and wave 1's 74,173 NULL cells load as zeros -- 69,636 of them the fourteen
+treatment flags that mean "this arm did not exist yet", the other 4,537 the ``badacct_last`` of
+mailers who never took a loan -- and every count downstream still adds up.
 
-pyodbc's fast path is the second guard rather than the first. It converts the text client-side
-against the parameter types the server describes, and it refuses an empty string for a SMALLINT
-("Invalid character value for cast specification") rather than zeroing it -- but relying on that
-would be relying on a driver detail to hold up a data rule. The None is sent explicitly.
+EACH COLUMN IS BOUND AS ITS DECLARED TYPE, NOT AS TEXT
+------------------------------------------------------
+Binding the CSV's text and letting the server convert it looks like the COPY's division of labour,
+and under ``fast_executemany`` it is not: pyodbc sizes a text parameter's buffer from the
+column's declared PRECISION, which counts digits and not the sign or the decimal point. Measured
+on the container: ``100.00`` is refused for a DECIMAL(5,2) that holds it, ``-32768`` for a
+SMALLINT and ``-2147483648`` for an INT, each with "String data, right truncation". So the
+loader reads the staging table's column types from ``information_schema`` and converts every
+field to the Python type that column binds as -- ``int`` for the integer types, ``Decimal`` for
+DECIMAL, ``str`` for VARCHAR -- before the array is sent. The table still decides, as it does for
+a COPY; it decides in this process, where a value that does not fit is refused with its column
+and line named.
+
+Typed binding is also stricter in the one direction that matters: a ``Decimal`` with more places
+than the column's scale is refused by pyodbc ("Converting decimal loses precision"), where the
+server's own ``CAST('9.705' AS DECIMAL(5,2))`` rounds to 9.71 without a word.
 
 THREE THINGS SQL SERVER ENFORCES THAT REDSHIFT DID NOT, ALL IN THE PORT'S FAVOUR
 ---------------------------------------------------------------------------------
@@ -101,6 +114,7 @@ import argparse
 import csv
 import io
 import logging
+from decimal import Decimal, InvalidOperation
 
 import azure_common as az
 
@@ -162,20 +176,70 @@ def parse_extract(table, text):
     return rows
 
 
+# The Python type each declared SQL type is bound as. A type missing from this map is refused by
+# name rather than guessed at: a new column type is a decision about how its text is read.
+BIND_AS = {"tinyint": int, "smallint": int, "int": int, "bigint": int,
+           "decimal": Decimal, "numeric": Decimal,
+           "char": str, "varchar": str, "nchar": str, "nvarchar": str}
+
+
+def column_binders(cursor, table):
+    """One Python type per staging column, read from the staging table's own declaration.
+
+    The declared column order is checked against the column list as well, because the INSERT binds
+    by position: a staging table whose columns had drifted from ``TABLES`` would take every value
+    into its neighbour, and this is the one place the job looks at the table before writing to it.
+    """
+    cursor.execute("SELECT column_name, data_type FROM information_schema.columns "
+                   "WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position",
+                   RAW_SCHEMA, "tmp_" + table)
+    declared = [tuple(row) for row in cursor.fetchall()]
+    if [name for name, _ in declared] != list(TABLES[table]["columns"]):
+        raise ValueError("{0} declares the columns {1}, not {2}".format(
+            staging_table(table), [name for name, _ in declared], list(TABLES[table]["columns"])))
+    unknown = sorted(set(data_type for _, data_type in declared) - set(BIND_AS))
+    if unknown:
+        raise ValueError("{0} has columns of type {1}, which the loader has no binding for"
+                         .format(staging_table(table), unknown))
+    return [BIND_AS[data_type] for _, data_type in declared]
+
+
+def typed_rows(table, rows, binders):
+    """Each non-null field converted to its column's bind type. NULL stays None.
+
+    A field that does not convert raises with its column and line named, before anything is sent.
+    """
+    columns = TABLES[table]["columns"]
+    typed = []
+    for number, row in enumerate(rows, start=2):
+        converted = []
+        for column, field, bind in zip(columns, row, binders):
+            if field is None:
+                converted.append(None)
+                continue
+            try:
+                converted.append(bind(field))
+            except (ValueError, InvalidOperation):
+                raise ValueError("line {0} of {1}'s extract: {2}={3!r} is not a valid {4}"
+                                 .format(number, table, column, field, bind.__name__))
+        typed.append(tuple(converted))
+    return typed
+
+
 def bulk_load(cursor, table, rows):
     """Insert the parsed rows into the staging table with pyodbc's array binding.
 
-    Values go as text and the server's declared types convert them -- the same division of labour
-    as a COPY, where the file is text and the table decides what it means. An empty list is not
-    sent at all: pyodbc refuses an empty parameter sequence, and run 4's header-only extract is
-    the one run that produces one.
+    Every field is bound as its column's declared type (see the module docstring for why text is
+    not enough). An empty list is not sent at all: pyodbc refuses an empty parameter sequence,
+    and run 4's header-only extract is the one run that produces one.
     """
     if not rows:
         LOG.info("0 rows to load into %s", staging_table(table))
         return 0
+    typed = typed_rows(table, rows, column_binders(cursor, table))
     cursor.fast_executemany = True
-    cursor.executemany(insert_sql(table), rows)
-    return len(rows)
+    cursor.executemany(insert_sql(table), typed)
+    return len(typed)
 
 
 def self_check():
@@ -213,9 +277,28 @@ def self_check():
     # 6. Run 4: a header and nothing else parses to no rows, and needs no branch downstream.
     assert parse_extract("mail_offers", ",".join(TABLES["mail_offers"]["columns"]) + "\n") == []
 
+    # 7. Typed binding: the client_attributes declaration's bind types, a NULL left alone, and a
+    #    six-character rate that text binding would refuse arriving as the Decimal it is.
+    client_binders = [int, str, str, int, int, int, int]
+    assert typed_rows("client_attributes", rows, client_binders) == \
+        [(1, None, "HIGH", 0, None, 12, 3)]
+    mail_columns = TABLES["mail_offers"]["columns"]
+    mail_binders = [Decimal if column == "offer4" else int for column in mail_columns]
+    mailer = tuple("100.00" if column == "offer4" else "-32768" if column == "prize" else "0"
+                   for column in mail_columns)
+    typed = dict(zip(mail_columns, typed_rows("mail_offers", [mailer], mail_binders)[0]))
+    assert typed["offer4"] == Decimal("100.00") and typed["prize"] == -32768, typed
+    try:
+        typed_rows("client_attributes", [("1", None, "HIGH", "x", None, "12", "3")],
+                   client_binders)
+    except ValueError as exc:
+        assert "female" in str(exc), "the refusal does not name the column"
+    else:                                                           # pragma: no cover
+        raise AssertionError("a non-integer flag was accepted")
+
     LOG.info("self-check passed: the AWS MERGE text plus its T-SQL terminator, one bound "
-             "parameter per column, empty fields as NULL, and a reordered or empty extract "
-             "refused before it reaches the warehouse")
+             "parameter per column, empty fields as NULL, every field typed to its column, and "
+             "a reordered or empty extract refused before it reaches the warehouse")
 
 
 def main():
@@ -268,8 +351,7 @@ def main():
         LOG.info("%s: %s rows staged and merged, %s rows now in %s -- one transaction",
                  table, staged, held, target)
     except Exception:
-        if conn is not None:
-            conn.rollback()
+        az.rollback(conn, log=LOG)
         raise
     finally:
         if conn is not None:

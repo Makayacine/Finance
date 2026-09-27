@@ -52,7 +52,11 @@ WHAT BLOB STORAGE CHANGES
 Almost nothing, which is the point of keeping the S3 key: the container is ``credit-mailer-lab``
 and the blob name is the S3 key byte for byte. ``overwrite=True`` is the fixed-key design -- the
 landing zone holds only the latest extract of a table, so the chain must stay sequential -- and
-the upload is ``text/csv`` in UTF-8, encoded here because the bytes are what the loader reads.
+the bytes are UTF-8, encoded here because they are what the loader reads, and declared as
+``text/csv; charset=utf-8``. The charset belongs in the content type: ``Content-Encoding`` names a
+content coding such as gzip, and ``utf-8`` there tells an HTTP client to undo a compression the
+blob does not have.
+
 Run 4's header-only CSV is a blob of 379 bytes, not an empty one; see the AWS ``to_csv()``.
 
 The container is not created here. The AWS job did not create its bucket either: a job that
@@ -155,8 +159,7 @@ def write_landing_object(container_client, table_name, csv_data):
 
     blob = container_client.get_blob_client(az.landing_blob_name(table_name))
     blob.upload_blob(csv_data.encode("utf-8"), overwrite=True,
-                     content_settings=ContentSettings(content_type="text/csv",
-                                                      content_encoding="utf-8"))
+                     content_settings=ContentSettings(content_type="text/csv; charset=utf-8"))
     return blob.url
 
 

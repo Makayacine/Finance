@@ -245,6 +245,26 @@ def connect_sql(database=DEFAULT_DATABASE, autocommit=False):
     return pyodbc.connect(odbc, autocommit=autocommit)
 
 
+def rollback(conn, log=LOG):
+    """Abandon the transaction on the way out of a failure, without replacing the failure.
+
+    The AWS processed-layer job's ``rollback()`` helper, applied to the connection rather than to
+    statement text. A rollback with nothing open is a no-op under pyodbc, but a rollback on a
+    connection that has itself failed -- a dropped session, a killed SPID, the network going away
+    mid-MERGE -- can raise. That raise would happen inside the caller's ``except`` block and replace
+    the error being handled, which is the one line in the log that says what went wrong. So a
+    failed rollback is logged and swallowed: closing the connection abandons the transaction on
+    the server in any case.
+    """
+    if conn is None:
+        return
+    try:
+        conn.rollback()
+    except Exception:
+        log.warning("rollback failed; closing the connection ends the transaction in any case, "
+                    "and the error above this line is the one that matters", exc_info=True)
+
+
 def blob_container(container=DEFAULT_CONTAINER):
     """A ContainerClient on the landing-zone container. The container is not created here."""
     from azure.storage.blob import BlobServiceClient
