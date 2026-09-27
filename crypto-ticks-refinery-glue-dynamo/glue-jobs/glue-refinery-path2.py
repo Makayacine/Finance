@@ -283,7 +283,7 @@ def step4_imputation(frame, symbols, rows):
 
     # THE GROUPING IS THE TRAP. A single median over the frame blends three price scales
     # (BTC ~ $94k, ETH ~ $3.3k, SOL ~ $190) and would hand an empty ETH bar a five-figure
-    # close. The framework's NexusMart matrix has one cohort per run and never has to state it;
+    # close. The framework's worked example has one cohort per run and never has to state it;
     # bar data does. percentile_approx through expr() for the same 3.3.0-wrapper reason as
     # pmod in the shared reader.
     medians = (imputed.groupBy("symbol")
@@ -665,8 +665,8 @@ def encoded_index_variance(frame, column, order_type):
 def step9_elastic_net(frame, kept):
     """Multinomial logistic regression with an Elastic Net penalty, k=3.
 
-    The framework says "cross-validated" and never mentions temporal ordering, because
-    NexusMart's rows are exchangeable sessions. Bars are not. Spark's CrossValidator builds
+    The framework says "cross-validated" and never mentions temporal ordering, because the rows
+    of its worked example are exchangeable sessions. Bars are not. Spark's CrossValidator builds
     RANDOM folds, so on ordered data it trains on the future and validates on the past. Both
     schemes are run here and the gap is measured, because the size of the optimism IS the
     argument -- asserting that random folds leak is weaker than pricing it.
@@ -843,7 +843,7 @@ def step10_scaling_search(dev, holdout, evaluator, kept, best, baseline, n_model
     verdict(True, f"Step 10 quantile search: {winner} wins on held-out accuracy "
                   f"({results[winner]:.4f}, baseline {baseline:.4f}) over {len(results)} "
                   f"candidates, chosen on a measured criterion rather than on the framework's "
-                  f"NexusMart precedent")
+                  f"worked example")
     verdict(False, "Step 10 substitution: Spark ships neither PowerTransformer nor "
                    "QuantileTransformer, so two of the three legs are hand-rolled stand-ins -- "
                    "signed log1p is Yeo-Johnson at lambda=0 with no lambda search, and "

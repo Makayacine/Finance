@@ -14,6 +14,53 @@ A curated collection of quantitative finance analyses, featuring exploratory dat
 
 ---
 
+## The ten-step refinery
+
+Three of the pipelines — crypto-ticks and both builds of credit-mailer — share one statistical
+refinery. It chooses how a dataset is cleaned from the kind of target it has rather than from
+habit, and it runs once, top to bottom: no step goes back to rework an earlier one.
+
+**Steps 1–3 are a shared entryway** and run the same way whichever path follows: deduplication
+on a key, normalised column names and types, and missing values kept visible rather than filled,
+because where a value is missing can itself predict the outcome.
+
+**The fork comes after Step 3, before anything is filled, on purpose.** Each path treats a gap
+differently, so nothing can be imputed until the path is known. The refinery checks what kind of
+quantity the target `y` is and sends the data down one of three isolated paths. Steps 4–10 keep
+their numbers on every path, but what each step does, and whether it may run at all, depends on
+the path:
+
+| Step | Path 1 — continuous `y` | Path 2 — categorical `y` | Path 3 — bandit |
+| --- | --- | --- | --- |
+| 4 Imputation | median by default; above 5% missing, no medians and complete rows only | median; a missing category becomes its own state | none: a gap stays an unobserved state |
+| 5 Diagnostics | univariate density | class balance, interaction correlation | stream diagnostics |
+| 6 Topology | global cross-correlation | cross-correlation + sin/cos time coordinates | sin/cos time coordinates, where time has a period |
+| 7 Feature engineering | deterministic cross-products | cyclical coordinates; interaction cross-products | interaction frames |
+| 8 Pruning | variance threshold on numeric columns | one-hot encode *before* the variance threshold | **banned** |
+| 9 Regularisation | cross-validated Elastic Net | cross-validated Elastic Net | **banned** |
+| 10 Scaling | linear scalers only, so coefficients stay in the target's units | search across standard, power and quantile transforms | **banned** |
+
+Path 3's bans are the design, not gaps in it: each one protects the engine downstream. On
+crypto-ticks, one-hot encoding and variance pruning would dissolve the raw tokens its association
+mining counts, and Elastic Net zeroes rare columns first, though a rare pairing can carry the
+highest lift. On credit-mailer the same two steps would delete or shrink the thinnest price arms,
+the ones Thompson sampling most needs to explore. On both, scaling turns a Beta posterior's counts
+into numbers that are no longer valid shape parameters. Every banned step is reported with a
+verdict rather than skipped silently: the crypto-ticks notebook runs each one on a copy to measure
+what it would break, and the credit-mailer job prices the pruning and scaling bans on its own
+counts.
+
+| Project | Paths it runs |
+| --- | --- |
+| `crypto-ticks-refinery-glue-dynamo` | all three, from one table of 5-second bars |
+| `credit-mailer-watermark-glue-redshift` | Path 3 only: take-up under a randomised price is its one usable target |
+| `credit-mailer-watermark-azure-sql` | Path 3, reusing the AWS version's arithmetic |
+
+[`crypto-ticks-refinery-glue-dynamo/README.md`](crypto-ticks-refinery-glue-dynamo/README.md)
+walks every step on every path.
+
+---
+
 ## AWS data-engineering pipelines
 
 Three of the projects here are AWS data-engineering pipelines. Each is self-contained: the
@@ -90,12 +137,9 @@ Full detail, deployment steps and the verified run figures are in the project RE
 A ten-step statistical refinery over Binance spot tick data — 340,971,834 trades across BTCUSDT,
 ETHUSDT and SOLUSDT for January 2025, aggregated into 5-second OHLCV bars.
 
-The point of the project is the refinery's structure rather than the bars. Steps 1–3 are a
-shared, *path-blind* entryway, because they finish before the pipeline knows what kind of target
-it is handling. The moment data leaves Step 3 the pipeline reads the geometry of `y` and forks
-into three path-isolated sub-refineries that share step *numbers* and little else — and on the
-bandit path three of the seven steps are **forbidden**, each ban existing because a named
-downstream engine would break if the step ran.
+The point of the project is the refinery's structure rather than the bars: it is the one project
+that runs all three paths of [the ten-step refinery](#the-ten-step-refinery), each from the same
+table of bars.
 
 ```
 S3 raw/  ->  Glue: glue-ingest-bars.py  ->  S3 curated/ bars  (1,607,040 x 18)
@@ -168,10 +212,11 @@ Run 4 is the point. A job that ignored the stored value would extract all 58,168
 healthy doing it — same exit code, same object, same duration. The row count is the only thing
 that separates them.
 
-The analytical half is Path 3 of the same ten-step framework, and only Path 3: the geometry of
-`y` allows nothing else. `amountbrw_unc` is zero on 92.47% of rows, and `badacct_last` exists only
-for the 4,381 people who got a loan. What the file does have is an action that was genuinely
-randomised, which makes the off-policy evaluation causal rather than decorative.
+The analytical half is Path 3 of [the ten-step refinery](#the-ten-step-refinery), and only
+Path 3: no candidate target for the other two paths survives. `amountbrw_unc` is zero on 92.47%
+of rows, and `badacct_last` exists only for the 4,381 people who got a loan. What the file does
+have is an action that was genuinely randomised, which makes the off-policy evaluation causal
+rather than decorative.
 
 - **The file reproduces the paper exactly.** Waves 2 and 3 are 53,194 rows, which is the paper's
   published N; mean rate 793 basis points against its "793"; 87.2% of applications became loans

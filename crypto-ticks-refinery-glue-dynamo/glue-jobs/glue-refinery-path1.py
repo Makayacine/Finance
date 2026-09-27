@@ -17,8 +17,8 @@ THREE THINGS STATED UP FRONT, BECAUSE EACH IS EASY TO MISREAD AS A RESULT
 ------------------------------------------------------------------------
 
 1.  **The target is manufactured, and the framework offers no guidance on manufacturing one.**
-    NexusMart arrived with three genuine experiments and three genuine targets; a bar file
-    arrives with none. The nominated target is the next-bar log return,
+    The framework's worked example arrived with three genuine experiments and three genuine
+    targets; a bar file arrives with none. The nominated target is the next-bar log return,
     ``log(lead(close) / close)`` over a window partitioned by symbol and ordered by ``bar_us``.
     It is a real-valued continuous double, so the fork routes to Path 1 -- but every verdict
     below is conditional on that nomination, which is this project's decision and not the
@@ -96,7 +96,7 @@ APP_NAME = "CryptoTicksRefineryPath1"
 MISSINGNESS_BAN_THRESHOLD = 0.05
 
 # Exactly 0.0: removes features whose sample variance is <= 0, i.e. the genuine constants and
-# nothing else. On NexusMart's toy matrix every column is O(1)-O(400) and any threshold behaves.
+# nothing else. In the framework's toy matrix every column is O(1)-O(400): any threshold behaves.
 # Here quote_volume is O(1e5) and the target is O(1e-4), so ANY positive raw-variance threshold
 # deletes every return column before it touches anything uninformative. The framework forbids
 # fixing that by scaling first -- Step 10 runs AFTER Step 8 and the pass does not loop -- so
@@ -421,8 +421,7 @@ def step5_diagnostics(frame):
                  row["skew"], row["kurt"])
 
     # The operator-audit line the framework asks for: NAME the extreme observation rather than
-    # smoothing it away. Its NexusMart equivalent is "High-value outlier detected at
-    # session_884."
+    # smoothing it away.
     extreme = frame.orderBy(func.abs(func.col("y")).desc()).first()
     LOG.info("   Target Skewness Flagged: extreme move %+.2f bp on %s at bar_us %s (%.1f sd)",
              1e4 * extreme["y"], extreme["symbol"], extreme["bar_us"],

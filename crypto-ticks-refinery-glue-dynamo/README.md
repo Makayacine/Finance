@@ -358,10 +358,10 @@ implemented what was demonstrated would do nothing at all on its own data. The t
 strict in both sources (`>5%`, "exceeds the 5% firewall"), so 5.0% exactly keeps the default.
 
 **The target is manufactured.** `log(lead(close) / close)` over a window partitioned by symbol
-and ordered by `bar_us`. The framework gives no rule for manufacturing a target — NexusMart
-arrived with three genuine ones and a bar file arrives with none — so every Path 1 verdict is
-conditional on that nomination, and the job says so through `verdict()` at the fork rather than
-leaving it implied.
+and ordered by `bar_us`. The framework gives no rule for manufacturing a target — its worked
+example arrived with three genuine ones and a bar file arrives with none — so every Path 1
+verdict is conditional on that nomination, and the job says so through `verdict()` at the fork
+rather than leaving it implied.
 
 **The cross-validation is time-blocked, not a true expanding window.** Spark's `CrossValidator`
 uses random folds by default; on ordered bars that trains on the future, and adjacent bars are
@@ -454,7 +454,7 @@ later scores on, so both numbers would be optimistic and neither would look wron
 
 **Step 4's grouping is the trap.** A single median over the frame blends three price scales
 (BTC ~ $94k, ETH ~ $3.3k, SOL ~ $190) and would hand an empty ETH bar a five-figure close. The
-framework's NexusMart matrix has one cohort per run and never has to state this; bar data does.
+framework's worked example has one cohort per run and never has to state this; bar data does.
 Note also that Path 2 has **no** 5% firewall — that is a Path 1 rule, and the framework runs
 the Path 2 branch at 3.1% missing with no threshold test at all — so the rate is reported and
 not acted on.
@@ -511,7 +511,7 @@ QuantileTransformer (percent_rank)                  0.3972       +0.0432
 to +0.046 — is the leak, measured rather than asserted. Spark's `CrossValidator` builds random
 folds by default, and on ordered bars that trains on the future *and* splits near-duplicate
 adjacent bars across the boundary. The framework says "cross-validated" and never mentions
-temporal ordering, because NexusMart's rows are exchangeable sessions and bars are not.
+temporal ordering, because its worked example's rows are exchangeable sessions and bars are not.
 
 **Two of the three Step 10 legs are substitutions, and `scaling_search/` says which.** Spark
 ships neither `PowerTransformer` (no Yeo-Johnson, no Box-Cox) nor `QuantileTransformer` (no
