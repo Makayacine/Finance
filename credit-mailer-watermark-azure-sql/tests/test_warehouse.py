@@ -15,8 +15,10 @@ WHAT IS HERE
     counts, the watermark, both raw tables, the dimension and the fact. Run 4 must extract nothing,
     load nothing and change nothing.
 *   **The data rules the port had to re-earn in T-SQL**: wave 1's fourteen NULL treatment flags
-    reaching the fact as NULL and not as the zeros ``CAST('' AS SMALLINT)`` would make of them,
-    and the two BIT flags on ``dim_client`` keeping NULL where the raw SMALLINT is NULL.
+    reaching the fact as NULL and not as the zeros ``CAST('' AS SMALLINT)`` would make of them;
+    the two BIT flags on ``dim_client`` keeping NULL where the raw SMALLINT is NULL, on clients
+    landed for the purpose because the published source has none; and values at the full width
+    of their columns, which text binding refused.
 *   **Parity with the AWS pipeline.** The AWS jobs, unmodified, are run through their own
     ``--local`` four-run sequence on DuckDB, and every table of the resulting star -- both raw
     tables, the dimension, the fact, the arm grid and both bandit tables -- is compared with the
@@ -86,7 +88,8 @@ SOURCE_ROW_COUNT = 58168
 TREATMENT_FLAGS = processed.TREATMENT_FLAGS             # the 19 flags, from the AWS column table
 WAVE_ONE_ROWS = 4974
 WAVE_ONE_WHOLLY_NULL_FLAGS = 14
-WAVE_ONE_NULL_CELLS = 69636                             # 14 x 4,974
+WAVE_ONE_FLAG_NULL_CELLS = 69636                        # 14 x 4,974, the treatment flags
+WAVE_ONE_NULL_CELLS = 74173                             # all 32 columns: + 4,537 badacct_last
 
 # The posterior mean per arm after all three waves, as the AWS README publishes it (five places).
 # Deterministic -- a function of the counts only, with no seed involved -- so it is asserted
@@ -152,19 +155,20 @@ def chain(scratch, builder, source_tables, tmp_path_factory):
                                 "--config-table", config_table, "--container", container])
         assert code == 0, "the chain failed on the run through wave %s" % through_wave
 
-        landed = az.blob_container(container).get_blob_client(
-            az.landing_blob_name("mail_offers")).download_blob().readall().decode("utf-8")
+        landing = az.blob_container(container)
+        landed, clients_landed = [
+            len(landing.get_blob_client(az.landing_blob_name(table)).download_blob().readall()
+                .decode("utf-8").splitlines()) - 1
+            for table in ("mail_offers", "client_attributes")]
         watermarks = az.config_table(config_table)
         runs.append({
-            "landed": len(landed.splitlines()) - 1,
+            "landed": landed,
+            "clients_landed": clients_landed,
             "watermark": watermarks.get_entity(az.CONFIG_PARTITION,
                                                "mail_offers").get("last_extracted_value"),
             "client_watermark": dict(watermarks.get_entity(az.CONFIG_PARTITION,
                                                            "client_attributes")),
             "raw_mail_offers": _scalar(database, "SELECT COUNT(*) FROM raw_zone.mail_offers"),
-            "raw_client_attributes": _scalar(database,
-                                             "SELECT COUNT(*) FROM raw_zone.client_attributes"),
-            "dim_client": _scalar(database, "SELECT COUNT(*) FROM processed_zone.dim_client"),
             "fact": _scalar(database, "SELECT COUNT(*) FROM processed_zone.fact_mailer"),
             "fact_waves": [w for (w,) in _rows(
                 database, "SELECT DISTINCT wave FROM processed_zone.fact_mailer ORDER BY wave")],
@@ -190,10 +194,11 @@ def test_the_four_runs_land_4974_then_20996_then_32198_then_nothing(chain):
 def test_the_warehouse_grows_a_wave_at_a_time_and_run_four_adds_nothing(chain):
     """raw_zone.mail_offers and fact_mailer reach 58,168 on run 3 and stay there on run 4.
 
-    This is acceptance criterion 3 carried through the load: a loader that ignored the watermark
-    would be handed all 58,168 rows again on run 4, and the MERGE would hide it -- the counts
-    would still read 58,168. What separates the two is the landing count above (0, not 58,168)
-    together with the fact that the counts here did not move.
+    This is the zero-row run carried through the load, where the proof is less direct than it
+    looks: a loader that ignored the watermark would be handed all 58,168 rows again on run 4,
+    and the MERGE would hide it -- the counts would still read 58,168. What separates the two is
+    the landing count above (0, not 58,168) together with the fact that the counts here did not
+    move.
     """
     runs = chain["runs"]
     assert [run["raw_mail_offers"] for run in runs] == EXPECTED_RAW_MAIL_OFFERS
@@ -213,10 +218,14 @@ def test_run_four_changes_no_value_in_the_warehouse(chain):
 
 
 def test_client_attributes_reloads_whole_on_every_run_and_never_earns_a_watermark(chain):
-    """58,168 rows into raw_zone and dim_client on all four runs; no watermark property, ever."""
+    """All 58,168 rows land on every one of the four runs; no watermark property, ever.
+
+    Counted at the landing blob, not in the warehouse. After run 1 the raw table holds 58,168
+    whatever run 2 lands -- the MERGE keeps what is there -- so a warehouse count cannot tell a
+    full reload from an empty one. The blob the loader read can.
+    """
     for run in chain["runs"]:
-        assert run["raw_client_attributes"] == SOURCE_ROW_COUNT
-        assert run["dim_client"] == SOURCE_ROW_COUNT
+        assert run["clients_landed"] == SOURCE_ROW_COUNT
         assert "last_extracted_value" not in run["client_watermark"]
         assert "load_column" not in run["client_watermark"]
 
@@ -231,7 +240,8 @@ def test_wave_one_treatment_nulls_reach_the_fact_as_nulls(chain):
 
     The rule the SMALLINT columns exist for, re-earned on an engine where ``CAST('' AS SMALLINT)``
     is 0. If the loader let an empty CSV field reach the server as text, these would be zeros and
-    every count would still add up.
+    every count would still add up. Across all 32 columns wave 1 holds 74,173 NULL cells: the
+    69,636 in the flags and 4,537 in ``badacct_last``, one per mailer who took no loan.
     """
     database = chain["database"]
     for table in ("raw_zone.mail_offers", "processed_zone.fact_mailer"):
@@ -239,15 +249,24 @@ def test_wave_one_treatment_nulls_reach_the_fact_as_nulls(chain):
             ", ".join("SUM(CASE WHEN {0} IS NULL THEN 1 ELSE 0 END)".format(flag)
                       for flag in TREATMENT_FLAGS), table))[0]
         assert sum(1 for count in nulls if count == WAVE_ONE_ROWS) == WAVE_ONE_WHOLLY_NULL_FLAGS
-        assert sum(nulls) == WAVE_ONE_NULL_CELLS
+        assert sum(nulls) == WAVE_ONE_FLAG_NULL_CELLS
+    assert _scalar(database, "SELECT {0} FROM raw_zone.mail_offers WHERE wave = 1".format(
+        " + ".join("SUM(CASE WHEN {0} IS NULL THEN 1 ELSE 0 END)".format(column)
+                   for column in ingestion.TABLES["mail_offers"]["columns"]))) == \
+        WAVE_ONE_NULL_CELLS
     # bad_account: non-null exactly where a loan was taken, and never coalesced.
     assert _scalar(database, "SELECT COUNT(bad_account) FROM processed_zone.fact_mailer") == 4381
     assert _scalar(database, "SELECT COUNT(*) FROM processed_zone.fact_mailer "
                              "WHERE took_up = 1") == 4381
 
 
-def test_dim_client_flags_are_nullable_bit_and_keep_null(chain):
-    """``(ca.female = 1)`` rewritten as a CASE with no ELSE: 1 -> 1, other -> 0, NULL -> NULL."""
+def test_dim_client_flags_are_bit_and_agree_with_the_source(chain):
+    """``(ca.female = 1)`` as a CASE with no ELSE agrees with the raw flags, count for count.
+
+    The published source holds no NULL ``female`` or ``edhi``, so on this data the CASE only ever
+    sees 0 and 1 and its NULL branch never runs. That branch is exercised by
+    ``test_a_null_raw_flag_reaches_dim_client_as_null`` below, on a client landed for the purpose.
+    """
     database = chain["database"]
     types = dict(_rows(database, "SELECT column_name, data_type FROM information_schema.columns "
                                  "WHERE table_schema = 'processed_zone' "
@@ -352,7 +371,7 @@ def test_the_star_matches_the_one_the_aws_jobs_build(chain, duckdb_star):
     232,690 rows across five tables. SMALLINT against SMALLINT, DECIMAL(5,2) against
     DECIMAL(5,2) as Decimal on both sides, and DuckDB's BOOLEAN against SQL Server's BIT, both of
     which the drivers return as True / False / None -- so the CASE-with-no-ELSE rewrite is being
-    compared with Redshift's ``(ca.female = 1)`` on every client, including the NULLs.
+    compared with Redshift's ``(ca.female = 1)`` on every client.
     """
     for sql in STAR_QUERIES:
         azure = _rows(chain["database"], sql)
@@ -393,13 +412,14 @@ def loads(scratch):
 
 @pytest.fixture
 def empty(loads):
-    """Every raw_zone table emptied and committed before the test."""
+    """Every raw_zone table and the two star tables emptied and committed before the test."""
     conn = _sql(loads["database"])
     try:
         cursor = conn.cursor()
-        for table in ("mail_offers", "client_attributes", "tmp_mail_offers",
-                      "tmp_client_attributes"):
-            cursor.execute("TRUNCATE TABLE raw_zone.%s" % table)
+        for table in ("raw_zone.mail_offers", "raw_zone.client_attributes",
+                      "raw_zone.tmp_mail_offers", "raw_zone.tmp_client_attributes",
+                      "processed_zone.dim_client", "processed_zone.fact_mailer"):
+            cursor.execute("TRUNCATE TABLE %s" % table)
         conn.commit()
     finally:
         conn.close()
@@ -472,8 +492,8 @@ def test_varchar16_headroom_is_enforced(empty):
 def test_a_duplicated_key_fails_the_load_where_redshift_would_keep_both(empty):
     """PRIMARY KEY is enforced: the second insert of (7, 2) is error 2627, and nothing lands.
 
-    The staging table has no key -- SELECT ... INTO does not copy constraints, as CTAS does not on
-    Redshift -- so both copies reach the MERGE, and it is the target's key that refuses.
+    The staging table has no key -- SELECT ... INTO does not copy the PRIMARY KEY, as CTAS does
+    not on Redshift -- so both copies reach the MERGE, and it is the target's key that refuses.
     """
     import pyodbc
 
@@ -490,7 +510,11 @@ def test_truncate_rolls_back_with_a_failed_load(empty):
     A sentinel row is committed into the staging table first. The load then truncates staging,
     inserts, and fails at the MERGE. If TRUNCATE committed on its own, as Redshift's does, the
     sentinel would be gone; on SQL Server the rollback restores it, with the target untouched.
+    The failure is pinned to the one expected -- the key violation, error 2627 -- so an unrelated
+    error before the TRUNCATE cannot pass the test by leaving the sentinel where it was.
     """
+    import pyodbc
+
     conn = _sql(empty["database"])
     try:
         conn.cursor().execute("INSERT INTO raw_zone.tmp_mail_offers (client_id, wave) "
@@ -500,8 +524,9 @@ def test_truncate_rolls_back_with_a_failed_load(empty):
         conn.close()
 
     _land(empty["container"], "mail_offers", [_mailer(8, 3), _mailer(8, 3)])
-    with pytest.raises(Exception):
+    with pytest.raises(pyodbc.IntegrityError) as caught:
         _ingest(empty, "mail_offers")
+    assert "2627" in str(caught.value)
 
     assert _rows(empty["database"], "SELECT client_id, wave FROM raw_zone.tmp_mail_offers") == \
         [(999999, 9)]
@@ -519,6 +544,46 @@ def test_an_empty_field_lands_as_null_and_not_as_zero(empty):
         == [(None, None, 0)]
     assert _rows(empty["database"], "SELECT prize, badacct_last, intshown FROM "
                                     "raw_zone.mail_offers") == [(None, None, 0)]
+
+
+def test_values_at_the_full_width_of_their_column_load(empty):
+    """An offer rate of 100.00 loads into DECIMAL(5,2), and -32768 into a SMALLINT.
+
+    Both fit their columns and both were refused when the loader bound text: pyodbc's fast path
+    sizes a text buffer from the column's precision -- five characters for DECIMAL(5,2), five for
+    SMALLINT -- and the decimal point and the sign do not fit in it. Bound as Decimal and int,
+    each arrives as the value it is. The published rates run 3.25 to 14.75, so the data never
+    reached this edge; the width the DDL declares is what is being held to here.
+    """
+    _land(empty["container"], "mail_offers", [_mailer(21, 1, offer4="100.00", prize="-32768")])
+    _ingest(empty, "mail_offers")
+    assert _rows(empty["database"], "SELECT offer4, prize FROM raw_zone.mail_offers") == \
+        [(Decimal("100.00"), -32768)]
+
+
+def test_a_null_raw_flag_reaches_dim_client_as_null(empty):
+    """The CASE with no ELSE, run on a NULL: ``female`` and ``edhi`` empty in, NULL BIT out.
+
+    The published source has no NULL in either column, so the four-run chain never sends one
+    through this branch. Three clients are landed here to cover the whole truth table of
+    ``(x = 1)``: NULL -> NULL, 1 -> 1, and a value that is neither 0 nor 1 -> 0. Each has a mailer,
+    so the processed layer's parity check between staged and source rows has a fact to count.
+    """
+    _land(empty["container"], "client_attributes",
+          [_client(31, female="", edhi=""), _client(32, female="1", edhi="0"),
+           _client(33, female="2", edhi="1")])
+    _land(empty["container"], "mail_offers", [_mailer(31, 1), _mailer(32, 1), _mailer(33, 1)])
+    _ingest(empty, "client_attributes")
+    _ingest(empty, "mail_offers")
+    assert _rows(empty["database"], "SELECT female, edhi FROM raw_zone.client_attributes "
+                                    "WHERE client_id = 31") == [(None, None)]
+
+    _run_main(processed, ["--database", empty["database"]])
+
+    assert _rows(empty["database"], "SELECT client_id, is_female, is_more_educated "
+                                    "FROM processed_zone.dim_client ORDER BY client_id") == \
+        [(31, None, None), (32, True, False), (33, False, True)]
+    assert _scalar(empty["database"], "SELECT COUNT(*) FROM processed_zone.fact_mailer") == 3
 
 
 def test_reloading_the_same_extract_changes_nothing(empty):

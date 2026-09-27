@@ -134,7 +134,8 @@ def apply(database=az.DEFAULT_DATABASE, ddl_path=DEFAULT_DDL, drop=False):
             "WHERE table_type = 'BASE TABLE' ORDER BY table_schema, table_name").fetchall()
         arms = cursor.execute("SELECT COUNT(*) FROM processed_zone.dim_offer_arm").fetchone()[0]
     except Exception:
-        conn.rollback()
+        # Guarded: a failed rollback would otherwise replace the batch error it is cleaning up.
+        az.rollback(conn, log=LOG)
         raise
     finally:
         conn.close()

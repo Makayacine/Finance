@@ -8,7 +8,9 @@
 # ../credit-mailer-watermark-glue-redshift/local-development/build_source_db.py.
 #
 #   docker compose up -d --wait        # returns once both healthchecks pass
-#   docker compose down                # both hold their data in memory; this discards it
+#   docker compose down                # removes both containers and everything they held:
+#                                      # Azurite keeps its data in memory, SQL Server in the
+#                                      # container's own filesystem, with no volume declared
 #
 # Every credential below is local-only. Azurite's account key is not in this file at all -- it is
 # Microsoft's published development key, built into Azurite and into the SDKs'

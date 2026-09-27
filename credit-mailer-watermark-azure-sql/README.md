@@ -16,8 +16,8 @@ could only state.
 
 The whole pipeline runs offline against Microsoft's own emulators: Azurite for Blob and Table
 Storage, and SQL Server 2022 for the warehouse, running the same DDL and MERGE text Azure SQL
-Database receives. The four-run demo takes **about 22 s** end to end, and the test suite runs **40
-tests in about 33 s**.
+Database receives. The four-run demo takes **about 22 s** end to end, and the test suite runs **42
+tests in about 40 s**.
 
 ## Architecture
 
@@ -75,7 +75,7 @@ credit-mailer-watermark-azure-sql/
 ├── orchestration/run-chain.py              the six-state chain
 ├── table-storage/write-to-table-storage.py seeds and resets the two config entities
 ├── local-development/                      apply_ddl.py, create_container.py
-├── tests/                                  40 tests: 18 ported, 22 for the load half
+├── tests/                                  42 tests: 18 ported, 24 for the load half
 ├── docker-compose.yml  .env.example  requirements.txt
 ```
 
@@ -153,15 +153,20 @@ measured on the SQL Server 2022 container rather than assumed.
 | `SMALLINT` on the raw 0/1 flags | **`SMALLINT`, kept** — not `BIT` | 14 flags are NULL on all 4,974 wave-1 rows, and that NULL is data. BIT would hold the NULL, but `CAST(2 AS BIT)` is 1, so BIT would quietly accept a value that isn't a flag |
 | `BOOLEAN` on `dim_client.is_female`, `is_more_educated` | nullable **`BIT`** | T-SQL has no BOOLEAN. These two are computed in the MERGE, never loaded from a CSV, which is why BIT is safe here and not on the raw flags |
 | `(ca.female = 1)` in the SELECT list | `CAST(CASE WHEN ca.female = 1 THEN 1 WHEN ca.female <> 1 THEN 0 END AS BIT)` | A comparison is not a value in T-SQL (error 102). Two WHENs and **no ELSE** keep the three-valued meaning: NULL stays NULL instead of becoming 0 |
-| `CREATE TABLE raw_zone.tmp_x AS SELECT * FROM raw_zone.x` | `SELECT * INTO raw_zone.tmp_x FROM raw_zone.x WHERE 1 = 0` | T-SQL's CTAS. It carries names, types, order and nullability but not the PRIMARY KEY, as CTAS does on Redshift |
+| `CREATE TABLE raw_zone.tmp_x AS SELECT * FROM raw_zone.x` | `SELECT * INTO raw_zone.tmp_x FROM raw_zone.x WHERE 1 = 0` | T-SQL's CTAS. It carries names, types, order and nullability, so `client_id` and `wave` stay NOT NULL in staging; Redshift's CTAS carries names, types and order but not NOT NULL. Neither carries the PRIMARY KEY |
 | `CREATE TEMP TABLE stage_x AS SELECT ...` | `SELECT ... INTO #stage_x FROM ...` | a `#` table is session-private and dropped when the connection closes |
 | raw-ingestion `MERGE` with no terminator | the same text plus `;` | a MERGE must end in `;` (error 10713). The processed layer's MERGE already did |
 | `ORDER BY n DESC LIMIT 10` | `SELECT TOP 10 ... ORDER BY n DESC` | no LIMIT in T-SQL |
 | `BEGIN TRANSACTION;` / `COMMIT;` / `ROLLBACK;` sent as text | none: pyodbc's implicit transaction, `conn.commit()` / `conn.rollback()` | T-SQL nests them. A text BEGIN inside the driver's transaction sets `@@TRANCOUNT` to 2, `conn.commit()` then keeps nothing, and closing the connection rolls the load back |
-| `COPY ... EMPTYASNULL` | empty field → `None` in Python before binding | `CAST('' AS SMALLINT)` is **0** in T-SQL, and would turn wave 1's 69,636 NULL cells into zeros |
+| `COPY ... EMPTYASNULL` | empty field → `None` in Python before binding | `CAST('' AS SMALLINT)` is **0** in T-SQL, and would turn wave 1's 74,173 NULL cells into zeros: 69,636 in the 14 treatment flags and 4,537 in `badacct_last` |
 | `COPY ... IGNOREHEADER 1` (positional, unchecked) | the header is compared with the column list before any row is sent | a client-side load can check what a COPY can only skip |
 | multi-row `INSERT ... VALUES` | the same, limited to 1,000 rows (error 10738) | the refinery writes at most 54 and asserts the limit |
-| `AVG` over an integer column | **not used anywhere**; take-up is `SUM(took_up)` / `COUNT(*)` divided in Python | T-SQL's `AVG` of an integer column is an integer. `AVG` of 1 and 2 is 1 |
+
+Not in the table, because it is not a T-SQL change: no SQL in either pipeline uses `AVG` over an
+integer column. Take-up is `SUM(took_up)` over `COUNT(*)`, divided in Python. T-SQL returns an
+integer from `AVG` of an integer column (`AVG` of 1 and 2 is 1, measured on the container), and so
+does Redshift. DuckDB returns a double, which is why the sibling's local run could never have shown
+a take-up rate of 0.
 
 ## The bulk load: which shipped and why
 
@@ -178,7 +183,12 @@ Azurite, with a database-scoped SAS credential:
 
 **What shipped is the client-side load.** The raw-ingestion job reads the blob, turns empty fields
 into None, checks the header, and inserts into the staging table with pyodbc `fast_executemany`,
-which sends parameter arrays rather than one round trip per row. The `client_attributes` state
+which sends parameter arrays rather than one round trip per row. Each field is bound as the type
+its staging column declares (int, Decimal or str, read from `information_schema`), not as text.
+Under `fast_executemany`, pyodbc sizes a text parameter from the column's precision, which leaves no
+room for a sign or a decimal point. `100.00` was refused for a DECIMAL(5,2) that holds it, and
+`-32768` for a SMALLINT. Typed, both load, and a Decimal with more places than the column allows is
+refused rather than rounded. The `client_attributes` state
 (58,168 rows read, bound, merged and committed) takes under two seconds against the container.
 Azure SQL Database supports `BULK INSERT ... WITH (DATA_SOURCE = ...)` over a real
 `*.blob.core.windows.net` container. `bulk_load()` is the function to swap for that, and the MERGE
@@ -208,30 +218,38 @@ and a failing last batch leaves the database with no tables rather than half a s
 
 ## What the local run covers
 
-**40 tests, all against the real emulators through the real clients**: pyodbc to SQL Server,
-azure-storage-blob and azure-data-tables to Azurite. No mocks, and no SQLite or DuckDB standing in
-for T-SQL.
+**42 tests. 30 of them run against the real emulators through the real clients**: pyodbc to SQL
+Server, azure-storage-blob and azure-data-tables to Azurite. No mocks, and no SQLite or DuckDB
+standing in for T-SQL. **The other 12 need neither container.** They are the 9 bandit tests, which
+pin the refinery's arithmetic through the Azure job module, and three that check code rather than
+services: the extractor's `--self-check`, every warehouse job's `--self-check`, and the chain's
+state order against the sibling's Step Functions definition.
 
-- `tests/test_watermark.py` (9): the sibling's watermark suite, ported test for test. It covers the
+- `tests/test_watermark.py` (9: 8 against Azurite, plus the self-check): the sibling's watermark
+  suite, ported test for test. It covers the
   four runs at the landing zone (4,974 / 20,996 / 32,198 / 0 rows; watermark `'1'`, `'2'`, `'3'`,
   `'3'` as text), the header-only blob of run 4, the full load that ignores a set watermark,
   `client_attributes` with its absent watermark, and the `exit 1` when the chain and the config
   disagree.
-- `tests/test_bandit.py` (9): the sibling's bandit suite with every test body byte-identical,
-  asserting against the Azure refinery module. It pins that the job writing to Azure SQL runs the
+- `tests/test_bandit.py` (9, no emulator): the sibling's bandit suite with every test body
+  byte-identical, asserting against the Azure refinery module. It pins that the job writing to Azure SQL runs the
   declared grid and the shared arithmetic.
-- `tests/test_warehouse.py` (22), the load half the sibling's suite never reached:
+- `tests/test_warehouse.py` (24: 22 against the emulators, plus the chain-order and self-check
+  tests), the load half the sibling's suite never reached:
   - **The four runs through the chain.** Run 4 lands 0 rows, and a checksum over every column of
     `raw_zone.mail_offers` and `fact_mailer` shows it changed no value.
-  - **The data rules re-earned in T-SQL.** Wave 1's 14 wholly-NULL flags (69,636 cells) reach the
-    fact as NULL, `bad_account` is non-null on exactly the 4,381 take-ups, the BIT flags keep NULL
-    where the source is NULL, and the 18 posterior means match the sibling's published table to
-    five places.
+  - **The data rules re-earned in T-SQL.** Wave 1's 14 wholly-NULL flags (69,636 cells, of the
+    wave's 74,173 NULL cells) reach the fact as NULL, and `bad_account` is non-null on exactly the
+    4,381 take-ups. The BIT flags agree with the raw flags on all 58,168 clients. The published
+    data has no NULL `female` or `edhi`, so the NULL branch of the CASE is tested on its own
+    clients: NULL comes out NULL, 1 comes out 1 and 2 comes out 0. The 18 posterior means match
+    the sibling's published table to five places.
   - **Parity with the AWS pipeline.** The AWS jobs, unmodified, run their own four-run sequence
     on DuckDB, and all seven star and bandit tables are compared with SQL Server's row for row:
     232,690 star rows plus the 60 bandit rows, including the Monte-Carlo columns to the eighth
     decimal.
-  - **The three engine differences above**, an empty field landing as NULL, an idempotent reload,
+  - **The three engine differences above**, an empty field landing as NULL, values at the full
+    width of their columns (an offer rate of 100.00, a SMALLINT of -32,768), an idempotent reload,
     and a reordered extract refused before the warehouse is touched.
   - **The Table Storage traps**: the MERGE-mode reset and the stale ETag.
   - **The chain**: it matches the Step Functions definition state for state, a failing state
@@ -254,16 +272,22 @@ for T-SQL.
 
 ## Running it
 
-Ubuntu 24.04 shown. The ODBC driver comes from packages.microsoft.com, and other distributions are
-listed there.
+Ubuntu 24.04 shown. Two prerequisites come first:
+- **Docker Engine with the Compose plugin**, installed as in
+  [Docker's Ubuntu guide](https://docs.docker.com/engine/install/ubuntu/). `docker compose` must
+  be v2, since `--wait` is what blocks on the healthchecks.
+- **`python3-venv`**, installed below, because Ubuntu's Python ships without `venv`.
+
+The ODBC driver comes from packages.microsoft.com, and other distributions are listed there.
 
 ```bash
-# 1. Microsoft ODBC Driver 18 and the unixODBC headers pyodbc builds against
+# 1. Microsoft ODBC Driver 18, the unixODBC headers pyodbc builds against, and venv
 curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
   | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
 curl -fsSL https://packages.microsoft.com/config/ubuntu/24.04/prod.list \
   | sudo tee /etc/apt/sources.list.d/mssql-release.list
-sudo apt-get update && sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+sudo apt-get update
+sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev python3-venv
 
 # 2. Python, in a virtualenv
 cd credit-mailer-watermark-azure-sql
@@ -274,7 +298,7 @@ pip install -r requirements.txt
 docker compose up -d --wait
 
 # 4. The suite
-python -m pytest tests -q           # 40 passed
+python -m pytest tests -q           # 42 passed
 
 # 5. And the sibling's, which this port leaves untouched
 (cd ../credit-mailer-watermark-glue-redshift && pip install -r requirements.txt \
@@ -296,7 +320,8 @@ for wave in 1 2 3 3; do
       --db _localrun/source.duckdb --through-wave "$wave"
   python orchestration/run-chain.py --source-db _localrun/source.duckdb
 done
-docker compose down                 # both emulators hold their data in memory
+docker compose down                 # discards everything: Azurite holds its data in memory,
+                                    # SQL Server in the container's own filesystem
 ```
 
 Every job also has `--self-check`, which pins its pure decisions with no network, no service and no
