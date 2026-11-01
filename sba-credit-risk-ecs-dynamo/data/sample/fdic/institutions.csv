@@ -1,0 +1,549 @@
+CERT,NAME,CITY,STALP,BKCLASS,CHARTER,ACTIVE,ESTYMD,INSDATE,ENDEFYMD
+63,The Bank of Parrish,Parrish,AL,NM,0,0,05/19/1919,01/01/1934,05/09/2002
+91,Allied Bank,Mulberry,AR,SM,0,0,03/04/1902,01/01/1934,09/23/2016
+100,Bank of Bentonville,Bentonville,AR,SM,0,0,02/25/1931,01/01/1934,03/07/2002
+171,Peoples Bank of Bartow County,Cartersville,GA,NM,0,0,06/13/1905,01/01/1934,12/31/1992
+256,Melvin Savings Bank,Melvin,IA,NM,0,0,01/01/1912,01/01/1934,07/01/2021
+261,Farmers Deposit Bank of Brandenburg,Brandenburg,KY,NM,0,0,01/01/1897,01/01/1934,02/21/1994
+265,Citizens Deposit Bank,Calhoun,KY,NM,0,0,01/01/1903,01/01/1934,10/02/2000
+289,Bank of Hindman,Hindman,KY,NM,0,1,01/01/1903,01/01/1934,12/31/9999
+436,The People's Bank of Oxford,Oxford,PA,NM,0,0,12/19/1913,01/01/1934,06/11/2004
+505,Great Plains Bank,Eureka,SD,NM,0,1,10/23/1920,01/01/1934,12/31/9999
+747,"National City Bank, Northeast",Columbiana,OH,N,15694,0,12/15/1909,01/01/1934,01/01/1992
+770,Savings Bank & Trust,Wadsworth,OH,SM,0,0,01/01/1907,01/01/1934,12/10/2004
+817,"Wachovia Bank, National Association",Winston-Salem,NC,N,1559,0,01/01/1879,01/01/1934,04/01/2002
+875,Community Bank & Trust - Jackson,Commerce,GA,NM,0,0,01/01/1892,01/01/1934,11/20/2000
+892,Alerion Bank,New Orleans,LA,SM,0,0,12/01/1917,01/01/1934,12/23/1993
+1115,Farmers State Bank of Worden,Worden,MT,SM,0,0,09/05/1913,01/01/1934,07/14/1995
+1211,First City Bank of Richardson,Richardson,TX,NM,0,0,01/01/1905,07/01/1934,09/30/1988
+1217,Commercial State Bank,Sinton,TX,NM,0,0,02/01/1909,01/01/1934,03/16/2007
+1373,BOM Bank,Natchitoches,LA,NM,0,1,10/05/1903,01/01/1934,12/31/9999
+1401,State Bank of Danvers,Benson,MN,NM,0,0,07/09/1902,01/01/1934,06/30/2024
+1466,First Volunteer Bank of East Tennessee,Jacksboro,TN,NM,0,0,09/24/1923,01/01/1934,07/27/2001
+1605,MidAmerica Bank Chaska,Chaska,MN,NM,0,0,04/01/1870,01/01/1934,04/25/1992
+1619,Farmers State Bank Stanberry,Stanberry,MO,SM,0,0,03/25/1925,01/01/1934,08/01/2016
+1640,Boatmen's Raytown Bank,Raytown,MO,NM,0,0,11/18/1910,01/01/1934,11/14/1988
+1675,Richland State Bank,Bruce,SD,NM,0,1,01/01/1927,01/01/1934,12/31/9999
+1709,The Citizens Bank,Collierville,TN,NM,0,0,09/17/1917,01/01/1934,09/18/1998
+1800,State Bank of Arthur,Arthur,IL,SM,0,0,05/11/1910,01/01/1934,10/06/2017
+1807,Firstar Bank North Shore,Deerfield,IL,NM,0,0,10/04/1920,01/01/1934,11/07/1994
+1836,Norwest Bank Monticello,Monticello,IN,NM,0,0,08/01/1932,01/01/1934,03/01/1994
+1888,"Equitable Bank, National Association",Baltimore,MD,N,17356,0,01/17/1913,01/01/1934,06/30/1990
+1934,First State Bank of Okabena (Incorporated),Okabena,MN,NM,0,0,10/01/1906,01/01/1934,12/16/2016
+1950,First Financial Bank of Ste. Genevieve County,Ste. Genevieve,MO,NM,0,0,04/01/1901,01/01/1934,05/30/1997
+1971,Hume Bank,Hume,MO,NM,0,0,06/23/1909,01/01/1934,03/07/2008
+2119,The First National Bank of Barnesville,Barnesville,GA,N,6243,0,04/02/1902,01/01/1934,10/22/2010
+2157,First State Bank of Randolph County,Cuthbert,GA,NM,0,1,10/03/1900,01/01/1934,12/31/9999
+2174,Q Bank,Fort Benton,MT,SM,0,0,11/26/1915,01/01/1934,08/07/1998
+2241,CNB Bank,Carlsbad,NM,NM,0,1,08/01/1924,01/01/1934,12/31/9999
+2247,Bank of the Southwest,Roswell,NM,NM,0,1,03/18/1930,01/01/1934,12/31/9999
+2311,Oklahoma State Bank,Konawa,OK,NM,0,0,09/12/1911,01/01/1934,04/01/1989
+2322,Farmers Exchange Bank,Antlers,OK,NM,0,0,04/01/1914,01/01/1934,09/11/2000
+2324,Barnsdall State Bank,Barnsdall,OK,NM,0,0,12/07/1925,01/01/1934,04/02/2008
+2628,Multibank National of Western Massachusetts,Springfield,MA,N,1018,0,01/01/1913,01/01/1934,07/01/1991
+2675,Mechanics Bank,Worcester,MA,NM,0,0,01/01/1848,01/01/1934,06/10/1994
+2709,The State National Bank of Maysville,Maysville,KY,N,2663,0,03/27/1882,01/01/1934,03/31/1994
+2752,Lawrenceburg  Bank and Trust Company,Lawrenceburg,KY,SM,0,0,01/01/1885,01/01/1934,05/08/2010
+2765,Farmers Bank and Trust Company,Princeton,KY,NM,0,1,01/01/1900,01/01/1934,12/31/9999
+2826,"First Alabama Bank of Selma, N. A.",Selma,AL,N,7084,0,01/01/1904,01/01/1934,11/16/1985
+3086,First National Bank Baird,Baird,TX,N,25144,0,02/01/1885,01/01/1934,02/19/2021
+3132,The First National Bank of Carthage,Carthage,TX,N,6197,0,01/01/1902,01/01/1934,07/21/1999
+3210,The Moody National Bank,Galveston,TX,N,8899,1,01/01/1907,01/01/1934,12/31/9999
+3292,The Lamesa National Bank,Lamesa,TX,N,13111,1,07/30/1927,01/01/1934,12/31/9999
+3389,Pointbank,Pilot Point,TX,SM,0,1,07/13/1892,01/01/1934,12/31/9999
+3547,First National Bank,Chico,CA,N,9713,0,07/29/1910,01/01/1934,11/20/1986
+3612,MidAmerica National Bank,Canton,IL,N,13838,1,11/22/1933,01/01/1934,12/31/9999
+3665,First National Bank of Freeport,Freeport,IL,N,13695,0,06/01/1933,01/01/1934,07/01/1989
+3756,First State Bank of Wyanet,Wyanet,IL,NM,0,0,10/08/1908,01/01/1934,08/01/1988
+3761,The First National Bank of Ava,Ava,IL,N,10911,1,01/01/1917,01/01/1934,12/31/9999
+3852,Citizens First Bank,Arkadelphia,AR,SM,0,0,09/01/1888,01/01/1934,10/22/1998
+4041,The First Security Bank,Beaver,OK,NM,0,1,01/16/1916,01/01/1934,12/31/9999
+4055,The First National Bank of Carter,Carter,OK,N,12147,0,01/01/1922,01/01/1934,05/01/1986
+4134,The First National Bank of Lindsay,Lindsay,OK,N,6171,0,04/02/1902,01/01/1934,10/18/2024
+4148,The First National Bank and Trust Company of Miami,Miami,OK,N,5252,1,01/01/1900,01/01/1934,12/31/9999
+4151,"Shamrock Bank, National Association",Mountain View,OK,N,5656,0,06/01/1899,01/01/1934,03/22/2002
+4206,First Bank and Trust Co. of Tahlequah,Tahlequah,OK,NM,0,0,12/11/1891,01/01/1934,09/17/1993
+4264,Ocean Bank,Portsmouth,NH,SB,0,0,05/25/1854,08/09/1989,01/01/2009
+4396,The Holland National Bank,Holland,IN,N,9090,0,02/21/1908,01/01/1934,10/01/2000
+4408,"Citizens Bank of Gibson County, National Association",Princeton,IN,N,9463,0,07/01/1889,01/01/1934,07/24/1992
+4456,Bank Iowa,Red Oak,IA,SM,0,0,01/01/1901,01/01/1934,03/31/2011
+4584,Bank of Jasper,Jasper,MO,NM,0,0,01/01/1902,01/01/1934,02/06/1992
+4598,"The First National Bank of Nevada, Missouri",Nevada,MO,N,3959,1,01/01/1889,01/01/1934,12/31/9999
+4605,Mercantile Bank of St. Joseph,Saint Joseph,MO,NM,0,0,07/08/1889,01/01/1934,05/16/1998
+4624,American Bank of Baxter Springs,Baxter Springs,KS,SM,0,1,01/01/1917,01/01/1934,12/31/9999
+4794,First National Bank of Kansas,Burlington,KS,N,6101,1,01/14/1902,01/01/1934,12/31/9999
+4819,The First National Bank of Wyoming,Wyoming,DE,N,9428,0,03/09/1909,01/01/1934,09/05/2014
+4829,1880 Bank,Cambridge,MD,SM,0,0,01/01/1880,01/01/1934,10/31/2020
+4862,NBRS Financial,Rising Sun,MD,SM,0,0,07/01/1880,01/01/1934,10/17/2014
+4892,"Nationsbank of North Carolina, National Association",Charlotte,NC,N,13761,0,01/01/1933,01/01/1934,01/03/1995
+4919,The First National Bank of Centerville,Centerville,TN,N,3288,0,01/01/1885,01/01/1934,01/31/2008
+4981,Citizens State Bank,Trenton,TN,NM,0,0,09/22/1923,01/01/1934,01/01/1993
+5013,"NBD F & M Bank, National Association",Benton Harbor,MI,N,13833,0,11/17/1933,01/01/1934,10/31/1990
+5018,Citizens National Bank of Cheboygan,Cheboygan,MI,N,13522,1,01/24/1931,01/01/1934,12/31/9999
+5031,"First of America Bank - Lapeer, National Association",Lapeer,MI,N,1731,0,01/01/1856,01/01/1934,04/01/1991
+5044,Security Bank Northeast,Richmond,MI,SM,13793,0,10/03/1933,01/01/1934,06/01/1992
+5124,"Norwest Bank Minnesota West, National Association",Moorhead,MN,N,13075,0,05/15/1927,01/01/1934,08/26/2000
+5180,The First National Bank of Le Center,Lonsdale,MN,N,6921,1,01/01/1903,01/01/1934,12/31/9999
+5207,First Bank (National Association) - Lake,Minneapolis,MN,N,13096,0,06/30/1927,01/01/1934,12/31/1987
+5233,"Norwest Bank Red Wing, National Association",Red Wing,MN,N,1487,0,06/20/1865,01/01/1934,07/08/2000
+5237,"Norwest Bank Minnesota South, National Association",Rochester,MN,N,2088,0,01/01/1868,01/01/1934,07/08/2000
+5288,The First National Bank of Columbus,Columbus,WI,N,178,0,12/08/1856,01/01/1934,03/01/1994
+5423,The American National Bank of Kimball,Kimball,NE,N,13420,0,09/01/1917,01/01/1934,09/07/2002
+5493,The First National Bank of Wilcox,Wilcox,NE,N,7861,0,08/05/1905,01/01/1934,11/24/1997
+5526,The Farmers National Bank of Seymour,Seymour,TX,N,7482,0,01/01/1904,01/01/1934,12/31/2010
+5547,First-Taylor National Bank,Taylor,TX,N,3027,0,08/21/1883,01/01/1934,05/17/1990
+5586,"First RepublicBank Wichita Falls, National Association",Wichita Falls,TX,N,13665,0,03/15/1933,01/01/1934,07/29/1988
+5596,The First National Bank of Yorktown,Yorktown,TX,N,6987,0,10/01/1903,01/01/1934,09/10/1992
+5598,Troy Bank & Trust Company,Troy,AL,NM,0,1,01/01/1906,01/01/1934,12/31/9999
+5634,Connect Bank,Star City,AR,SM,0,1,04/07/1925,01/01/1934,12/31/9999
+5672,Florida Community Bank,Immokalee,FL,NM,0,0,07/07/1923,01/01/1934,01/29/2010
+5751,"First Midwest Bank, National Association",Waukegan,IL,N,14364,0,01/01/1908,01/01/1934,06/15/1990
+5758,The First Chicago Bank of Mount Prospect,Mount Prospect,IL,NM,0,0,07/10/1911,01/01/1934,06/20/1992
+5854,"South Central Bank,  Inc.",Glasgow,KY,NM,0,1,01/01/1908,01/01/1934,12/31/9999
+5942,Peoples Bank & Trust Company,Rocky Mount,NC,NM,0,0,04/01/1931,01/01/1934,11/03/1990
+6033,The New Enterprise Bank,New Enterprise,PA,NM,0,0,01/01/1911,01/01/1934,11/01/1985
+6109,"First Trust and Savings Bank, Oneida, Tennessee",Oneida,TN,NM,0,0,09/09/1923,01/01/1934,04/14/2014
+6191,Layton State Bank,West Allis,WI,NM,0,0,08/28/1920,01/01/1934,10/28/2016
+6251,The Somersworth Bank,Somersworth,NH,NM,1183,0,01/01/1865,01/01/1934,06/26/1992
+6265,Vermont National Bank,Brattleboro,VT,N,1430,0,11/07/1906,01/01/1934,03/24/2000
+6290,First National Bank of Vermont,Bradford,VT,N,122,0,11/11/1863,01/01/1934,01/29/1993
+6513,First Peoples Bank of New Jersey,Haddon Township,NJ,NM,0,0,09/21/1921,01/01/1934,09/19/1992
+6516,Liberty National Bank,Ada,OH,N,5425,0,10/01/1893,01/01/1934,12/01/2022
+6556,Central National Bank of Cleveland,Cleveland,OH,N,4318,0,01/01/1890,01/01/1934,02/18/1986
+6629,The Malta National Bank,Malta,OH,N,2052,0,11/19/1872,01/01/1934,05/03/2001
+6646,1st National Bank,Lebanon,OH,N,8709,1,01/01/1907,01/01/1934,12/31/9999
+6662,RiverHills Bank,Milford,OH,NM,0,1,11/17/1904,01/01/1934,12/31/9999
+6700,Somerville Bank,Eaton,OH,NM,0,1,10/10/1910,01/01/1934,12/31/9999
+6767,The National Bank of Summers of Hinton,Hinton,WV,N,7998,0,06/03/1895,01/01/1934,04/26/1999
+6775,"One Valley Bank-East, National Association",Martinsburg,WV,N,4811,0,10/29/1892,01/01/1934,11/10/2000
+6778,The Merchants National Bank of Montgomery,Montgomery,WV,N,9740,0,04/27/1910,01/01/1934,12/22/1997
+6795,First National Bank,Ronceverte,WV,N,13830,0,01/01/1933,01/01/1934,03/04/2016
+6831,The First National Bank of Clifton Forge,Clifton Forge,VA,N,6008,0,01/01/1901,01/01/1934,07/16/1999
+7228,Sleepy Hollow Bank,Sleepy Hollow,NY,SM,0,0,01/01/1924,01/01/1934,05/09/2008
+7592,The Manheim National Bank,Manheim,PA,N,912,0,01/01/1865,01/01/1934,09/01/1987
+8265,Bank of Leeton,Leeton,MO,NM,0,0,09/14/1896,01/01/1934,01/22/2010
+8303,Community Bank,Chillicothe,MO,NM,0,0,10/19/1919,01/01/1934,01/01/1988
+8495,Town & Country Bank,Buffalo,IL,SM,0,0,11/20/1911,01/01/1934,07/11/2009
+8594,Montrose Savings Bank,Montrose,MO,NM,0,1,01/01/1895,01/01/1934,12/31/9999
+8639,Scandia American Bank & Trust,Stanley,ND,NM,0,0,01/01/1910,01/01/1934,10/28/2011
+8758,Citizens Bank,Sac City,IA,NM,0,0,02/08/1929,01/01/1934,11/03/2023
+8883,The Farmers and Traders Bank,California,MO,NM,0,0,01/01/1885,01/01/1934,04/12/1999
+9024,"Calhoun County Bank, Inc.",Grantsville,WV,NM,0,1,01/01/1900,01/01/1934,12/31/9999
+9071,Barnett Bank of Atlanta,Atlanta,GA,SM,0,0,07/10/1918,01/01/1934,12/02/1993
+9262,The Elizabeth State Bank,Elizabeth,IL,NM,0,0,12/01/1909,01/01/1934,07/02/2009
+9264,H. F. Gehant Banking Co.,West Brooklyn,IL,NM,0,0,06/11/1897,01/01/1934,03/20/2020
+9534,Bank Wisconsin,Kewaskum,WI,NM,0,0,10/04/1904,01/01/1934,09/20/1997
+9619,Coastal Community Bank,Panama City Beach,FL,NM,0,0,01/01/1906,01/01/1934,07/30/2010
+9648,The Nashville State Bank,Nashville,IN,NM,0,0,01/03/1905,01/01/1934,12/30/1986
+9662,United Bank of Minneapolis,Minneapolis,KS,NM,0,0,01/01/1880,01/01/1934,08/21/1986
+9740,Eagle Valley Bank,Dennison,MN,NM,0,0,01/29/1903,01/01/1934,10/01/1998
+9846,Truist Bank,Charlotte,NC,NM,0,1,01/01/1872,01/01/1934,12/31/9999
+9956,Trust Company Bank,Memphis,TN,NM,0,0,01/01/1902,01/01/1934,04/29/2016
+10007,Partnership Bank,Cedarburg,WI,NM,0,0,03/01/1894,01/01/1934,07/12/2019
+10011,Woodford State Bank,Monroe,WI,NM,0,1,01/01/1915,01/01/1934,12/31/9999
+10073,First State Bank and Trust Company of Valdosta,Valdosta,GA,NM,0,0,03/01/1906,01/01/1934,06/01/2010
+10278,The Huntington State Bank,Alexandria,OH,SM,0,0,01/01/1905,01/01/1934,01/29/1999
+10407,The Farmers State Bank of Brush,Brush,CO,NM,0,1,10/09/1915,01/01/1934,12/31/9999
+10436,People's State Bank,Manito,IL,NM,0,0,10/31/1905,01/01/1934,10/20/2006
+10845,The Clay City Banking Co.,Clay City,IL,NM,0,1,07/05/1892,01/01/1934,12/31/9999
+10886,Legence Bank,Eldorado,IL,NM,0,1,01/01/1906,01/01/1934,12/31/9999
+10904,F&M Bank-Iowa Central,Marshalltown,IA,SM,0,0,09/01/1915,01/01/1934,04/23/2010
+10920,The Fidelity State Bank and Trust Company,Dodge City,KS,SM,0,1,01/02/1933,01/01/1934,12/31/9999
+10985,Town and Country Bank of Almelund,Almelund,MN,NM,0,0,05/01/1914,01/01/1934,07/14/2000
+11297,The Woodbury Banking Company,Woodbury,GA,NM,0,0,10/01/1902,01/01/1934,08/19/2016
+11412,Northern National Bank,Pelican Rapids,MN,N,22882,0,01/01/1882,01/01/1934,11/15/1996
+11623,Bank Cmg,Madison,WI,SM,0,1,10/22/1883,01/01/1934,12/31/9999
+11677,Park National Bank,Chicago,IL,N,24634,0,05/07/1883,01/01/1934,10/30/2009
+11720,Landmark Bank of Mascoutah,Mascoutah,IL,SM,0,0,06/22/1923,01/01/1934,12/29/1988
+11792,Franklin State Bank & Trust Company,Winnsboro,LA,NM,0,1,01/01/1908,01/01/1934,12/31/9999
+11807,United Bank of Michigan,Grand Rapids,MI,NM,0,1,01/01/1903,01/02/1934,12/31/9999
+11908,"Friona State Bank, N.A.",Friona,TX,N,24321,0,11/19/1919,01/01/1934,12/31/2010
+11927,The First State Bank,Brackettville,TX,SM,0,0,01/01/1906,01/01/1934,01/01/1998
+11952,"The Poca Valley Bank, Inc.",Walton,WV,NM,0,1,09/24/1908,01/01/1934,12/31/9999
+11970,Keybank National Association,Portland,ME,N,23281,0,10/09/1933,01/01/1934,06/30/1997
+12078,The Greenville Banking Company,Greenville,GA,NM,0,0,01/01/1887,01/01/1934,12/01/2015
+12179,Chemical Bank Lake City,Lake City,MI,NM,15234,0,01/01/1909,01/01/1934,12/16/1985
+12319,Town and Country Bank,Watertown,WI,NM,0,0,01/10/1913,01/01/1934,03/23/2015
+12424,Ellis State Bank,Ellis,KS,NM,0,0,01/01/1899,01/01/1934,08/16/2008
+12585,The Hopeton State Bank,Hopeton,OK,NM,0,1,01/01/1919,01/01/1934,12/31/9999
+12609,Patterson State Bank,Patterson,LA,NM,0,1,01/01/1925,01/01/1934,12/31/9999
+12866,Arrowhead State Bank of Kansas City,Kansas City,KS,NM,0,0,06/13/1917,01/01/1934,05/05/1987
+12913,Manufacturers Bank of Lansing,Lansing,MI,NM,0,0,10/01/1928,01/01/1934,10/28/1991
+13041,Valley Bank,Madison,WI,NM,0,0,01/01/1871,01/01/1934,08/01/1994
+13072,"Commerce Bank, National Association",Springfield,MO,N,21538,0,09/20/1902,01/01/1934,06/28/1996
+13081,Simmons First Bank of Russellville,Russellville,AR,SM,0,0,01/01/1905,01/01/1934,08/09/2014
+13599,First Lockhart Bank,Lockhart,TX,NM,0,1,01/09/1934,01/09/1934,12/31/9999
+13661,The Whaples and Farmers State Bank,Neponset,IL,NM,0,0,12/27/1919,01/17/1934,09/11/2004
+13748,The Upstate National Bank,Ogdensburg,NY,N,12018,1,09/27/1922,01/24/1934,12/31/9999
+13766,"Bank IV McPherson, National Association",Mcpherson,KS,N,22144,0,09/16/1878,01/26/1934,12/31/1991
+13838,Field & Main Bank,Henderson,KY,SM,0,0,02/02/1934,02/05/1934,05/01/2026
+13915,The Pleasant Hill Bank,Pleasant Hill,MO,NM,0,0,02/16/1934,02/20/1934,03/25/2017
+14181,1st Source Bank of Starke County,Hamlet,IN,NM,0,0,01/01/1904,04/02/1934,09/01/1995
+14208,Security Savings Bank,Gowrie,IA,SM,0,1,04/18/1914,04/06/1934,12/31/9999
+14218,First Security State Bank of Southeast Missouri,Caruthersville,MO,NM,0,0,01/01/1934,04/05/1934,05/09/2005
+14314,Exchange Bank of Schmidt & Koester,Marysville,KS,NM,0,0,03/01/1870,05/02/1934,10/18/1991
+14318,First National Bank,Edinburg,TX,N,14124,0,01/01/1934,04/30/1934,09/13/2013
+14361,The First State Bank,Barboursville,WV,NM,0,0,09/01/1905,05/14/1934,04/03/2020
+14418,Aurora National Bank,Aurora,IL,N,14161,0,06/11/1934,06/11/1934,09/23/2000
+14660,Bank of Prairie du Sac,Prairie Du Sac,WI,NM,0,1,03/22/1916,01/01/1934,12/31/9999
+14700,Farmers Savings Bank,Kingsley,IA,NM,0,0,12/08/1908,08/15/1934,01/07/1997
+14775,First National Bank of Crystal Falls,Crystal Falls,MI,N,14269,0,09/24/1934,09/24/1934,04/01/2017
+14787,Valley National Bank of Fremont County,Hamburg,IA,N,17309,0,01/01/1918,10/03/1934,04/29/1993
+14911,Shell Lake State Bank,Shell Lake,WI,NM,0,1,11/16/1916,12/05/1934,12/31/9999
+14977,NBD Monroe County Bank,Dundee,MI,SM,0,0,09/16/1892,08/27/1934,10/31/1990
+15058,Commerce Bank of University City,University City,MO,NM,0,0,03/15/1935,03/20/1935,07/01/1985
+15062,Allendale County Bank,Fairfax,SC,NM,0,0,06/01/1933,03/21/1935,04/25/2014
+15064,Exchange State Bank,Carsonville,MI,NM,0,0,06/01/1901,03/23/1935,01/01/2023
+15188,The Necedah Bank,Necedah,WI,NM,0,0,07/15/1899,06/20/1935,08/27/2018
+15276,Valley Bank of Belgrade,Belgrade,MT,NM,0,0,05/06/1902,09/03/1935,01/01/2003
+15291,Bank of Dadeville,Dadeville,AL,SM,0,0,10/28/1935,10/28/1935,09/22/2007
+15368,Security State Bank,Spirit Lake,IA,SM,0,0,01/01/1935,03/24/1936,10/28/2002
+15497,Continental State Bank,Boyd,TX,NM,0,0,04/24/1909,05/25/1937,06/20/1998
+15716,Bank of Summerton,Summerton,SC,NM,0,0,09/11/1934,01/15/1940,09/16/1985
+15750,Meritor Savings Bank,Philadelphia,PA,SI,0,0,12/02/1816,01/01/1934,12/11/1992
+15879,Jourdanton State Bank,Jourdanton,TX,NM,0,0,02/11/1942,02/11/1942,05/07/2016
+15911,First Bank and Trust,Hudson,WI,NM,0,0,07/08/1879,09/15/1942,02/29/2008
+16074,The Home Savings Bank,White Plains,NY,SI,0,0,01/01/1893,07/01/1943,01/01/1986
+16089,First Suburban National Bank,Maywood,IL,N,14470,0,09/07/1943,09/07/1943,10/22/2010
+16106,Citizens State Bank,Hugo,OK,NM,0,0,12/01/1943,12/01/1943,04/01/1989
+16264,First State Bank,Wylie,TX,NM,0,0,05/28/1945,05/28/1945,12/31/1989
+16315,First Ridge Farm State Bank,Ridge Farm,IL,NM,0,0,09/28/1945,09/28/1945,10/18/2003
+16421,Boatmen's National Bank of Conway,Conway,AR,N,18778,0,05/18/1946,05/18/1946,08/15/1997
+16431,Frontier Bank,Lagrange,GA,NM,0,0,05/23/1946,05/23/1946,03/08/2013
+16436,Centera Bank,Sublette,KS,NM,0,1,10/18/1937,05/31/1946,12/31/9999
+16560,"First City, Texas - El Paso, National Association",El Paso,TX,N,14581,0,07/14/1947,07/14/1947,10/30/1992
+16611,First Bank Mainland,La Marque,TX,NM,0,0,08/16/1947,08/16/1947,07/01/1991
+16680,First State Bank & Trust Company in Leesburg,Leesburg,GA,NM,0,0,01/03/1938,03/12/1948,05/30/1986
+16748,First City Bank of Florida,Fort Walton Beach,FL,NM,0,0,11/17/1948,11/17/1948,10/16/2020
+16751,The First State Bank,Abilene,TX,SM,0,0,11/18/1948,11/18/1948,02/17/1989
+16837,Commercial State Bank,Houston,TX,NM,0,0,09/12/1947,09/26/1949,01/12/1989
+16867,The Everett Bank,Everett,PA,NM,0,0,01/03/1950,01/03/1950,10/10/1995
+17027,"Security State Bank, National Association",Ore City,TX,N,23867,0,01/01/1912,07/02/1951,01/01/2014
+17118,American Bank of Haltom City,Haltom City,TX,NM,0,0,05/24/1952,05/24/1952,02/05/1993
+17200,Victory State Bank,Columbia,SC,NM,0,0,10/13/1921,04/01/1953,03/29/1999
+17409,Commercial State Bank,Long Island,KS,NM,0,0,04/22/1887,03/10/1955,07/28/1990
+17427,Commerce Bank of Webster Grove,Webster Groves,MO,NM,0,0,05/02/1955,05/02/1955,07/01/1985
+17551,Community State Bank,Paton,IA,NM,0,1,02/15/1956,02/15/1956,12/31/9999
+17661,The First State Bank of Healy,Healy,KS,NM,0,1,07/10/1906,09/14/1956,12/31/9999
+17726,The Home State Bank,Russell,KS,NM,0,0,11/30/1918,03/07/1957,03/03/1988
+17935,Northern Trust Bank/O'Hare National Association,Chicago,IL,N,14888,0,12/05/1958,12/05/1958,03/01/1996
+17954,Lakeside National Bank of Lake Charles,Lake Charles,LA,N,14849,0,01/06/1959,01/06/1959,08/03/1995
+18088,Bank of North America,Houston,TX,NM,0,0,10/01/1959,10/01/1959,08/27/1987
+18117,Midwest Bank and Trust Company,Elmwood Park,IL,SM,0,0,12/10/1959,12/10/1959,05/14/2010
+18152,Advantage Bank,Oklahoma City,OK,NM,0,0,11/17/1913,02/15/1960,10/09/2019
+18229,Northwest Community Bank,Winsted,CT,SI,0,1,07/15/1875,07/01/1960,12/31/9999
+18245,Burritt InterFinancial Bancorporation,New Britain,CT,SI,0,0,10/01/1889,07/01/1960,12/04/1992
+18287,"Trust Company Bank of South Georgia, National Association",Albany,GA,N,14907,0,08/15/1960,08/15/1960,01/17/1986
+18377,Graettinger State Bank,Graettinger,IA,NM,0,0,03/24/1934,04/27/1961,08/07/1986
+18443,CUSB Bank,Cresco,IA,SM,0,1,04/01/1888,10/03/1961,12/31/9999
+18467,Salisbury Bank and Trust Company,Lakeville,CT,NM,0,0,01/01/1874,01/01/1962,08/12/2023
+18474,First Kansas Bank,Hoisington,KS,NM,0,1,12/30/1961,12/30/1961,12/31/9999
+18488,UMB Security State Bank,Fort Scott,KS,NM,0,0,03/10/1962,03/10/1962,05/02/1994
+18577,First Communitiy Bank,Pocahontas,AR,NM,0,0,08/10/1962,08/10/1962,10/16/2000
+18681,Colorado National Bank - Belmont,Pueblo,CO,N,15048,0,01/09/1963,01/09/1963,07/24/1993
+18735,Bank of Colorado - Western Slope - Glenwood Springs,Glenwood Springs,CO,SM,0,0,04/01/1963,04/01/1963,08/01/1993
+18764,Community National Bank of Grand Forks,Grand Forks,ND,N,15088,0,04/30/1963,04/30/1963,08/29/2003
+18816,South Denver National Bank,Glendale,CO,N,15118,0,07/01/1963,07/01/1963,06/25/1987
+18855,Colchester State Bank,Colchester,IL,NM,0,0,08/19/1963,08/19/1963,07/22/2023
+19109,"Wells Fargo Bank Grand Junction, National Association",Grand Junction,CO,N,15317,0,05/04/1964,05/04/1964,01/01/2009
+19328,Seaway Bank and Trust Company,Chicago,IL,NM,0,0,01/02/1965,01/02/1965,01/27/2017
+19332,First Interstate Bank of Marshall,Marshall,TX,NM,0,0,01/02/1965,01/02/1965,12/12/1988
+19546,The Jefferson Guaranty Bank,Metairie,LA,NM,0,0,01/24/1966,01/24/1966,01/03/1997
+19555,MBank Greenway,Houston,TX,NM,0,0,02/22/1966,02/22/1966,07/01/1987
+19726,James River Bank/Colonial,Suffolk,VA,SM,0,0,06/27/1967,06/27/1967,11/19/2001
+19777,The Bank of West Point,West Point,VA,SM,0,0,01/06/1968,01/06/1968,05/11/1985
+20000,United Kansas Bank & Trust,Merriam,KS,NM,0,0,07/29/1969,07/29/1969,02/06/1995
+20201,First Bank of Conyers,Conyers,GA,NM,0,0,06/24/1970,06/24/1970,12/03/1987
+20214,Allied Jetero Bank,Westfield,TX,NM,0,0,07/06/1970,07/06/1970,02/01/1988
+20290,Highland Community Bank,Chicago,IL,NM,0,0,11/09/1970,11/09/1970,01/23/2015
+20364,North Milwaukee State Bank,Milwaukee,WI,NM,0,0,02/12/1971,02/12/1971,03/11/2016
+20408,Bank of the Commonwealth,Norfolk,VA,SM,0,0,04/14/1971,04/14/1971,09/23/2011
+20442,The Meriden Trust and Safe Deposit Company,Meriden,CT,NM,0,0,04/03/1889,06/17/1971,07/07/1994
+20455,Colorado National Bank - Arapahoe,Arapahoe County,CO,N,15885,0,07/12/1971,07/12/1971,12/15/1991
+20489,Pleasanton State Bank,Pleasanton,NE,SM,0,0,09/09/1971,09/09/1971,10/11/2003
+20545,NCNB Virginia,Mclean,VA,NM,0,0,11/17/1971,11/17/1971,03/31/1992
+20567,Indian Springs State Bank,Kansas City,KS,NM,0,0,12/22/1971,12/22/1971,01/28/1984
+20913,Naper Bank Bolingbrook,Bolingbrook,IL,NM,0,0,01/02/1973,01/02/1973,11/21/1988
+21051,Palm Beach National Bank & Trust Company,Palm Beach,FL,N,16116,0,04/24/1973,04/24/1973,10/18/2002
+21155,"Independent Bank - East, National Association",Rockwall,TX,N,16156,0,07/13/1973,07/13/1973,06/30/1989
+21158,Bank of Frio Canyon,Leakey,TX,NM,0,0,07/16/1973,07/16/1973,12/19/2006
+21692,Peoples Bank of Graceville,Graceville,FL,NM,0,1,07/12/1974,07/12/1974,12/31/9999
+21722,First Progressive Bank,Metairie,LA,NM,0,0,08/09/1974,08/09/1974,01/17/1986
+21793,Valley Bank,Fort Lauderdale,FL,NM,0,0,10/15/1974,10/15/1974,06/20/2014
+21918,AmeriBank of Oldsmar,Oldsmar,FL,NM,0,0,02/04/1975,02/04/1975,10/01/1989
+21920,Millbury Savings Bank,Millbury,MA,SI,0,0,04/10/1854,01/29/1975,10/19/2019
+21922,Bank of San Pedro,Los Angeles,CA,NM,0,0,02/07/1975,02/07/1975,07/15/1994
+21942,Weber Valley Bank,Ogden,UT,NM,0,0,03/10/1975,03/10/1975,05/01/1985
+21993,First Illinois Bank of Willowbrook,Willowbrook,IL,NM,0,0,04/24/1975,04/24/1975,01/31/1989
+22002,Bank of Sierra Blanca,Sierra Blanca,TX,NM,0,0,05/08/1975,05/08/1975,01/18/2002
+22011,Iowa State Bank,Hamburg,IA,NM,0,0,02/01/1923,05/09/1975,08/08/2000
+22274,Southern Ocean State Bank,Little Egg Harbor Township,NJ,NM,0,0,05/17/1976,05/17/1976,07/29/1994
+22283,Fidata Trust Company Massachusetts,Boston,MA,NM,0,0,12/17/1975,06/03/1976,12/31/1987
+22292,Colonial Bank of Granite City,Granite City,IL,NM,0,0,06/28/1976,06/28/1976,07/29/1988
+22375,First National Bank of South Texas,San Antonio,TX,N,16618,0,11/29/1976,11/29/1976,02/12/2000
+22395,Mark Twain Progress Bank,Fenton,MO,NM,0,0,01/07/1977,01/07/1977,02/28/1986
+22426,Daiwa Bank Trust Company,New York,NY,NC,0,0,03/08/1977,12/31/9999,02/02/1996
+22444,INLAND BANK & TRUST,Oak Brook,IL,NM,0,0,04/01/1977,04/01/1977,07/01/2023
+22476,Covenant Bank,Chicago,IL,NM,0,0,06/20/1977,06/20/1977,02/15/2013
+22510,Bay State Bank,Ship Bottom,NJ,NM,0,0,08/15/1977,08/15/1977,05/10/1991
+22560,First Community National Bank,Rockford,IL,N,16684,0,11/28/1977,11/28/1977,05/01/1990
+22643,The Cowlitz Bank,Longview,WA,NM,0,0,05/01/1978,05/01/1978,07/30/2010
+22782,Colonial Banking Company,Grants Pass,OR,NM,0,0,01/03/1979,01/03/1979,01/05/1998
+22842,First State Bank of Higginsville/Odessa,Higginsville,MO,NM,0,0,04/11/1979,04/11/1979,11/20/1998
+22883,First Montgomery Bank,Montgomery,AL,SM,0,0,06/18/1979,06/18/1979,01/01/1997
+22927,Louisiana Bank,West Monroe,LA,NM,0,0,08/20/1979,08/20/1979,01/01/1995
+22949,Timber Community Bank,Roseburg,OR,NM,0,0,09/13/1979,09/13/1979,12/19/1986
+22979,Mineola State Bank,Mineola,TX,NM,0,0,11/15/1979,11/15/1979,03/16/1993
+23000,"SouthTrust Bank of Tuscaloosa County, National Association",Tuscaloosa,AL,N,22378,0,12/04/1979,12/04/1979,01/13/1995
+23018,Security First Bank of Oliver County,Center,ND,NM,0,0,01/02/1980,01/02/1980,04/01/2000
+23023,First Interstate Bank of Billings Heights,Billings,MT,NM,0,0,01/04/1980,01/04/1980,12/01/1992
+23124,Alliance Bank,Culver City,CA,NM,0,0,05/15/1980,05/15/1980,02/06/2009
+23135,Maritime Bank of California,Los Angeles,CA,NM,0,0,06/10/1980,06/10/1980,08/27/1993
+23142,First Colonial Bank for Savings,Lynn,MA,SI,0,0,05/15/1855,07/02/1980,10/12/1993
+23187,Charter National Bank and Trust,Hoffman Estates,IL,N,16880,0,07/31/1980,07/31/1980,02/10/2012
+23306,Community National Bank,Lino Lakes,MN,N,16929,0,12/20/1980,12/20/1980,12/17/2010
+23320,Community First National Bank,Salt Lake City,UT,N,23725,0,01/16/1981,01/16/1981,08/29/2000
+23334,Commerce National Bank,College Station,TX,N,16953,0,01/05/1981,01/05/1981,04/17/1997
+23424,F & M Bank-Appleton,Appleton,WI,SM,0,0,06/08/1981,06/08/1981,01/03/2000
+23480,Bank of Paradise,Paradise,CA,NM,0,0,07/13/1981,07/13/1981,07/31/1989
+23840,"Mercantile Bank of South County, National Association",St. Louis County,MO,N,17297,0,05/21/1982,05/21/1982,03/13/1986
+23860,Fairfield County Trust Company,Stamford,CT,NM,0,0,06/21/1982,06/21/1982,04/09/1992
+23996,Overland Bank,Temecula,CA,NM,0,0,08/26/1982,08/26/1982,04/01/1995
+24242,First Exchange Bank of Madison County,Fredericktown,MO,SM,0,0,01/22/1983,01/22/1983,05/07/1992
+24320,Columbia National Bank,Santa Monica,CA,N,17639,0,02/07/1983,02/07/1983,01/22/1993
+24708,"Texas Commerce Bank-West Oaks, National Association",Houston,TX,N,17922,0,09/13/1983,09/13/1983,06/15/1987
+24735,Silicon Valley Bank,Santa Clara,CA,SM,0,0,10/17/1983,10/17/1983,03/10/2023
+24877,First National Bank,Haysville,KS,N,18007,0,12/01/1983,12/01/1983,01/26/1996
+25099,"Premier Bank, a National Association",Dallas,TX,N,18167,0,04/02/1984,04/02/1984,03/31/1989
+25106,Rainbow Financial Corporation,Honolulu,HI,NM,0,0,03/01/1968,04/23/1984,02/26/1999
+25192,"American Investment Bank, National Association",Salt Lake City,UT,N,18174,0,04/02/1984,04/02/1984,07/29/2005
+25610,Central Bank,Miami,FL,SM,0,0,09/17/1984,09/17/1984,06/19/1998
+25645,First Commercial Bank of Huntsville,Huntsville,AL,NM,0,0,09/24/1984,09/24/1984,06/01/2010
+25754,Metropolitan National Bank-Lewisville,Lewisville,TX,N,18334,0,08/13/1984,08/13/1984,07/29/1988
+25766,United National Bank,Denton,TX,N,18370,0,08/31/1984,08/31/1984,04/09/1993
+25796,Community Bank and Trust - West Georgia,Lagrange,GA,NM,0,0,12/15/1984,12/15/1984,05/01/2026
+25910,National Bank of the Redwoods,Santa Rosa,CA,N,18541,0,01/24/1985,01/24/1985,03/12/2005
+25915,Country National Bank,Redding,CA,N,18585,0,03/11/1985,03/11/1985,07/21/1994
+26232,Frio National Bank,Pearsall,TX,N,18624,0,05/15/1985,05/15/1985,09/24/1993
+26341,United Missouri Bank of Linn County,Linneus,MO,NM,0,0,07/19/1985,07/19/1985,04/10/1986
+26369,Fidelity Bank Northeast,Minneapolis,MN,SM,0,0,08/29/1985,08/29/1985,05/01/1986
+26388,Tri City National Bank of Brookfield,Brookfield,WI,N,20841,0,10/04/1985,10/04/1985,08/13/1990
+26440,Huntington Pacific Thrift and Loan Association,Huntington Beach,CA,NM,0,0,09/22/1982,11/16/1985,12/04/1992
+26472,Teambank Nebraska,Bellevue,NE,NM,0,0,12/16/1985,12/16/1985,06/26/1999
+26494,Lorena State Bank,Lorena,TX,SM,0,0,01/09/1986,01/09/1986,06/28/1999
+26512,Methuen Co-operative Bank,Methuen,MA,SI,0,1,01/01/1923,01/23/1986,12/31/9999
+26540,Commerce Bank of Plano,Plano,TX,SM,0,0,02/10/1986,02/10/1986,01/07/1988
+26552,Mt. Washington Co-operative Bank,South Boston,MA,SI,0,0,01/01/1893,02/07/1986,01/04/2010
+26606,1st Atlantic Bank,Little River,SC,NM,0,0,03/21/1986,03/21/1986,12/31/1993
+26626,"United Texas Bank, National Association",Dallas,TX,N,25377,1,04/07/1986,04/07/1986,12/31/9999
+26652,Net First National Bank,Boca Raton,FL,N,20923,0,04/21/1986,04/21/1986,03/01/2002
+26656,Statewide Thrift and Loan Company,Redwood City,CA,NM,0,0,05/01/1986,05/01/1986,11/13/1992
+26680,Heritage Bank of North Florida,Orange Park,FL,NM,0,0,05/23/1986,05/23/1986,04/19/2013
+26703,"River City Bank, Inc.",Louisville,KY,NM,0,1,06/26/1986,06/26/1986,12/31/9999
+26723,First RepublicBank Delaware,Newark,DE,NM,0,0,07/24/1986,07/24/1986,08/02/1988
+26730,Westcal National Bank,San Mateo,CA,N,18689,0,07/21/1986,07/21/1986,10/04/1994
+26799,EvaBank,Eva,AL,NM,0,1,10/13/1986,10/13/1986,12/31/9999
+26877,Millennium Bank,San Francisco,CA,SM,0,0,12/23/1986,12/23/1986,12/29/2000
+27001,Powder Mill Bank,Morris Plains,NJ,NM,0,0,06/29/1987,06/29/1987,05/22/1992
+27027,Barbary Coast National Bank,San Francisco,CA,N,21513,0,07/27/1987,07/27/1987,05/19/1994
+27092,New Heritage Bank,Lawrence,MA,NM,0,0,07/09/1987,07/09/1987,03/06/1992
+27128,"St. George Thrift & Loan St. George, Utah",St. George,UT,NM,0,0,07/01/1976,12/11/1987,06/24/1993
+27231,MetroBank,Indianapolis,IN,NM,0,0,04/08/1988,04/08/1988,01/14/2003
+27306,"NationsBank of Texas, National Association",Dallas,TX,N,21834,0,07/29/1988,07/29/1988,05/06/1998
+27332,Republic Bank,Philadelphia,PA,NM,0,0,09/06/1988,09/06/1988,04/26/2024
+27407,Jupiter-Tequesta National Bank,Tequesta,FL,N,21685,0,12/15/1988,12/15/1988,04/15/1995
+27415,Pacific Thrift and Loan Company,Woodland Hills,CA,NM,0,0,12/19/1988,12/19/1988,11/19/1999
+27433,Planters Bank and Trust Company of Claiborne Parish,Haynesville,LA,NM,0,0,01/19/1989,01/19/1989,11/07/1997
+27440,Charter Bank and Trust Co.,Marietta,GA,NM,0,0,02/03/1989,02/03/1989,07/19/2004
+27456,"Greenwood Bank of Bethel, Inc.",Bethel,CT,NM,0,0,02/18/1989,02/18/1989,11/06/1992
+27554,F&M Bank- Atlantic,Gloucester,VA,SM,0,0,07/20/1989,07/20/1989,03/16/2002
+27595,"Bank of America, National Association (USA)",Phoenix,AZ,N,22106,0,09/28/1989,09/28/1989,10/20/2006
+27617,The United Savings and Loan Association of Trenton New Jersey,Trenton,NJ,SL,0,0,01/01/1915,08/09/1989,06/15/1990
+27633,First Federal Savings and Loan Association,Beaumont,TX,SL,0,0,01/01/1922,08/09/1989,09/27/1991
+27712,Farmers Federal Savings and Loan Association,Ravenswood,WV,SL,0,0,01/01/1904,12/29/1936,10/31/1986
+27851,Hamiltonian Federal Savings and Loan Association,Ladue,MO,SL,0,0,01/01/1920,01/23/1941,01/01/1982
+27905,First Federal Savings and Loan Association of Tipton County,Tipton,IN,SL,0,0,01/01/1915,07/08/1936,05/31/1988
+27968,Watch Hill Bank,Cincinnati,OH,SL,0,0,01/01/1886,08/09/1989,10/31/2018
+28107,Citizens Savings and Loan Association of Springfield,Springfield,IL,SL,0,0,01/01/1895,08/09/1989,09/07/1989
+28157,The Cincinnatus Savings & Loan Co.,Cincinnati,OH,SL,0,1,01/01/1885,08/09/1989,12/31/9999
+28213,"Winter Hill Bank, FSB",Somerville,MA,SB,701149,1,01/01/1906,08/09/1989,12/31/9999
+28218,"Homestead Savings, Federal Savings and Loan Association",San Francisco,CA,SL,0,0,01/01/1887,08/09/1989,10/30/1992
+28222,Haddon Savings Bank,Haddon Heights,NJ,SI,0,1,01/01/1905,08/09/1989,12/31/9999
+28276,Home Savings Bank,Jefferson City,MO,SB,701282,0,01/01/1897,08/09/1989,09/17/2016
+28361,LBA Savings Bank,Lafayette,LA,SI,0,0,01/01/1900,08/09/1989,04/26/2003
+28373,Natick Federal Savings Bank,Natick,MA,SB,701463,0,01/01/1886,08/09/1989,07/01/2012
+28387,Transohio Savings Bank,Cleveland,OH,SB,0,0,01/01/1891,08/09/1989,07/10/1992
+28462,"GreenChoice Bank, fsb",Chicago,IL,SB,701638,0,01/01/1910,08/09/1989,07/25/2014
+28542,Local Oklahoma Bank,Oklahoma City,OK,SM,0,0,01/01/1908,08/09/1989,06/19/2004
+28597,Western Savings and Loan Association,Phoenix,AZ,SL,0,0,01/01/1929,07/06/1936,06/14/1989
+28611,Pulaski Savings Bank,Chicago,IL,SI,0,0,01/01/1890,08/09/1989,01/17/2025
+28685,"Security Bank, S.S.B.",Milwaukee,WI,SI,0,0,01/01/1913,08/09/1989,10/01/1997
+28695,Crestar Bank FSB,Baltimore,MD,SB,0,0,01/01/1879,08/09/1989,11/08/1996
+28698,"Sun Savings Association, F. A.",Kansas City,KS,SL,0,0,01/01/1895,08/09/1989,05/11/1990
+28707,Home Federal Savings and Loan Association of Centralia,Centralia,IL,SL,0,0,01/01/1891,08/09/1989,05/09/1990
+28723,First Savings Bank,Danville,IL,SI,0,0,01/01/1880,08/09/1989,11/01/2023
+28749,Indian Village Community Bank,Gnadenhutten,OH,SI,0,0,01/01/1923,08/09/1989,11/01/2008
+28838,FloridaFirst Bank,Lakeland,FL,SB,0,0,03/01/1934,08/09/1989,05/14/2004
+28867,Home Unity Savings and Loan Association,Lafayette Hill,PA,SL,0,0,01/01/1886,08/09/1989,06/04/1992
+28877,First Federal Savings and Loan Association of Elgin,Elgin,IL,SL,0,0,01/01/1925,01/02/1935,12/31/1988
+29092,Home Federal Savings and Loan Association of Harlan,Harlan,IA,SL,0,0,08/01/1934,08/09/1989,09/27/1991
+29141,Wells Federal Bank,Wells,MN,NM,0,0,09/01/1934,08/09/1989,08/19/2017
+29158,"1ST Ohio Savings Bank, FSB",Saint Bernard,OH,SB,0,0,01/01/1932,08/09/1989,03/13/1992
+29165,First Federal Savings Bank,Hendersonville,NC,SB,0,0,09/01/1934,08/09/1989,07/01/1991
+29167,Home Federal Savings Bank,Fort Collins,CO,SB,0,0,09/01/1934,08/09/1989,06/30/1993
+29172,First Federal Savings and Loan Association of Wakeeney,Wakeeney,KS,SB,703042,0,10/01/1934,08/09/1989,04/01/2017
+29188,Fox Valley Savings Bank,Fond Du Lac,WI,SI,0,1,10/01/1934,08/09/1989,12/31/9999
+29236,"Union Federal Bank, A federal savings bank",Los Angeles,CA,SB,0,0,12/17/1934,08/09/1989,08/12/1996
+29367,Citizens Financial Bank,Munster,IN,SB,703344,0,01/01/1934,08/09/1989,11/13/2013
+29382,Cheltenham Federal Savings and Loan Association,Philadelphia,PA,SL,0,0,01/01/1919,01/03/1938,11/30/1988
+29409,Ninth Federal Savings and Loan Association,New York City,NY,SL,0,0,04/17/1935,04/17/1935,03/31/1982
+29423,Savers Federal Savings and Loan Association,Little Rock,AR,SL,0,0,04/24/1935,08/09/1989,10/05/1989
+29518,Pelican Homestead and Savings Association,Metairie,LA,SL,0,0,01/01/1922,08/09/1989,01/31/1992
+29558,"Home Bank, F.S.B.",Lakewood,OH,SB,0,0,01/01/1911,08/09/1989,09/20/1997
+29594,First Federal Bank,Lexington,KY,SB,703719,0,12/26/1935,08/09/1989,04/19/2013
+29713,"Brookings Federal Bank, a federal savings bank",Brookings,SD,SB,0,0,01/01/1913,08/09/1989,03/28/1994
+29722,First Federal Bank for Savings,Ashland,KY,SL,0,0,06/22/1936,08/09/1989,06/01/2001
+29734,"First Bank of Hanover, Pennsylvania",Hanover,PA,SB,0,0,01/01/1897,08/09/1989,10/30/1995
+29800,Lisle Savings Bank,Lisle,IL,SI,0,1,01/01/1917,08/09/1989,12/31/9999
+29980,Midland Federal Savings and Loan Association,Bridgeview,IL,SL,704475,1,01/01/1914,08/09/1989,12/31/9999
+30023,Peoples Savings Bank,Xenia,OH,SL,0,0,01/01/1885,08/09/1989,08/31/1995
+30051,Guardian Federal Savings and Loan Association,Bridgeport,CT,SL,0,0,01/01/1889,08/09/1989,07/31/1991
+30154,Sewickley Savings Bank,Sewickley,PA,SI,0,1,01/01/1884,08/09/1989,12/31/9999
+30200,Metropolitan Federal Bank of Minnesota,Brainerd,MN,SB,0,0,01/01/1941,08/09/1989,10/01/1990
+30312,"Hometown Savings and Loan Association, FA",Winfield,IL,SL,0,0,01/01/1890,08/09/1989,08/03/1990
+30329,Home Federal Savings Bank,Detroit,MI,SB,0,0,11/01/1947,08/09/1989,11/06/2009
+30335,Financial Federal Savings Bank,Long Island City,NY,SB,0,0,12/26/1947,08/09/1989,01/22/1999
+30356,"First Federal Savings Bank of North Carolina, FSB",Shelby,NC,SB,0,0,01/01/1910,08/01/1952,04/30/1987
+30378,Springfield Savings and Loan Association,Springfield,VT,SL,0,0,01/01/1910,08/09/1989,11/01/1994
+30505,Oneonta Federal Savings and Loan Association,Oneonta,NY,SL,0,0,01/01/1888,07/02/1951,01/31/1988
+30540,Midwest Federal Savings and Loan Association of Minneapolis,Minneapolis,MN,SL,0,0,01/01/1891,12/29/1951,05/04/1989
+30570,Washington Federal Bank For Savings,Chicago,IL,SB,712269,0,01/01/1913,08/09/1989,12/15/2017
+30595,F&M Bank and Trust Company,Hannibal,MO,SM,0,1,01/01/1886,08/09/1989,12/31/9999
+30615,"Tempo Bank, A Federal Savings Bank",Trenton,IL,SB,705636,0,01/01/1889,08/09/1989,12/31/2022
+30707,Equitable Savings and Loan Association,Sterling,CO,SL,0,1,01/01/1921,08/09/1989,12/31/9999
+30968,"Downey Savings and Loan Association, F.A.",Newport Beach,CA,SL,0,0,10/16/1957,08/09/1989,11/21/2008
+31020,First Federal Savings and Loan Association,Brooksville,FL,SL,0,0,01/01/1957,03/10/1958,10/31/1987
+31042,Twin City Federal Savings Bank,Bristol,TN,SB,0,0,08/08/1958,08/09/1989,11/20/2000
+31096,Sabine Valley Savings and Loan Association,Center,TX,SL,0,0,01/01/1958,08/09/1989,12/14/1990
+31119,"Homebanc, A Federal Savings Bank",Rockford,IL,SB,0,0,01/01/1889,08/09/1989,07/17/1998
+31163,Citizens of Texas Savings and Loan Association,Baytown,TX,SL,0,0,01/01/1960,08/09/1989,08/10/1990
+31236,Hearthside Bank Corporation,Middlesboro,KY,NM,0,1,01/01/1920,08/09/1989,12/31/9999
+31489,First Financial Savings and Loan Association,Stevens Point,WI,SL,0,0,01/01/1964,06/10/1965,08/31/1985
+31521,"Regions Bank, F.S.B.",Dalton,GA,SB,0,0,05/02/1966,08/09/1989,12/09/1996
+31559,Dwelling House Savings and Loan Association,Pittsburgh,PA,SL,0,0,01/01/1890,08/09/1989,08/14/2009
+31623,Imperial Savings and Loan Association,Martinsville,VA,SL,0,0,01/01/1929,08/09/1989,08/20/2010
+31675,Home Savings Bank,Anchorage,AK,SL,0,0,11/16/1973,08/09/1989,08/31/1989
+31683,Tri-Lakes Federal Savings and Loan Association,Branson,MO,SL,0,0,01/01/1973,01/24/1974,07/31/1982
+31814,"Rock Savings Bank, Savings Association",Beloit,WI,SL,0,0,01/01/1916,08/09/1989,12/07/1995
+31821,Lafayette Savings and Loan Association,Gretna,LA,SL,0,0,08/17/1976,08/17/1976,07/27/1989
+31867,First Bank and Trust of Mississippi,Winona,MS,NM,0,0,01/01/1971,08/09/1989,12/31/2008
+31908,Vision Banc Savings Association,Kingsville,TX,SL,0,0,01/01/1974,08/09/1989,12/07/1990
+31940,Century Savings Association of Kansas,Shawnee Mission,KS,SL,0,0,01/01/1908,09/28/1978,06/26/1985
+32015,Community Savings and Loan Association,Baton Rouge,LA,SL,0,0,05/21/1980,05/21/1980,06/30/1986
+32102,Doral Bank,San Juan,PR,NM,0,0,10/16/1981,08/09/1989,02/27/2015
+32182,First Trident Savings and Loan Corporation,Charleston,SC,SL,0,0,11/16/1983,08/09/1989,12/21/1992
+32218,"Bank USA, National Association",Phoenix,AZ,N,24690,0,05/31/1984,08/09/1989,10/30/2009
+32227,Sentry Savings and Loan Association,Stamford,CT,SL,0,0,06/21/1984,08/09/1989,12/31/1993
+32312,Interbanc,Fort Lauderdale,FL,NM,0,0,04/05/1985,08/09/1989,10/01/1992
+32345,"CCB Savings Bank of Lenoir, Inc., SSB",Lenoir,NC,SI,0,0,04/04/1912,08/09/1989,02/04/1995
+32506,"Unified Savings, A Federal Savings and Loan Association",Northridge,CA,SL,0,0,10/10/1986,08/09/1989,09/22/1989
+32514,Sovereign Savings Bank,Palm Harbor,FL,SL,0,0,12/18/1986,08/09/1989,03/15/1991
+32618,Guaranty Bank,Austin,TX,SB,0,0,09/30/1988,08/09/1989,08/21/2009
+32628,"Columbia, A Federal Savings and Loan Association",Denver,CO,SL,0,0,12/09/1988,08/09/1989,10/01/1992
+32676,New Guaranty Federal Savings and Loan Association,Taylor,MI,SL,0,0,07/27/1989,08/09/1989,04/27/1990
+32696,"Pioneer Savings, FA",Plymouth,IN,SL,0,0,07/13/1989,08/09/1989,05/18/1990
+32841,Security Federal Savings Association,Garden Grove,CA,SL,0,0,11/16/1989,11/16/1989,05/04/1990
+32922,First Federal Savings Bank,Diamondville,WY,SB,0,0,11/30/1989,11/30/1989,06/15/1990
+32943,"Texasbanc, FSB",Conroe,TX,SB,0,0,02/23/1990,02/23/1990,08/02/1991
+32964,"Bank Midwest, National Association",Kansas City,MO,N,22015,0,05/07/1990,05/07/1990,12/10/2010
+33338,"Jefferson Federal Savings and Loan Association, F.A.",Birmingham,AL,SL,0,0,03/08/1991,03/08/1991,03/13/1992
+33358,United Federal Savings Association of Iowa,Des Moines,IA,SL,0,0,03/22/1991,03/22/1991,06/24/1994
+33448,Metrobank Federal Savings and Loan Association,Palisades Park,NJ,SL,0,0,06/28/1991,06/28/1991,04/10/1992
+33459,"Surety Federal Savings and Loan Association, F.A.",Morganton,NC,SL,0,0,07/09/1991,07/09/1991,08/27/1993
+33586,Knoblauch State Bank,Reading,PA,NM,0,0,04/20/1992,04/20/1992,07/24/1995
+33641,Birmingham Federal Savings Bank,Birmingham,AL,SB,0,0,08/21/1992,08/21/1992,08/06/1993
+33661,"Mizrahi Tefahot Bank, Ltd.",Los Angeles,CA,OI,0,1,06/01/1923,08/18/1981,12/31/9999
+33778,GE Capital Bank,Salt Lake City,UT,NM,0,0,02/12/1993,02/12/1993,04/21/2016
+33821,Key Bank of Colorado,Fort Collins,CO,NM,0,0,06/30/1993,06/30/1993,03/25/1994
+33925,"Mackinac Savings Bank, F.S.B.",Boynton Beach,FL,SB,712202,0,07/15/1994,07/15/1994,05/31/2017
+33938,Capitol City Bank & Trust Company,Atlanta,GA,NM,0,0,10/03/1994,10/03/1994,02/13/2015
+33985,The Peoples Bank of Coffee County,Elba,AL,NM,0,0,02/18/1995,02/18/1995,07/01/2008
+34016,Premier Bank,Jefferson City,MO,NM,0,0,05/15/1995,05/15/1995,10/15/2010
+34161,Cambridge Bank,Lake Zurich,IL,NM,0,0,04/19/1996,04/19/1996,05/19/2008
+34166,Providian Bank,Salt Lake City,UT,NM,0,0,04/30/1996,04/30/1996,12/31/2003
+34220,Community Bank CBD,Delavan,WI,NM,0,0,08/12/1996,08/12/1996,01/17/2015
+34236,Hometown National Bank,New Albany,IN,N,23090,0,03/22/1997,03/22/1997,03/20/2003
+34296,Syringa Bank,Boise,ID,NM,0,0,02/24/1997,02/24/1997,01/31/2014
+34322,Dallas National Bank,Dallas,TX,N,23143,0,01/30/1997,01/30/1997,06/06/2008
+34328,Cache Bank and Trust,Greeley,CO,NM,0,0,10/11/1996,10/11/1996,12/08/2021
+34527,Central Arizona Bank,Scottsdale,AZ,NM,0,0,06/30/1997,06/30/1997,05/14/2013
+34611,Community First Bank,Harrison,AR,NM,0,0,10/30/1997,10/30/1997,11/11/2016
+34644,Key Community Bank,Inver Grove Heights,MN,NM,0,1,05/20/1998,05/20/1998,12/31/9999
+34699,Metropolitan Commercial Bank,New York,NY,SM,0,1,06/21/1999,06/21/1999,12/31/9999
+34711,Farmers Building and Savings Bank,Rochester,PA,SI,0,1,06/30/1894,12/09/1997,12/31/9999
+34747,Hillsboro Bank,Plant City,FL,NM,0,0,07/06/1998,07/06/1998,10/01/2021
+34773,Lakeland National Bank,Lino Lakes,MN,N,23602,0,11/09/1998,11/09/1998,12/01/2000
+34892,Mid-Valley Bank,Woodburn,OR,NM,0,0,10/28/1998,10/28/1998,06/23/2006
+34952,Bank of the Southwest,Phoenix,AZ,NM,0,0,06/28/1999,06/28/1999,05/15/2006
+34983,Northern Star Bank,Mankato,MN,NM,0,0,01/25/1999,01/25/1999,12/19/2014
+35146,Alliance FSB,Niles,IL,SB,0,0,06/28/1999,06/28/1999,11/30/2001
+35160,"The Bank of Richmond, National Association",Richmond,VA,N,23866,0,07/15/1999,07/15/1999,06/01/2007
+35172,Boundary Waters Bank,Ely,MN,NM,0,0,04/01/1999,04/01/1999,08/18/2023
+35237,"John Deere Financial, f.s.b.",Middleton,WI,SB,715685,1,12/24/2000,12/24/2000,12/31/9999
+35269,Cornerstone Bank,Senatobia,MS,NM,0,0,08/02/1999,08/02/1999,05/16/2006
+35296,Tennessee Commerce Bank,Franklin,TN,NM,0,0,01/14/2000,01/14/2000,01/27/2012
+35299,Security Exchange Bank,Marietta,GA,NM,0,0,04/17/2000,04/17/2000,06/15/2012
+35357,Red Rock Community Bank,Las Vegas,NV,NM,0,0,11/29/1999,11/29/1999,01/29/2010
+35374,Vision Bank,Gulf Shores,AL,NM,0,0,03/29/2000,03/29/2000,07/20/2007
+35395,Country Bank,Aledo,IL,NM,0,0,03/08/2000,03/08/2000,10/14/2011
+35428,SUNRISE BANK OF ALBUQUERQUE,Albuquerque,NM,NM,0,0,04/06/2000,04/06/2000,01/01/2014
+35469,Integrity Bank,Alpharetta,GA,NM,0,0,11/01/2000,11/01/2000,08/29/2008
+35489,"ING Bank, fsb",Wilmington,DE,SB,716782,0,08/04/2000,08/04/2000,11/01/2012
+35602,Country Trust Bank,Bloomington,IL,SB,716088,1,05/01/2000,05/01/2000,12/31/9999
+57036,Community Capital Bank,Jonesboro,GA,NM,0,0,08/05/2002,08/05/2002,10/21/2011
+57041,The Community's Bank,Bridgeport,CT,NM,0,0,02/23/2001,02/23/2001,09/13/2013
+57053,Signature Bank,New York,NY,NM,0,0,04/12/2001,04/12/2001,03/12/2023
+57107,ISN Bank,Cherry Hill,NJ,NM,0,0,05/22/2001,05/22/2001,09/17/2010
+57149,Parkway Bank Arizona,Phoenix,AZ,NM,0,0,08/06/2001,08/06/2001,09/26/2008
+57174,"American Home Bank, N.A.",Mountville,PA,N,24212,0,08/06/2001,08/06/2001,12/31/2008
+57228,Embassy Bank for the Lehigh Valley,Bethlehem,PA,NM,0,1,11/06/2001,11/06/2001,12/31/9999
+57246,Pacific International Bank,Seattle,WA,NM,0,0,11/15/2001,11/15/2001,02/21/2013
+57298,1st Bank Yuma,Yuma,AZ,NM,0,0,09/04/2001,09/04/2001,03/31/2026
+57430,Security Bank of North Fulton,Alpharetta,GA,NM,0,0,09/19/2003,09/19/2003,07/24/2009
+57431,"Texas Community Bank, National Association",The Woodlands,TX,N,24357,0,09/10/2002,09/10/2002,12/13/2013
+57563,Citizens Community Bank,Ridgewood,NJ,NM,0,0,10/28/2004,10/28/2004,05/01/2009
+57640,Bank of Walker County,Jasper,AL,NM,0,1,03/29/2004,03/29/2004,12/31/9999
+57646,FirsTier Bank,Louisville,CO,NM,0,0,11/14/2003,11/14/2003,01/28/2011
+57656,Heritage Community Bank,Greeneville,TN,NM,0,1,12/03/2003,12/03/2003,12/31/9999
+57658,Northwest Bank & Trust,Acworth,GA,NM,0,0,03/11/2004,03/11/2004,07/30/2010
+57828,Community National Bank,Great Neck,NY,N,24523,0,04/05/2005,04/05/2005,06/19/2015
+57893,MetroPacific Bank,Irvine,CA,NM,0,0,02/07/2005,02/07/2005,06/26/2009
+57912,Liberty Bank,Clearwater,FL,NM,0,0,02/22/2005,02/22/2005,12/31/2008
+57914,Pacific Coast National Bank,San Clemente,CA,N,24535,0,05/16/2005,05/16/2005,11/13/2009
+57953,Legacy Bank,Springdale,AR,SM,0,1,03/28/2005,03/28/2005,12/31/9999
+57997,Bryant Bank,Tuscaloosa,AL,NM,0,1,06/10/2005,06/10/2005,12/31/9999
+58005,Georgia Heritage Bank,Dallas,GA,NM,0,0,10/26/2005,10/26/2005,03/13/2019
+58019,Coronado First Bank,Coronado,CA,NM,0,0,10/03/2005,10/03/2005,11/17/2011
+58106,Riverland Bank,Jordan,MN,NM,0,0,10/20/2005,10/20/2005,05/08/2026
+58189,Providence Bank,Alpharetta,GA,NM,0,0,04/10/2006,04/10/2006,09/01/2019
+58205,Westbridge Bank and Trust,Chesterfield,MO,NM,0,0,02/07/2006,02/07/2006,10/15/2010
+58291,CalPrivate Bank,La Jolla,CA,NM,0,1,12/18/2006,12/18/2006,12/31/9999
+58302,First NBC Bank,New Orleans,LA,NM,0,0,05/19/2006,05/19/2006,04/28/2017
+58315,RockBridge Commercial Bank,Atlanta,GA,NM,0,0,11/13/2006,11/13/2006,12/18/2009
+58327,Southern Bank & Trust,Aiken,SC,NM,0,0,09/12/2006,09/12/2006,12/05/2011
+58331,Florida Shores Bank - Southeast,Pompano Beach,FL,NM,0,0,12/08/2006,12/08/2006,01/15/2014
+58416,"Heritage Bank, National Association",Phoenix,AZ,N,24681,0,09/18/2006,09/18/2006,03/15/2013
+58484,Austin County State Bank,Bellville,TX,NM,0,1,06/26/2007,06/26/2007,12/31/9999
+58545,"Business Bank of Texas, N.A.",Austin,TX,N,24744,0,08/06/2007,08/06/2007,05/01/2021
+58552,Summit Community Bank,Maplewood,MN,SM,0,0,05/07/2007,05/07/2007,12/07/2013
+58619,MRV Banks,Sainte Genevieve,MO,NM,0,1,07/16/2007,07/16/2007,12/31/9999
+58689,South Atlantic Bank,Myrtle Beach,SC,NM,0,1,11/28/2007,11/28/2007,12/31/9999
+58701,Pisgah Community Bank,Asheville,NC,NM,0,0,05/15/2008,05/15/2008,05/10/2013
+58816,Royal Business Bank,Los Angeles,CA,NM,0,1,11/18/2008,11/18/2008,12/31/9999
+58937,Coastway Community Bank,Providence,RI,SI,0,0,07/01/2009,07/01/2009,10/05/2018
+59017,First Republic Bank,San Francisco,CA,NM,0,0,07/01/2010,07/01/2010,05/01/2023
+59362,Solutions Plus Bank,Albertville,AL,NM,0,1,12/04/2025,12/04/2025,12/31/9999
+90029,First Community Industrial Bank of Lakewood,Lakewood,CO,NM,0,0,07/15/1951,01/09/1986,10/12/1991
+90226,The Central Savings Bank,Lowell,MA,SI,0,0,03/03/1871,11/05/1985,02/14/1992
+90266,Plymouth Five Cents Savings Bank,Plymouth,MA,SI,0,0,01/01/1855,08/07/1985,09/18/1992
+90582,Castle Rock Bank,Castle Rock,CO,SM,0,0,02/21/1974,06/17/1986,10/28/2017
