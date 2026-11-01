@@ -483,12 +483,14 @@ def counterparty_el(panel, failures, prefailure, institutions, runoff_ratio, top
     sample = loss_sample(failures, prefailure)
     fit_rows = sample[~sample.flag_fslic & ~sample.flag_1984_85 & ~sample.flag_systemic_2023]
     loss_model = fit_loss(fit_rows)
-    # Zero equity on a filing is a branch of a foreign bank: it holds no capital of its own, and a
-    # PD driven by an equity ratio it cannot have would rank it as the riskiest bank in the US.
+    # Equity of exactly zero marks a filer with no capital of its own -- on the 2025 year-end, 15
+    # branches of foreign banks and 2 CERTs with no institutions record. An equity-driven PD would
+    # rank them the riskiest banks in the country, so they are left out. Negative equity is kept:
+    # that is a domestic bank that is insolvent, which is exactly what the model is for.
     latest = panel[(panel.repdte == panel.repdte.max()) & panel.fail_date.isna()
                    & panel.assist_date.isna()].copy()
-    no_equity = int((latest.EQV <= 0).sum())
-    latest = latest[latest.EQV > 0]
+    no_equity = int((latest.EQV == 0).sum())
+    latest = latest[latest.EQV != 0]
     latest["pre_1992"] = 0.0
     latest["pd"] = pd_model.predict(latest)
     latest["loss_rate_hat"] = loss_model.predict(latest).clip(0, None)

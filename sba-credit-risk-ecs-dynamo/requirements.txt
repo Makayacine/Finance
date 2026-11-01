@@ -1,0 +1,22 @@
+# Local path -- the tests, the --local pipeline and the notebook, on a laptop with no AWS account.
+#
+# pandas 3 is a floor, not a preference. The validator compares dtype names exactly, and pandas 3
+# names a text column "str" where pandas 2 says "object"; every dtype dict in credit_risk/config.py
+# is written in pandas 3's names. The two container images pin the same releases.
+pandas>=3.0
+numpy>=2.0
+scipy>=1.13
+statsmodels>=0.14
+pytest
+
+# The walkthrough notebook only.
+matplotlib
+jupyter
+
+# Host scripts with their own needs, not installed by the line above:
+#   local-development/parse_sba_recovery.py   pypdf, to re-read SBA's report PDFs. The CSV it
+#                                             writes is committed, so nothing else needs it.
+#   stage_landing.py --bucket                 boto3, for the upload to S3.
+#
+# boto3 is not listed: nothing on the --local path imports it. The containers install it
+# (docker-*/requirements.txt), and credit_risk/stores.py imports it only inside its AWS classes.

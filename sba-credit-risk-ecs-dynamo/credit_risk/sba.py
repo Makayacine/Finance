@@ -53,7 +53,7 @@ never called either.
 **One rule for severity above 1.** 4,966 charge-offs on FY2000-2019 approvals exceed their
 original amount -- SBA's own report defines the charged-off amount as principal *and interest*,
 which is the likeliest reason, though the FOIA field is not documented that way. They are capped
-at 1, which keeps the identity's bound. ``severity_sensitivity`` re-runs the book under "drop
+at 1, which keeps the identity's bound. ``severity_sensitivity`` re-prices the book under "drop
 them" and "keep them uncapped" so the cost of the rule is on the page.
 """
 
@@ -115,6 +115,8 @@ GUARANTEE_EDGES = [-np.inf, 0.5, 0.74, 0.76, 0.84, 0.86, np.inf]
 GUARANTEE_LABELS = ["<=50%", "51-74%", "75%", "76-84%", "85%", "86%+"]
 JOBS_EDGES = [-np.inf, 0, 2, 5, 10, 25, np.inf]
 JOBS_LABELS = ["0", "1-2", "3-5", "6-10", "11-25", "26+"]
+ORDINAL_BINS = {"amount_band": AMOUNT_LABELS, "guarantee_band": GUARANTEE_LABELS,
+                "jobs_band": JOBS_LABELS}
 
 # SBA recoded BusinessAge in FY2018. Both codings are folded onto four groups that mean the same
 # thing in each, so a FY2021 loan lands in a bin the FY2000-2009 scorecard has seen.
@@ -192,8 +194,9 @@ class Binning:
     state_fallback: str = "g3"
     sectors: set = field(default_factory=set)
     processing: set = field(default_factory=set)
-    kept: dict = field(default_factory=dict)  # feature -> bins seen often enough to keep
-    fallback: dict = field(default_factory=dict)  # feature -> where an unseen bin goes
+    kept: dict = field(default_factory=dict)  # nominal feature -> bins seen often enough to keep
+    fallback: dict = field(default_factory=dict)  # nominal feature -> where an unseen bin goes
+    ordinal_map: dict = field(default_factory=dict)  # ordered feature -> {bin: bin it scores as}
 
     def apply(self, book):
         out = pd.DataFrame(index=book.index)
@@ -216,6 +219,8 @@ class Binning:
         out["business_type"] = book.BusinessType.str.lower()
         for feature, kept in self.kept.items():
             out[feature] = out[feature].where(out[feature].isin(kept), self.fallback[feature])
+        for feature, mapping in self.ordinal_map.items():
+            out[feature] = out[feature].map(mapping).fillna(mapping["nan"])
         return out
 
 
@@ -225,6 +230,16 @@ def sector_code(naics):
                         "44": "44-45", "49": "48-49", "48": "48-49"})
 
 
+def nearest_kept(values, labels, min_count):
+    """Map every declared label, and "nan", onto the nearest label with at least min_count rows."""
+    counts = values.value_counts()
+    kept = [i for i, label in enumerate(labels) if counts.get(label, 0) >= min_count]
+    mapping = {label: labels[min(kept, key=lambda k: (abs(k - i), k))]
+               for i, label in enumerate(labels)}
+    mapping["nan"] = counts.reindex(labels).idxmax()
+    return mapping
+
+
 def fit_binning(train, y, min_count):
     binning = Binning()
     sector = sector_code(train.NaicsCode)
@@ -232,10 +247,19 @@ def fit_binning(train, y, min_count):
     _, binning.processing = woe.fold_rare(train.ProcessingMethod.fillna("unknown"), min_count)
     binning.state_map = woe.coarse_class(train.ProjectState.fillna("unknown"), y, STATE_GROUPS)
     binning.state_fallback = f"g{(STATE_GROUPS + 1) // 2}"
-    # Second pass on the finished bins: anything rarer than min_count folds into "other", and a
-    # bin never seen in training goes to "other" if training had one, else to the commonest bin.
-    # An "other" that is itself under min_count joins the commonest bin rather than standing alone.
-    for feature, values in binning.apply(train).items():
+    # Second pass on the finished bins. An ordered characteristic folds a rare bin into its
+    # nearest kept neighbour -- the course's coarse classing -- so a loan above $2m, which the
+    # FY2000-09 programme barely made (the 7(a) cap was $2m until the Small Business Jobs Act of
+    # 2010), scores as the largest amount the card has seen, not as an "other" lumped with
+    # whatever else was rare. A nominal one folds rare bins into "other"; a bin never seen in
+    # training goes to "other" if training had one, else to the commonest bin, and an "other"
+    # that is itself under min_count joins the commonest bin rather than standing alone.
+    binned = binning.apply(train)
+    for feature, labels in ORDINAL_BINS.items():
+        binning.ordinal_map[feature] = nearest_kept(binned[feature], labels, min_count)
+    for feature, values in binned.items():
+        if feature in ORDINAL_BINS:
+            continue
         folded, _ = woe.fold_rare(values, min_count)
         counts = folded.value_counts()
         common = counts.index[0]
@@ -547,18 +571,29 @@ def book_summary(live):
     }
 
 
-def severity_sensitivity(pd_model, hazard_model, book):
-    """The book's severity and EL under each rule for charge-offs above their original amount."""
+def severity_sensitivity(pd_model, hazard_model, severity_model, book):
+    """The open book's EL under each rule for charge-offs above their original amount.
+
+    The fitted model is kept and only its level moves: each rule's mean severity on the training
+    charge-offs, over the capped mean the model was fitted to. A fractional logit cannot be refitted
+    to the uncapped values -- they run to several hundred times the loan, and its Bernoulli
+    variance has no room above 1 -- and refitting on the dropped rows would change two things at
+    once. EL is linear in severity, so this isolates exactly what the rule changes.
+    """
+    live = live_book(pd_model, hazard_model, severity_model, book)
+    capped = severity_frame(book, "cap")
+    base = capped.severity[capped.vintage.isin(SEVERITY_TRAIN_VINTAGES)].mean()
     rows = []
     for rule in ("cap", "drop", "uncapped"):
         charged = severity_frame(book, rule)
-        model = fit_severity(pd_model, book, rule)
-        live = live_book(pd_model, hazard_model, model, book)
+        train_mean = charged.severity[charged.vintage.isin(SEVERITY_TRAIN_VINTAGES)].mean()
+        factor = train_mean / base
         rows.append({"rule": rule, "charge_offs": len(charged),
                      "mean_severity": float(charged.severity.mean()),
                      "median_severity": float(charged.severity.median()),
-                     "book_el_12m": float(live.el_12m.sum()),
-                     "book_el_lifetime": float(live.el_lifetime.sum())})
+                     "level_factor": float(factor),
+                     "book_el_12m": float(live.el_12m.sum() * factor),
+                     "book_el_lifetime": float(live.el_lifetime.sum() * factor)})
     return pd.DataFrame(rows)
 
 
