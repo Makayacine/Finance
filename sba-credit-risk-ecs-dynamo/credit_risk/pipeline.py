@@ -64,7 +64,7 @@ def run_sba(loan_paths, recovery_path, n_boot=500, log=print):
         "stage2": hazard_model.stage2,
         "stages": stages,
         "severity": severity_model.out_of_time,
-        "severity_rules": sba.severity_sensitivity(pd_model, hazard_model, book),
+        "severity_rules": sba.severity_sensitivity(pd_model, hazard_model, severity_model, book),
         "psi": sba.psi_by_vintage(pd_model, book),
         "recovery": sba.recovery_context(recovery),
     }
