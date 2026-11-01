@@ -1,0 +1,5 @@
+# The validator only reads CSVs and compares dtypes. pandas is pinned to the same release the
+# local run and the tests use: the dtype names the check compares ("str", "float64") are
+# pandas 3's, and pandas 2 would report every string column as "object" and fail the gate.
+pandas==3.0.5
+boto3>=1.34

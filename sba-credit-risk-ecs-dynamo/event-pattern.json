@@ -1,0 +1,8 @@
+{
+  "source": ["aws.s3"],
+  "detail-type": ["Object Created"],
+  "detail": {
+    "bucket": {"name": ["<landing-bucket-name>"]},
+    "object": {"key": ["new/_READY"]}
+  }
+}

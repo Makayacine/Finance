@@ -1,0 +1,97 @@
+{
+  "Comment": "SBA and FDIC credit risk: validate the batch, gate on every entity's expected file count, fit both chains. Every <...> value is account-specific and is set by whoever deploys it.",
+  "StartAt": "ValidateData",
+  "States": {
+    "ValidateData": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.waitForTaskToken",
+      "Parameters": {
+        "LaunchType": "FARGATE",
+        "Cluster": "<ecs-cluster-arn>",
+        "TaskDefinition": "<data-validity-task-definition-arn>",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ["<subnet-id>"],
+            "SecurityGroups": ["<security-group-id>"],
+            "AssignPublicIp": "ENABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "data-validity",
+              "Environment": [
+                {"Name": "TASK_TOKEN", "Value.$": "$$.Task.Token"},
+                {"Name": "BUCKET", "Value.$": "$.detail.bucket.name"}
+              ]
+            }
+          ]
+        }
+      },
+      "TimeoutSeconds": 3600,
+      "ResultPath": "$.validation",
+      "Catch": [
+        {"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "ValidatorFailed"}
+      ],
+      "Next": "AllEntitiesReady"
+    },
+    "AllEntitiesReady": {
+      "Type": "Choice",
+      "Choices": [
+        {"Variable": "$.validation.gate_passed", "BooleanEquals": true, "Next": "RunCreditModels"}
+      ],
+      "Default": "GateFailed"
+    },
+    "GateFailed": {
+      "Type": "Fail",
+      "Error": "ValidationGateFailed",
+      "CausePath": "$.validation.summary"
+    },
+    "RunCreditModels": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "LaunchType": "FARGATE",
+        "Cluster": "<ecs-cluster-arn>",
+        "TaskDefinition": "<credit-model-task-definition-arn>",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ["<subnet-id>"],
+            "SecurityGroups": ["<security-group-id>"],
+            "AssignPublicIp": "ENABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "credit-model",
+              "Environment": [
+                {"Name": "BUCKET", "Value.$": "$.detail.bucket.name"},
+                {"Name": "TABLE", "Value": "sba_credit_risk_results"}
+              ]
+            }
+          ]
+        }
+      },
+      "TimeoutSeconds": 7200,
+      "ResultPath": "$.model",
+      "Catch": [
+        {"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "ModelFailed"}
+      ],
+      "Next": "Done"
+    },
+    "Done": {
+      "Type": "Succeed"
+    },
+    "ValidatorFailed": {
+      "Type": "Fail",
+      "Error": "ValidatorFailed",
+      "CausePath": "$.error.Cause"
+    },
+    "ModelFailed": {
+      "Type": "Fail",
+      "Error": "ModelFailed",
+      "CausePath": "$.error.Cause"
+    }
+  }
+}

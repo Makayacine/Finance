@@ -234,9 +234,13 @@ def fit_binning(train, y, min_count):
     binning.state_fallback = f"g{(STATE_GROUPS + 1) // 2}"
     # Second pass on the finished bins: anything rarer than min_count folds into "other", and a
     # bin never seen in training goes to "other" if training had one, else to the commonest bin.
+    # An "other" that is itself under min_count joins the commonest bin rather than standing alone.
     for feature, values in binning.apply(train).items():
-        folded, kept = woe.fold_rare(values, min_count)
-        common = folded.value_counts().index[0]
+        folded, _ = woe.fold_rare(values, min_count)
+        counts = folded.value_counts()
+        common = counts.index[0]
+        if counts.get("other", min_count) < min_count:
+            folded = folded.replace("other", common)
         binning.kept[feature] = set(folded.unique())
         binning.fallback[feature] = "other" if "other" in binning.kept[feature] else common
     return binning

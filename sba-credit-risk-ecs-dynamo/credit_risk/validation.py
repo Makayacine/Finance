@@ -19,6 +19,10 @@ the ready folder after the move makes a re-run after a fix pass, and makes a str
 ``sba_loans/`` fail the gate rather than be quietly modelled -- the count must equal
 ``expected_files`` exactly, not reach it.
 
+**Any invalid file fails the gate too**, even when every count is met. A file that landed under
+``new/fdic_financials/`` and failed its dtype check is part of this batch, and a batch with a
+broken part is not modelled because its good parts happen to add up.
+
 A FAILED GATE IS A FAILED EXECUTION
 -----------------------------------
 
@@ -93,7 +97,7 @@ def run_validation(store, entities=ENTITIES, log=print):
 
     ready = {e.name: len(store.list(f"{e.ready}/")) for e in entities}
     expected = {e.name: e.expected_files for e in entities}
-    passed = all(ready[name] == expected[name] for name in expected)
+    passed = not invalid and all(ready[name] == expected[name] for name in expected)
     summary = ", ".join(f"{name} {ready[name]}/{expected[name]}" for name in expected)
     if invalid:
         summary += f"; {len(invalid)} invalid: " + "; ".join(i["key"] for i in invalid)

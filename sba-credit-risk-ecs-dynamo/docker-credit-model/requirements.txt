@@ -1,0 +1,7 @@
+# Pinned to the releases the local run, the tests and the notebook were run with, so the
+# container fits the same models to the same digits.
+pandas==3.0.5
+numpy==2.5.3
+scipy==1.18.1
+statsmodels==0.15.0
+boto3>=1.34
