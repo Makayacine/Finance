@@ -80,7 +80,8 @@ FEATURES = ("EQV", "ROA", "NIMY", "NCLNLSR", "NTLNLSR", "LNLSDEPR", "unins_share
 WINDOWS = {"train": (1985, 2007), "validate": (2008, 2012), "test": (2013, 2025)}
 EMBARGO_MONTHS, HORIZON_MONTHS = 3, 12
 CALIBRATION_EDGES = [0, 0.001, 0.005, 0.02, 0.10, 1.0001]
-SYSTEMIC_2023 = {24735: "Silicon Valley Bank", 57053: "Signature Bank", 59017: "First Republic Bank"}
+SYSTEMIC_2023 = {24735: "Silicon Valley Bank", 57053: "Signature Bank",
+                 59017: "First Republic Bank"}
 FSLIC_DUPLICATE_COMMENT = "FSLIC-RTC Duplicate Failures"
 RUNOFF_WINDOW_MONTHS = (9, 15)
 LOSS_TRAIN = (1986, 2007)  # FDIC: loss data before 1986 are not comprehensive
@@ -409,7 +410,8 @@ def runoff_table(sample):
 
 
 def runoff_model_comparison(sample, folds=10, seed=0):
-    """Notebook only: does a regression on the filing beat the median? Not run in the container."""
+    """Does a regression on the filing beat the median? The notebook asks; the container keeps
+    the table."""
     rows = sample.reset_index(drop=True)
     y = rows.runoff_ratio.clip(0, 3).values
     lim = {c: rows[c].quantile([0.01, 0.99]).values for c in FEATURES}
@@ -477,7 +479,7 @@ def el_backtest(pd_model, loss_model, panel, failures, runoff_ratio):
 
 
 def counterparty_el(panel, failures, prefailure, institutions, runoff_ratio, top=25):
-    """Today's banks: PD and loss models refitted on every labelled row, scored on the last filing."""
+    """Today's banks: both models refitted on every labelled row, scored on the last filing."""
     labelled = panel[panel.drop_reason == "kept"]
     pd_model = fit_pd(labelled)
     sample = loss_sample(failures, prefailure)

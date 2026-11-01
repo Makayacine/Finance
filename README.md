@@ -67,6 +67,8 @@ Three of the projects here are AWS data-engineering pipelines. Each is self-cont
 exploratory notebook it grew out of, the production jobs, the orchestration, and whatever the
 destination store needs — Redshift DDL, a DynamoDB key schema, or both.
 
+**`sba-credit-risk-ecs-dynamo`** is the credit-risk capstone on ECS Fargate rather than Glue or EMR: PD, gross charge-off severity, EL, IFRS 9 stage and IRB capital for 281,077 open SBA 7(a) company loans, with FDIC bank-failure PD, insurer loss rate and a dollar EL backtest beside it, gated by Step Functions into DynamoDB and runnable with `--local` on a laptop; its README carries the detail.
+
 ### Layout
 
 The three pipelines share a shape, so a reader who has seen one can navigate the rest:

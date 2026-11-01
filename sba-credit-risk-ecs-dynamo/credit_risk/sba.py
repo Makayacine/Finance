@@ -363,7 +363,7 @@ def psi_by_vintage(model, book):
 # Hazard, calibrated per band
 # ------------------------------------------------------------------------------------------------
 
-CREDIBILITY_EVENTS = 100  # expected charge-offs at which a vintage's own experience gets half weight
+CREDIBILITY_EVENTS = 100  # expected charge-offs at which a vintage's experience gets half weight
 
 
 @dataclass
