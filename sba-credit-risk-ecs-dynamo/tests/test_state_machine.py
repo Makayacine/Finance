@@ -1,4 +1,4 @@
-"""The deployed flow, read from its own JSON and run end to end on the committed sample.
+"""The flow you deploy, read from its own JSON and run end to end on the committed sample.
 
 ``local-development/run_pipeline.py`` walks ``step-functions/step-function.json`` state by state,
 so the end-to-end tests below exercise the definition itself: the Choice's ``Variable`` path, the

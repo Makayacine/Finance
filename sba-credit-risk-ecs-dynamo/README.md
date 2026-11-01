@@ -256,11 +256,11 @@ Every EXEMPT company loan with a disbursement date, priced at its age on 2026-09
 | Lifetime EL | $16.52bn (10.0%) |
 | IFRS 9 ECL, staged | $3.13bn — stage 1 $3.125bn on 280,223 loans, stage 2 $9.8m on 854 |
 | IFRS 9 ECL, point-in-time sensitivity | $1.78bn |
-| IRB capital K × EAD / RWA | $22.8bn / $285.1bn |
+| IRB capital K × exposure / RWA | $22.8bn / $285.1bn |
 
 The capital is the Basel corporate IRB formula with each slot filled by what the file has: the
 12-month *charge-off* PD in the PD slot (floored at 0.05%), the predicted gross charge-off
-severity in the LGD slot, the original amount as EAD and M = 2.5 years. The SME firm-size
+severity in the LGD slot, the original amount as the exposure and M = 2.5 years. The SME firm-size
 adjustment needs annual sales the file does not carry; without it these small firms get the
 correlation of a large corporate, which is why RWA runs at 173% of exposure.
 
