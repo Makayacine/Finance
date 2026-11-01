@@ -1,9 +1,11 @@
-"""Fetch the FDIC tables and the SBA recovery report into ``data/raw/``.
+"""Fetch the SBA 7(a) loan book, the FDIC tables and the SBA recovery report into ``data/raw/``.
 
 Runs on the host, once, before the pipeline. The validate and model containers only ever read
 folders, so nothing past this script needs a network. Standard library only, so it runs from a
 clean clone with nothing installed.
 
+    data/raw/sba/FOIA_7a_*.csv                 SBA 7(a) FOIA loan book in three fiscal-year files
+    data/raw/sba/7a_504_foia_data_dictionary.xlsx   the field definitions those files ship with
     data/raw/sba_recovery/                     Loan Program Performance report, 11 PDFs + the zip
     data/raw/fdic/failures.csv                 one row per failure or assistance event
     data/raw/fdic/institutions.csv             one row per CERT, active and closed
@@ -11,8 +13,13 @@ clean clone with nothing installed.
     data/raw/fdic/financials_yearend.csv       every bank at every year-end, 1984-2025
     data/raw/manifest.json                     source, retrieval date, row count, sha256
 
-The SBA 7(a) FOIA CSVs are a manual download from data.sba.gov/dataset/7a-504-foia and are not
-fetched here.
+The SBA 7(a) FOIA CSVs come from data.sba.gov/dataset/7a-504-foia, as of 2026-09-30. Each one is
+streamed to a ``.part`` file and only renamed once its byte count matches the server's
+Content-Length, so an interrupted run leaves no half file that looks whole. A file already on disk
+at the right size is not downloaded again. They are 763 MB together and every one is over GitHub's
+100 MB limit, which is why ``data/raw/`` is gitignored and a stratified sample is committed instead.
+The CSVs carry borrower names and street addresses, some of them sole proprietors: those columns
+are dropped on read by everything downstream and never leave ``data/raw/``.
 
 WHY THERE ARE TWO FINANCIALS FILES
 ----------------------------------
@@ -44,6 +51,14 @@ from pathlib import Path
 FDIC_API = "https://api.fdic.gov/banks"
 SBA_REPORT = "https://legacy.sba.gov/sites/default/files/2025-09/WebsiteReports_FY25Q3.zip"
 SBA_REPORT_PDFS = 11
+SBA_FOIA = "https://data.sba.gov/sites/default/files/uploaded_resources"
+SBA_FOIA_FILES = (
+    "FOIA_7a_FY2000_FY2009_asof_260930.csv",
+    "FOIA_7a_FY2010_FY2019_asof_260930.csv",
+    "FOIA_7a_FY2020_Present_asof_260930.csv",
+    "7a_504_foia_data_dictionary.xlsx",
+)
+CHUNK_BYTES = 1 << 20
 
 RAW = Path(__file__).resolve().parents[1] / "data" / "raw"
 
@@ -96,7 +111,11 @@ def fetch_rows(endpoint, fields, sort_by, filters=None):
 
 
 def sha256(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(CHUNK_BYTES):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def save_csv(path, rows, fields, key):
@@ -130,11 +149,40 @@ def fetch_sba_report():
     return {"source": SBA_REPORT, "pdfs": len(pdfs), "sha256": sha256(archive_path)}
 
 
+def count_csv_rows(path):
+    with path.open(newline="", encoding="latin-1") as handle:
+        return sum(1 for _ in csv.reader(handle)) - 1  # quoted fields can hold newlines
+
+
+def fetch_sba_file(name):
+    target = RAW / "sba" / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    url = f"{SBA_FOIA}/{name}"
+    with urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=180) as head:
+        expected = int(head.headers["Content-Length"])
+    if not (target.exists() and target.stat().st_size == expected):
+        part = target.with_name(target.name + ".part")
+        with urllib.request.urlopen(url, timeout=180) as response, part.open("wb") as handle:
+            while chunk := response.read(CHUNK_BYTES):
+                handle.write(chunk)
+        if part.stat().st_size != expected:
+            raise RuntimeError(f"{name}: {part.stat().st_size:,} bytes, server says {expected:,}")
+        os.replace(part, target)
+    entry = {"source": url, "bytes": expected, "sha256": sha256(target)}
+    if name.endswith(".csv"):
+        entry["rows"] = count_csv_rows(target)
+    rows = f", {entry['rows']:,} rows" if "rows" in entry else ""
+    print(f"{name}: {expected / 1e6:.1f} MB{rows}", flush=True)
+    return entry
+
+
 def main():
     fdic = RAW / "fdic"
     manifest = {"retrieved": date.today().isoformat(), "files": {}}
     files = manifest["files"]
 
+    for name in SBA_FOIA_FILES:
+        files[name] = fetch_sba_file(name)
     files["sba_recovery"] = fetch_sba_report()
 
     failures = fetch_rows("failures", FAILURE_FIELDS, "FAILDATE")
@@ -156,7 +204,8 @@ def main():
     for start in range(0, len(failed), CERTS_PER_BATCH):
         batch = " OR ".join(str(cert) for cert in failed[start : start + CERTS_PER_BATCH])
         prefailure += fetch_rows("financials", FINANCIAL_FIELDS, "CERT", f"CERT:({batch})")
-        print(f"  prefailure: {start + CERTS_PER_BATCH:,} of {len(failed):,} banks", flush=True)
+        done = min(start + CERTS_PER_BATCH, len(failed))
+        print(f"  prefailure: {done:,} of {len(failed):,} banks", flush=True)
     files["financials_prefailure.csv"] = save_csv(
         fdic / "financials_prefailure.csv", prefailure, FINANCIAL_FIELDS, ["CERT", "REPDTE"]
     )
