@@ -1,0 +1,873 @@
+table,program,cohort_year,fiscal_year,rate_pct,cohort_total_pct
+post_charge_off,7(a) Regular,2016,2016,-1.22,2.68
+post_charge_off,7(a) Regular,2016,2017,1.0,2.68
+post_charge_off,7(a) Regular,2016,2018,0.74,2.68
+post_charge_off,7(a) Regular,2016,2019,0.46,2.68
+post_charge_off,7(a) Regular,2016,2020,0.35,2.68
+post_charge_off,7(a) Regular,2016,2021,0.21,2.68
+post_charge_off,7(a) Regular,2016,2022,0.27,2.68
+post_charge_off,7(a) Regular,2016,2023,0.33,2.68
+post_charge_off,7(a) Regular,2016,2024,0.33,2.68
+post_charge_off,7(a) Regular,2016,2025,0.21,2.68
+post_charge_off,7(a) Regular,2017,2017,1.05,5.7
+post_charge_off,7(a) Regular,2017,2018,1.17,5.7
+post_charge_off,7(a) Regular,2017,2019,0.75,5.7
+post_charge_off,7(a) Regular,2017,2020,0.62,5.7
+post_charge_off,7(a) Regular,2017,2021,0.4,5.7
+post_charge_off,7(a) Regular,2017,2022,0.44,5.7
+post_charge_off,7(a) Regular,2017,2023,0.65,5.7
+post_charge_off,7(a) Regular,2017,2024,0.36,5.7
+post_charge_off,7(a) Regular,2017,2025,0.26,5.7
+post_charge_off,7(a) Regular,2018,2018,0.61,6.65
+post_charge_off,7(a) Regular,2018,2019,1.51,6.65
+post_charge_off,7(a) Regular,2018,2020,1.1,6.65
+post_charge_off,7(a) Regular,2018,2021,0.87,6.65
+post_charge_off,7(a) Regular,2018,2022,0.77,6.65
+post_charge_off,7(a) Regular,2018,2023,0.64,6.65
+post_charge_off,7(a) Regular,2018,2024,0.45,6.65
+post_charge_off,7(a) Regular,2018,2025,0.69,6.65
+post_charge_off,7(a) Regular,2019,2019,0.92,5.42
+post_charge_off,7(a) Regular,2019,2020,1.17,5.42
+post_charge_off,7(a) Regular,2019,2021,0.69,5.42
+post_charge_off,7(a) Regular,2019,2022,0.87,5.42
+post_charge_off,7(a) Regular,2019,2023,0.69,5.42
+post_charge_off,7(a) Regular,2019,2024,0.6,5.42
+post_charge_off,7(a) Regular,2019,2025,0.49,5.42
+post_charge_off,7(a) Regular,2020,2020,0.44,4.55
+post_charge_off,7(a) Regular,2020,2021,0.52,4.55
+post_charge_off,7(a) Regular,2020,2022,0.91,4.55
+post_charge_off,7(a) Regular,2020,2023,1.09,4.55
+post_charge_off,7(a) Regular,2020,2024,0.96,4.55
+post_charge_off,7(a) Regular,2020,2025,0.64,4.55
+post_charge_off,7(a) Regular,2021,2021,0.41,6.04
+post_charge_off,7(a) Regular,2021,2022,1.63,6.04
+post_charge_off,7(a) Regular,2021,2023,2.35,6.04
+post_charge_off,7(a) Regular,2021,2024,1.04,6.04
+post_charge_off,7(a) Regular,2021,2025,0.62,6.04
+post_charge_off,7(a) Regular,2022,2022,0.78,4.79
+post_charge_off,7(a) Regular,2022,2023,1.88,4.79
+post_charge_off,7(a) Regular,2022,2024,1.27,4.79
+post_charge_off,7(a) Regular,2022,2025,0.87,4.79
+post_charge_off,7(a) Regular,2023,2023,0.99,3.27
+post_charge_off,7(a) Regular,2023,2024,1.57,3.27
+post_charge_off,7(a) Regular,2023,2025,0.71,3.27
+post_charge_off,7(a) Regular,2024,2024,0.63,1.42
+post_charge_off,7(a) Regular,2024,2025,0.79,1.42
+post_charge_off,7(a) Regular,2025,2025,0.55,0.55
+post_charge_off,504 Regular,2016,2016,2.91,15.01
+post_charge_off,504 Regular,2016,2017,3.93,15.01
+post_charge_off,504 Regular,2016,2018,2.74,15.01
+post_charge_off,504 Regular,2016,2019,1.08,15.01
+post_charge_off,504 Regular,2016,2020,0.75,15.01
+post_charge_off,504 Regular,2016,2021,0.66,15.01
+post_charge_off,504 Regular,2016,2022,0.74,15.01
+post_charge_off,504 Regular,2016,2023,1.21,15.01
+post_charge_off,504 Regular,2016,2024,0.69,15.01
+post_charge_off,504 Regular,2016,2025,0.3,15.01
+post_charge_off,504 Regular,2017,2017,3.81,15.44
+post_charge_off,504 Regular,2017,2018,2.96,15.44
+post_charge_off,504 Regular,2017,2019,3.04,15.44
+post_charge_off,504 Regular,2017,2020,1.57,15.44
+post_charge_off,504 Regular,2017,2021,0.49,15.44
+post_charge_off,504 Regular,2017,2022,0.89,15.44
+post_charge_off,504 Regular,2017,2023,0.73,15.44
+post_charge_off,504 Regular,2017,2024,0.58,15.44
+post_charge_off,504 Regular,2017,2025,1.36,15.44
+post_charge_off,504 Regular,2018,2018,0.79,10.6
+post_charge_off,504 Regular,2018,2019,3.1,10.6
+post_charge_off,504 Regular,2018,2020,1.95,10.6
+post_charge_off,504 Regular,2018,2021,0.68,10.6
+post_charge_off,504 Regular,2018,2022,0.72,10.6
+post_charge_off,504 Regular,2018,2023,1.13,10.6
+post_charge_off,504 Regular,2018,2024,2.02,10.6
+post_charge_off,504 Regular,2018,2025,0.21,10.6
+post_charge_off,504 Regular,2019,2019,1.67,8.64
+post_charge_off,504 Regular,2019,2020,3.17,8.64
+post_charge_off,504 Regular,2019,2021,0.36,8.64
+post_charge_off,504 Regular,2019,2022,2.12,8.64
+post_charge_off,504 Regular,2019,2023,0.66,8.64
+post_charge_off,504 Regular,2019,2024,0.37,8.64
+post_charge_off,504 Regular,2019,2025,0.29,8.64
+post_charge_off,504 Regular,2020,2020,1.75,10.98
+post_charge_off,504 Regular,2020,2021,4.45,10.98
+post_charge_off,504 Regular,2020,2022,3.45,10.98
+post_charge_off,504 Regular,2020,2023,0.43,10.98
+post_charge_off,504 Regular,2020,2024,0.48,10.98
+post_charge_off,504 Regular,2020,2025,0.41,10.98
+post_charge_off,504 Regular,2021,2021,0.82,5.62
+post_charge_off,504 Regular,2021,2022,0.46,5.62
+post_charge_off,504 Regular,2021,2023,0.86,5.62
+post_charge_off,504 Regular,2021,2024,0.54,5.62
+post_charge_off,504 Regular,2021,2025,2.93,5.62
+post_charge_off,504 Regular,2022,2022,1.07,5.67
+post_charge_off,504 Regular,2022,2023,2.37,5.67
+post_charge_off,504 Regular,2022,2024,1.8,5.67
+post_charge_off,504 Regular,2022,2025,0.43,5.67
+post_charge_off,504 Regular,2023,2023,0.9,3.72
+post_charge_off,504 Regular,2023,2024,1.25,3.72
+post_charge_off,504 Regular,2023,2025,1.58,3.72
+post_charge_off,504 Regular,2024,2024,0.15,0.37
+post_charge_off,504 Regular,2024,2025,0.22,0.37
+post_charge_off,504 Regular,2025,2025,2.96,2.96
+post_charge_off,SBIC Debentures,2016,2016,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2017,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2018,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2019,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2020,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2021,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2022,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2023,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2024,0.0,0.0
+post_charge_off,SBIC Debentures,2016,2025,0.0,0.0
+post_charge_off,SBIC Debentures,2017,2017,0.0,0.04
+post_charge_off,SBIC Debentures,2017,2018,0.04,0.04
+post_charge_off,SBIC Debentures,2017,2019,0.0,0.04
+post_charge_off,SBIC Debentures,2017,2020,0.0,0.04
+post_charge_off,SBIC Debentures,2017,2021,0.0,0.04
+post_charge_off,SBIC Debentures,2017,2022,0.0,0.04
+post_charge_off,SBIC Debentures,2017,2023,0.0,0.04
+post_charge_off,SBIC Debentures,2017,2024,0.0,0.04
+post_charge_off,SBIC Debentures,2017,2025,0.0,0.04
+post_charge_off,SBIC Debentures,2018,2018,1.68,3.51
+post_charge_off,SBIC Debentures,2018,2019,1.61,3.51
+post_charge_off,SBIC Debentures,2018,2020,0.04,3.51
+post_charge_off,SBIC Debentures,2018,2021,0.0,3.51
+post_charge_off,SBIC Debentures,2018,2022,0.0,3.51
+post_charge_off,SBIC Debentures,2018,2023,0.17,3.51
+post_charge_off,SBIC Debentures,2018,2024,0.0,3.51
+post_charge_off,SBIC Debentures,2018,2025,0.02,3.51
+post_charge_off,SBIC Debentures,2021,2021,0.0,0.0
+post_charge_off,SBIC Debentures,2021,2022,0.0,0.0
+post_charge_off,SBIC Debentures,2021,2023,0.0,0.0
+post_charge_off,SBIC Debentures,2021,2024,0.0,0.0
+post_charge_off,SBIC Debentures,2021,2025,0.0,0.0
+post_charge_off,SBIC Debentures,2024,2024,0.0,0.0
+post_charge_off,SBIC Debentures,2024,2025,0.0,0.0
+post_charge_off,SBIC Participating Securities,2016,2016,0.0,7.02
+post_charge_off,SBIC Participating Securities,2016,2017,3.14,7.02
+post_charge_off,SBIC Participating Securities,2016,2018,0.71,7.02
+post_charge_off,SBIC Participating Securities,2016,2019,0.34,7.02
+post_charge_off,SBIC Participating Securities,2016,2020,0.04,7.02
+post_charge_off,SBIC Participating Securities,2016,2021,2.78,7.02
+post_charge_off,SBIC Participating Securities,2016,2022,0.0,7.02
+post_charge_off,SBIC Participating Securities,2016,2023,0.0,7.02
+post_charge_off,SBIC Participating Securities,2016,2024,0.0,7.02
+post_charge_off,SBIC Participating Securities,2016,2025,0.0,7.02
+post_charge_off,SBIC Participating Securities,2017,2017,0.0,6.72
+post_charge_off,SBIC Participating Securities,2017,2018,0.22,6.72
+post_charge_off,SBIC Participating Securities,2017,2019,0.87,6.72
+post_charge_off,SBIC Participating Securities,2017,2020,1.29,6.72
+post_charge_off,SBIC Participating Securities,2017,2021,3.95,6.72
+post_charge_off,SBIC Participating Securities,2017,2022,0.17,6.72
+post_charge_off,SBIC Participating Securities,2017,2023,0.0,6.72
+post_charge_off,SBIC Participating Securities,2017,2024,0.22,6.72
+post_charge_off,SBIC Participating Securities,2017,2025,0.0,6.72
+post_charge_off,SBIC Participating Securities,2018,2018,0.0,2.04
+post_charge_off,SBIC Participating Securities,2018,2019,0.01,2.04
+post_charge_off,SBIC Participating Securities,2018,2020,0.0,2.04
+post_charge_off,SBIC Participating Securities,2018,2021,2.03,2.04
+post_charge_off,SBIC Participating Securities,2018,2022,0.0,2.04
+post_charge_off,SBIC Participating Securities,2018,2023,0.0,2.04
+post_charge_off,SBIC Participating Securities,2018,2024,0.0,2.04
+post_charge_off,SBIC Participating Securities,2018,2025,0.0,2.04
+post_charge_off,SBIC Participating Securities,2019,2019,0.01,7.94
+post_charge_off,SBIC Participating Securities,2019,2020,0.03,7.94
+post_charge_off,SBIC Participating Securities,2019,2021,7.06,7.94
+post_charge_off,SBIC Participating Securities,2019,2022,0.84,7.94
+post_charge_off,SBIC Participating Securities,2019,2023,0.0,7.94
+post_charge_off,SBIC Participating Securities,2019,2024,0.0,7.94
+post_charge_off,SBIC Participating Securities,2019,2025,0.0,7.94
+post_charge_off,SBIC Participating Securities,2020,2020,0.0,48.53
+post_charge_off,SBIC Participating Securities,2020,2021,24.03,48.53
+post_charge_off,SBIC Participating Securities,2020,2022,20.65,48.53
+post_charge_off,SBIC Participating Securities,2020,2023,3.26,48.53
+post_charge_off,SBIC Participating Securities,2020,2024,0.58,48.53
+post_charge_off,SBIC Participating Securities,2020,2025,0.0,48.53
+post_charge_off,SBIC Participating Securities,2023,2023,0.0,0.97
+post_charge_off,SBIC Participating Securities,2023,2024,0.97,0.97
+post_charge_off,SBIC Participating Securities,2023,2025,0.0,0.97
+post_charge_off,SBIC Participating Securities,2024,2024,0.0,0.0
+post_charge_off,SBIC Participating Securities,2024,2025,0.0,0.0
+post_charge_off,ARC 506,2016,2016,5.63,21.16
+post_charge_off,ARC 506,2016,2017,6.36,21.16
+post_charge_off,ARC 506,2016,2018,2.4,21.16
+post_charge_off,ARC 506,2016,2019,1.9,21.16
+post_charge_off,ARC 506,2016,2020,1.53,21.16
+post_charge_off,ARC 506,2016,2021,0.34,21.16
+post_charge_off,ARC 506,2016,2022,0.78,21.16
+post_charge_off,ARC 506,2016,2023,0.76,21.16
+post_charge_off,ARC 506,2016,2024,0.8,21.16
+post_charge_off,ARC 506,2016,2025,0.66,21.16
+post_charge_off,ARC 506,2017,2017,-0.99,6.95
+post_charge_off,ARC 506,2017,2018,0.85,6.95
+post_charge_off,ARC 506,2017,2019,0.98,6.95
+post_charge_off,ARC 506,2017,2020,1.66,6.95
+post_charge_off,ARC 506,2017,2021,0.0,6.95
+post_charge_off,ARC 506,2017,2022,0.0,6.95
+post_charge_off,ARC 506,2017,2023,2.05,6.95
+post_charge_off,ARC 506,2017,2024,0.95,6.95
+post_charge_off,ARC 506,2017,2025,1.45,6.95
+post_charge_off,ARC 506,2018,2018,3.12,21.6
+post_charge_off,ARC 506,2018,2019,6.33,21.6
+post_charge_off,ARC 506,2018,2020,1.1,21.6
+post_charge_off,ARC 506,2018,2021,6.18,21.6
+post_charge_off,ARC 506,2018,2022,2.8,21.6
+post_charge_off,ARC 506,2018,2023,0.97,21.6
+post_charge_off,ARC 506,2018,2024,0.76,21.6
+post_charge_off,ARC 506,2018,2025,0.33,21.6
+post_charge_off,ARC 506,2019,2019,0.61,9.25
+post_charge_off,ARC 506,2019,2020,0.61,9.25
+post_charge_off,ARC 506,2019,2021,0.0,9.25
+post_charge_off,ARC 506,2019,2022,0.55,9.25
+post_charge_off,ARC 506,2019,2023,2.42,9.25
+post_charge_off,ARC 506,2019,2024,2.87,9.25
+post_charge_off,ARC 506,2019,2025,2.2,9.25
+post_charge_off,ARC 506,2020,2020,2.57,15.12
+post_charge_off,ARC 506,2020,2021,0.0,15.12
+post_charge_off,ARC 506,2020,2022,0.1,15.12
+post_charge_off,ARC 506,2020,2023,2.84,15.12
+post_charge_off,ARC 506,2020,2024,6.13,15.12
+post_charge_off,ARC 506,2020,2025,3.48,15.12
+post_charge_off,ARC 506,2021,2021,0.0,0.0
+post_charge_off,ARC 506,2021,2022,0.0,0.0
+post_charge_off,ARC 506,2021,2023,0.0,0.0
+post_charge_off,ARC 506,2021,2024,0.0,0.0
+post_charge_off,ARC 506,2021,2025,0.0,0.0
+post_charge_off,ARC 506,2022,2022,0.0,0.0
+post_charge_off,ARC 506,2022,2023,0.0,0.0
+post_charge_off,ARC 506,2022,2024,0.0,0.0
+post_charge_off,ARC 506,2022,2025,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2016,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2017,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2018,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2019,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2020,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2021,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2022,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2023,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2024,0.0,0.0
+post_charge_off,Dealer Floor Plan,2016,2025,0.0,0.0
+post_charge_off,Dealer Floor Plan,2024,2024,0.0,0.0
+post_charge_off,Dealer Floor Plan,2024,2025,0.0,0.0
+post_charge_off,504 First Lien,2017,2017,0.0,0.0
+post_charge_off,504 First Lien,2017,2018,0.0,0.0
+post_charge_off,504 First Lien,2017,2019,0.0,0.0
+post_charge_off,504 First Lien,2017,2020,0.0,0.0
+post_charge_off,504 First Lien,2017,2021,0.0,0.0
+post_charge_off,504 First Lien,2017,2022,0.0,0.0
+post_charge_off,504 First Lien,2017,2023,0.0,0.0
+post_charge_off,504 First Lien,2017,2024,0.0,0.0
+post_charge_off,504 First Lien,2017,2025,0.0,0.0
+post_charge_off,504 First Lien,2019,2019,0.0,0.0
+post_charge_off,504 First Lien,2019,2020,0.0,0.0
+post_charge_off,504 First Lien,2019,2021,0.0,0.0
+post_charge_off,504 First Lien,2019,2022,0.0,0.0
+post_charge_off,504 First Lien,2019,2023,0.0,0.0
+post_charge_off,504 First Lien,2019,2024,0.0,0.0
+post_charge_off,504 First Lien,2019,2025,0.0,0.0
+post_charge_off,504 First Lien,2020,2020,0.0,0.0
+post_charge_off,504 First Lien,2020,2021,0.0,0.0
+post_charge_off,504 First Lien,2020,2022,0.0,0.0
+post_charge_off,504 First Lien,2020,2023,0.0,0.0
+post_charge_off,504 First Lien,2020,2024,0.0,0.0
+post_charge_off,504 First Lien,2020,2025,0.0,0.0
+post_charge_off,504 First Lien,2022,2022,0.0,0.0
+post_charge_off,504 First Lien,2022,2023,0.0,0.0
+post_charge_off,504 First Lien,2022,2024,0.0,0.0
+post_charge_off,504 First Lien,2022,2025,0.0,0.0
+post_charge_off,504 First Lien,2024,2024,0.0,0.0
+post_charge_off,504 First Lien,2024,2025,0.0,0.0
+post_charge_off,504 Refi,2016,2016,-0.04,22.53
+post_charge_off,504 Refi,2016,2017,21.5,22.53
+post_charge_off,504 Refi,2016,2018,0.09,22.53
+post_charge_off,504 Refi,2016,2019,0.16,22.53
+post_charge_off,504 Refi,2016,2020,0.13,22.53
+post_charge_off,504 Refi,2016,2021,0.0,22.53
+post_charge_off,504 Refi,2016,2022,0.13,22.53
+post_charge_off,504 Refi,2016,2023,0.2,22.53
+post_charge_off,504 Refi,2016,2024,0.21,22.53
+post_charge_off,504 Refi,2016,2025,0.17,22.53
+post_charge_off,504 Refi,2017,2017,5.77,7.18
+post_charge_off,504 Refi,2017,2018,0.21,7.18
+post_charge_off,504 Refi,2017,2019,0.54,7.18
+post_charge_off,504 Refi,2017,2020,0.12,7.18
+post_charge_off,504 Refi,2017,2021,0.11,7.18
+post_charge_off,504 Refi,2017,2022,0.12,7.18
+post_charge_off,504 Refi,2017,2023,0.15,7.18
+post_charge_off,504 Refi,2017,2024,0.13,7.18
+post_charge_off,504 Refi,2017,2025,0.04,7.18
+post_charge_off,504 Refi,2018,2018,0.03,1.79
+post_charge_off,504 Refi,2018,2019,1.75,1.79
+post_charge_off,504 Refi,2018,2020,-0.03,1.79
+post_charge_off,504 Refi,2018,2021,-0.14,1.79
+post_charge_off,504 Refi,2018,2022,0.03,1.79
+post_charge_off,504 Refi,2018,2023,0.06,1.79
+post_charge_off,504 Refi,2018,2024,0.06,1.79
+post_charge_off,504 Refi,2018,2025,0.04,1.79
+post_charge_off,504 Refi,2019,2019,0.02,0.92
+post_charge_off,504 Refi,2019,2020,0.36,0.92
+post_charge_off,504 Refi,2019,2021,0.0,0.92
+post_charge_off,504 Refi,2019,2022,0.13,0.92
+post_charge_off,504 Refi,2019,2023,0.14,0.92
+post_charge_off,504 Refi,2019,2024,0.15,0.92
+post_charge_off,504 Refi,2019,2025,0.12,0.92
+post_charge_off,504 Refi,2020,2020,0.0,1.94
+post_charge_off,504 Refi,2020,2021,0.7,1.94
+post_charge_off,504 Refi,2020,2022,0.2,1.94
+post_charge_off,504 Refi,2020,2023,0.44,1.94
+post_charge_off,504 Refi,2020,2024,0.39,1.94
+post_charge_off,504 Refi,2020,2025,0.22,1.94
+post_charge_off,504 Refi,2021,2021,0.0,3.47
+post_charge_off,504 Refi,2021,2022,2.14,3.47
+post_charge_off,504 Refi,2021,2023,0.41,3.47
+post_charge_off,504 Refi,2021,2024,0.46,3.47
+post_charge_off,504 Refi,2021,2025,0.47,3.47
+post_charge_off,504 Refi,2022,2022,0.0,1.45
+post_charge_off,504 Refi,2022,2023,1.16,1.45
+post_charge_off,504 Refi,2022,2024,0.15,1.45
+post_charge_off,504 Refi,2022,2025,0.14,1.45
+post_charge_off,504 Refi,2023,2023,2.82,4.32
+post_charge_off,504 Refi,2023,2024,0.86,4.32
+post_charge_off,504 Refi,2023,2025,0.64,4.32
+post_charge_off,504 Refi,2024,2024,5.93,35.09
+post_charge_off,504 Refi,2024,2025,29.16,35.09
+post_charge_off,504 Refi,2025,2025,0.0,0.0
+post_charge_off,504 Refi,2022,2022,0.7,4.11
+post_charge_off,504 Refi,2022,2023,1.35,4.11
+post_charge_off,504 Refi,2022,2024,1.36,4.11
+post_charge_off,504 Refi,2022,2025,0.7,4.11
+post_charge_off,504 Refi,2023,2023,0.41,1.9
+post_charge_off,504 Refi,2023,2024,0.68,1.9
+post_charge_off,504 Refi,2023,2025,0.81,1.9
+post_charge_off,504 Refi,2024,2024,0.61,1.73
+post_charge_off,504 Refi,2024,2025,1.12,1.73
+post_charge_off,504 Refi,2025,2025,0.65,0.65
+post_charge_off,All Other,2016,2016,0.41,3.93
+post_charge_off,All Other,2016,2017,1.64,3.93
+post_charge_off,All Other,2016,2018,0.92,3.93
+post_charge_off,All Other,2016,2019,0.13,3.93
+post_charge_off,All Other,2016,2020,0.15,3.93
+post_charge_off,All Other,2016,2021,0.08,3.93
+post_charge_off,All Other,2016,2022,0.11,3.93
+post_charge_off,All Other,2016,2023,0.19,3.93
+post_charge_off,All Other,2016,2024,0.16,3.93
+post_charge_off,All Other,2016,2025,0.15,3.93
+post_charge_off,All Other,2017,2017,1.35,2.41
+post_charge_off,All Other,2017,2018,0.28,2.41
+post_charge_off,All Other,2017,2019,0.13,2.41
+post_charge_off,All Other,2017,2020,0.47,2.41
+post_charge_off,All Other,2017,2021,-0.0,2.41
+post_charge_off,All Other,2017,2022,0.04,2.41
+post_charge_off,All Other,2017,2023,0.07,2.41
+post_charge_off,All Other,2017,2024,0.02,2.41
+post_charge_off,All Other,2017,2025,0.04,2.41
+post_charge_off,All Other,2018,2018,0.48,1.47
+post_charge_off,All Other,2018,2019,0.66,1.47
+post_charge_off,All Other,2018,2020,0.0,1.47
+post_charge_off,All Other,2018,2021,0.0,1.47
+post_charge_off,All Other,2018,2022,0.03,1.47
+post_charge_off,All Other,2018,2023,0.16,1.47
+post_charge_off,All Other,2018,2024,0.08,1.47
+post_charge_off,All Other,2018,2025,0.07,1.47
+post_charge_off,All Other,2019,2019,0.44,4.79
+post_charge_off,All Other,2019,2020,3.87,4.79
+post_charge_off,All Other,2019,2021,0.05,4.79
+post_charge_off,All Other,2019,2022,0.11,4.79
+post_charge_off,All Other,2019,2023,0.15,4.79
+post_charge_off,All Other,2019,2024,0.05,4.79
+post_charge_off,All Other,2019,2025,0.1,4.79
+post_charge_off,All Other,2020,2020,0.0,5.9
+post_charge_off,All Other,2020,2021,0.0,5.9
+post_charge_off,All Other,2020,2022,5.84,5.9
+post_charge_off,All Other,2020,2023,0.06,5.9
+post_charge_off,All Other,2020,2024,0.0,5.9
+post_charge_off,All Other,2020,2025,0.0,5.9
+post_charge_off,All Other,2022,2022,0.02,1.39
+post_charge_off,All Other,2022,2023,0.63,1.39
+post_charge_off,All Other,2022,2024,0.64,1.39
+post_charge_off,All Other,2022,2025,0.1,1.39
+post_charge_off,All Other,2023,2023,0.0,0.09
+post_charge_off,All Other,2023,2024,0.09,0.09
+post_charge_off,All Other,2023,2025,0.0,0.09
+post_charge_off,All Other,2024,2024,0.0,0.0
+post_charge_off,All Other,2024,2025,0.0,0.0
+post_charge_off,Microloan Direct,2016,2016,1.17,27.79
+post_charge_off,Microloan Direct,2016,2017,10.5,27.79
+post_charge_off,Microloan Direct,2016,2018,3.26,27.79
+post_charge_off,Microloan Direct,2016,2019,3.51,27.79
+post_charge_off,Microloan Direct,2016,2020,4.82,27.79
+post_charge_off,Microloan Direct,2016,2021,1.1,27.79
+post_charge_off,Microloan Direct,2016,2022,0.55,27.79
+post_charge_off,Microloan Direct,2016,2023,0.98,27.79
+post_charge_off,Microloan Direct,2016,2024,0.73,27.79
+post_charge_off,Microloan Direct,2016,2025,1.16,27.79
+post_charge_off,Microloan Direct,2017,2017,2.21,42.31
+post_charge_off,Microloan Direct,2017,2018,6.35,42.31
+post_charge_off,Microloan Direct,2017,2019,6.91,42.31
+post_charge_off,Microloan Direct,2017,2020,8.17,42.31
+post_charge_off,Microloan Direct,2017,2021,1.42,42.31
+post_charge_off,Microloan Direct,2017,2022,8.59,42.31
+post_charge_off,Microloan Direct,2017,2023,2.72,42.31
+post_charge_off,Microloan Direct,2017,2024,4.68,42.31
+post_charge_off,Microloan Direct,2017,2025,1.27,42.31
+post_charge_off,Microloan Direct,2018,2018,2.36,33.95
+post_charge_off,Microloan Direct,2018,2019,7.41,33.95
+post_charge_off,Microloan Direct,2018,2020,2.79,33.95
+post_charge_off,Microloan Direct,2018,2021,0.0,33.95
+post_charge_off,Microloan Direct,2018,2022,3.34,33.95
+post_charge_off,Microloan Direct,2018,2023,9.64,33.95
+post_charge_off,Microloan Direct,2018,2024,7.76,33.95
+post_charge_off,Microloan Direct,2018,2025,0.65,33.95
+post_charge_off,Microloan Direct,2019,2019,0.77,3.39
+post_charge_off,Microloan Direct,2019,2020,0.0,3.39
+post_charge_off,Microloan Direct,2019,2021,0.0,3.39
+post_charge_off,Microloan Direct,2019,2022,2.62,3.39
+post_charge_off,Microloan Direct,2019,2023,0.0,3.39
+post_charge_off,Microloan Direct,2019,2024,0.0,3.39
+post_charge_off,Microloan Direct,2019,2025,0.0,3.39
+post_charge_off,Microloan Direct,2020,2020,1.19,10.36
+post_charge_off,Microloan Direct,2020,2021,4.01,10.36
+post_charge_off,Microloan Direct,2020,2022,0.83,10.36
+post_charge_off,Microloan Direct,2020,2023,1.48,10.36
+post_charge_off,Microloan Direct,2020,2024,1.62,10.36
+post_charge_off,Microloan Direct,2020,2025,1.22,10.36
+post_charge_off,Microloan Direct,2022,2022,0.91,0.91
+post_charge_off,Microloan Direct,2022,2023,0.0,0.91
+post_charge_off,Microloan Direct,2022,2024,0.0,0.91
+post_charge_off,Microloan Direct,2022,2025,0.0,0.91
+post_charge_off,Microloan Direct,2023,2023,9.56,20.66
+post_charge_off,Microloan Direct,2023,2024,11.1,20.66
+post_charge_off,Microloan Direct,2023,2025,0.0,20.66
+post_charge_off,Microloan Direct,2024,2024,0.55,0.69
+post_charge_off,Microloan Direct,2024,2025,0.14,0.69
+post_charge_off,Microloan Direct,2025,2025,0.0,0.0
+post_charge_off,All Other,2018,2018,0.0,0.0
+post_charge_off,All Other,2018,2019,0.0,0.0
+post_charge_off,All Other,2018,2020,0.0,0.0
+post_charge_off,All Other,2018,2021,0.0,0.0
+post_charge_off,All Other,2018,2022,0.0,0.0
+post_charge_off,All Other,2018,2023,0.0,0.0
+post_charge_off,All Other,2018,2024,0.0,0.0
+post_charge_off,All Other,2018,2025,0.0,0.0
+post_charge_off,All Other,2020,2020,0.0,18.63
+post_charge_off,All Other,2020,2021,0.0,18.63
+post_charge_off,All Other,2020,2022,0.0,18.63
+post_charge_off,All Other,2020,2023,6.54,18.63
+post_charge_off,All Other,2020,2024,6.85,18.63
+post_charge_off,All Other,2020,2025,5.25,18.63
+post_charge_off,Disaster,2016,2016,3.03,36.26
+post_charge_off,Disaster,2016,2017,7.93,36.26
+post_charge_off,Disaster,2016,2018,5.92,36.26
+post_charge_off,Disaster,2016,2019,5.63,36.26
+post_charge_off,Disaster,2016,2020,2.56,36.26
+post_charge_off,Disaster,2016,2021,1.31,36.26
+post_charge_off,Disaster,2016,2022,3.27,36.26
+post_charge_off,Disaster,2016,2023,3.46,36.26
+post_charge_off,Disaster,2016,2024,1.85,36.26
+post_charge_off,Disaster,2016,2025,1.31,36.26
+post_charge_off,Disaster,2017,2017,3.89,34.03
+post_charge_off,Disaster,2017,2018,6.9,34.03
+post_charge_off,Disaster,2017,2019,6.7,34.03
+post_charge_off,Disaster,2017,2020,4.06,34.03
+post_charge_off,Disaster,2017,2021,1.24,34.03
+post_charge_off,Disaster,2017,2022,3.54,34.03
+post_charge_off,Disaster,2017,2023,3.69,34.03
+post_charge_off,Disaster,2017,2024,2.51,34.03
+post_charge_off,Disaster,2017,2025,1.49,34.03
+post_charge_off,Disaster,2018,2018,3.82,34.72
+post_charge_off,Disaster,2018,2019,8.96,34.72
+post_charge_off,Disaster,2018,2020,5.16,34.72
+post_charge_off,Disaster,2018,2021,2.56,34.72
+post_charge_off,Disaster,2018,2022,4.55,34.72
+post_charge_off,Disaster,2018,2023,4.01,34.72
+post_charge_off,Disaster,2018,2024,4.02,34.72
+post_charge_off,Disaster,2018,2025,1.65,34.72
+post_charge_off,Disaster,2019,2019,2.13,39.17
+post_charge_off,Disaster,2019,2020,8.55,39.17
+post_charge_off,Disaster,2019,2021,2.61,39.17
+post_charge_off,Disaster,2019,2022,9.06,39.17
+post_charge_off,Disaster,2019,2023,7.59,39.17
+post_charge_off,Disaster,2019,2024,5.54,39.17
+post_charge_off,Disaster,2019,2025,3.67,39.17
+post_charge_off,Disaster,2020,2020,2.24,27.16
+post_charge_off,Disaster,2020,2021,2.86,27.16
+post_charge_off,Disaster,2020,2022,5.09,27.16
+post_charge_off,Disaster,2020,2023,7.78,27.16
+post_charge_off,Disaster,2020,2024,5.72,27.16
+post_charge_off,Disaster,2020,2025,3.48,27.16
+post_charge_off,Disaster,2021,2021,1.58,8.2
+post_charge_off,Disaster,2021,2022,1.52,8.2
+post_charge_off,Disaster,2021,2023,1.44,8.2
+post_charge_off,Disaster,2021,2024,2.46,8.2
+post_charge_off,Disaster,2021,2025,1.2,8.2
+post_charge_off,Disaster,2022,2022,0.68,30.72
+post_charge_off,Disaster,2022,2023,12.96,30.72
+post_charge_off,Disaster,2022,2024,10.9,30.72
+post_charge_off,Disaster,2022,2025,6.17,30.72
+post_charge_off,Disaster,2023,2023,3.74,26.9
+post_charge_off,Disaster,2023,2024,14.67,26.9
+post_charge_off,Disaster,2023,2025,8.49,26.9
+post_charge_off,Disaster,2024,2024,3.79,8.66
+post_charge_off,Disaster,2024,2025,4.87,8.66
+post_charge_off,Disaster,2025,2025,1.97,1.97
+post_charge_off,COVID EIDL,2021,2021,1.07,1.4
+post_charge_off,COVID EIDL,2021,2022,0.47,1.4
+post_charge_off,COVID EIDL,2021,2023,-0.47,1.4
+post_charge_off,COVID EIDL,2021,2024,0.24,1.4
+post_charge_off,COVID EIDL,2021,2025,0.09,1.4
+post_charge_off,COVID EIDL,2022,2022,0.78,19.23
+post_charge_off,COVID EIDL,2022,2023,6.95,19.23
+post_charge_off,COVID EIDL,2022,2024,7.14,19.23
+post_charge_off,COVID EIDL,2022,2025,4.36,19.23
+post_charge_off,COVID EIDL,2023,2023,0.82,2.09
+post_charge_off,COVID EIDL,2023,2024,0.85,2.09
+post_charge_off,COVID EIDL,2023,2025,0.42,2.09
+post_charge_off,COVID EIDL,2024,2024,2.08,3.06
+post_charge_off,COVID EIDL,2024,2025,0.98,3.06
+post_charge_off,COVID EIDL,2025,2025,0.92,0.92
+total_recovery,7(a) Regular,2016,2016,5.04,36.98
+total_recovery,7(a) Regular,2016,2017,14.2,36.98
+total_recovery,7(a) Regular,2016,2018,5.95,36.98
+total_recovery,7(a) Regular,2016,2019,2.66,36.98
+total_recovery,7(a) Regular,2016,2020,1.56,36.98
+total_recovery,7(a) Regular,2016,2021,2.4,36.98
+total_recovery,7(a) Regular,2016,2022,1.48,36.98
+total_recovery,7(a) Regular,2016,2023,1.79,36.98
+total_recovery,7(a) Regular,2016,2024,1.11,36.98
+total_recovery,7(a) Regular,2016,2025,0.81,36.98
+total_recovery,7(a) Regular,2017,2017,7.51,34.33
+total_recovery,7(a) Regular,2017,2018,10.03,34.33
+total_recovery,7(a) Regular,2017,2019,5.66,34.33
+total_recovery,7(a) Regular,2017,2020,2.42,34.33
+total_recovery,7(a) Regular,2017,2021,2.17,34.33
+total_recovery,7(a) Regular,2017,2022,2.83,34.33
+total_recovery,7(a) Regular,2017,2023,1.45,34.33
+total_recovery,7(a) Regular,2017,2024,1.55,34.33
+total_recovery,7(a) Regular,2017,2025,0.7,34.33
+total_recovery,7(a) Regular,2018,2018,6.76,37.23
+total_recovery,7(a) Regular,2018,2019,11.45,37.23
+total_recovery,7(a) Regular,2018,2020,5.73,37.23
+total_recovery,7(a) Regular,2018,2021,4.27,37.23
+total_recovery,7(a) Regular,2018,2022,4.09,37.23
+total_recovery,7(a) Regular,2018,2023,2.52,37.23
+total_recovery,7(a) Regular,2018,2024,1.42,37.23
+total_recovery,7(a) Regular,2018,2025,0.99,37.23
+total_recovery,7(a) Regular,2019,2019,6.51,38.6
+total_recovery,7(a) Regular,2019,2020,10.15,38.6
+total_recovery,7(a) Regular,2019,2021,7.76,38.6
+total_recovery,7(a) Regular,2019,2022,6.59,38.6
+total_recovery,7(a) Regular,2019,2023,3.33,38.6
+total_recovery,7(a) Regular,2019,2024,2.82,38.6
+total_recovery,7(a) Regular,2019,2025,1.44,38.6
+total_recovery,7(a) Regular,2020,2020,7.02,37.22
+total_recovery,7(a) Regular,2020,2021,12.29,37.22
+total_recovery,7(a) Regular,2020,2022,7.68,37.22
+total_recovery,7(a) Regular,2020,2023,4.98,37.22
+total_recovery,7(a) Regular,2020,2024,3.71,37.22
+total_recovery,7(a) Regular,2020,2025,1.54,37.22
+total_recovery,7(a) Regular,2021,2021,5.16,27.44
+total_recovery,7(a) Regular,2021,2022,12.27,27.44
+total_recovery,7(a) Regular,2021,2023,4.65,27.44
+total_recovery,7(a) Regular,2021,2024,3.76,27.44
+total_recovery,7(a) Regular,2021,2025,1.6,27.44
+total_recovery,7(a) Regular,2022,2022,6.87,25.81
+total_recovery,7(a) Regular,2022,2023,9.6,25.81
+total_recovery,7(a) Regular,2022,2024,6.27,25.81
+total_recovery,7(a) Regular,2022,2025,3.07,25.81
+total_recovery,7(a) Regular,2023,2023,5.96,23.47
+total_recovery,7(a) Regular,2023,2024,11.99,23.47
+total_recovery,7(a) Regular,2023,2025,5.52,23.47
+total_recovery,7(a) Regular,2024,2024,6.42,14.75
+total_recovery,7(a) Regular,2024,2025,8.33,14.75
+total_recovery,7(a) Regular,2025,2025,4.17,4.17
+total_recovery,504 Regular,2016,2016,13.58,56.85
+total_recovery,504 Regular,2016,2017,16.57,56.85
+total_recovery,504 Regular,2016,2018,6.03,56.85
+total_recovery,504 Regular,2016,2019,4.9,56.85
+total_recovery,504 Regular,2016,2020,2.98,56.85
+total_recovery,504 Regular,2016,2021,2.39,56.85
+total_recovery,504 Regular,2016,2022,5.2,56.85
+total_recovery,504 Regular,2016,2023,2.72,56.85
+total_recovery,504 Regular,2016,2024,1.68,56.85
+total_recovery,504 Regular,2016,2025,0.81,56.85
+total_recovery,504 Regular,2017,2017,8.54,52.38
+total_recovery,504 Regular,2017,2018,14.46,52.38
+total_recovery,504 Regular,2017,2019,8.96,52.38
+total_recovery,504 Regular,2017,2020,4.33,52.38
+total_recovery,504 Regular,2017,2021,3.9,52.38
+total_recovery,504 Regular,2017,2022,4.35,52.38
+total_recovery,504 Regular,2017,2023,3.77,52.38
+total_recovery,504 Regular,2017,2024,2.65,52.38
+total_recovery,504 Regular,2017,2025,1.42,52.38
+total_recovery,504 Regular,2018,2018,16.21,48.24
+total_recovery,504 Regular,2018,2019,11.65,48.24
+total_recovery,504 Regular,2018,2020,7.8,48.24
+total_recovery,504 Regular,2018,2021,3.36,48.24
+total_recovery,504 Regular,2018,2022,3.81,48.24
+total_recovery,504 Regular,2018,2023,3.38,48.24
+total_recovery,504 Regular,2018,2024,1.08,48.24
+total_recovery,504 Regular,2018,2025,0.96,48.24
+total_recovery,504 Regular,2019,2019,9.74,46.44
+total_recovery,504 Regular,2019,2020,17.15,46.44
+total_recovery,504 Regular,2019,2021,8.38,46.44
+total_recovery,504 Regular,2019,2022,3.59,46.44
+total_recovery,504 Regular,2019,2023,3.12,46.44
+total_recovery,504 Regular,2019,2024,2.31,46.44
+total_recovery,504 Regular,2019,2025,2.16,46.44
+total_recovery,504 Regular,2020,2020,20.36,55.13
+total_recovery,504 Regular,2020,2021,11.12,55.13
+total_recovery,504 Regular,2020,2022,9.32,55.13
+total_recovery,504 Regular,2020,2023,6.12,55.13
+total_recovery,504 Regular,2020,2024,5.4,55.13
+total_recovery,504 Regular,2020,2025,2.81,55.13
+total_recovery,504 Regular,2021,2021,8.24,51.19
+total_recovery,504 Regular,2021,2022,22.79,51.19
+total_recovery,504 Regular,2021,2023,11.21,51.19
+total_recovery,504 Regular,2021,2024,5.27,51.19
+total_recovery,504 Regular,2021,2025,3.68,51.19
+total_recovery,504 Regular,2022,2022,21.81,50.35
+total_recovery,504 Regular,2022,2023,19.93,50.35
+total_recovery,504 Regular,2022,2024,8.53,50.35
+total_recovery,504 Regular,2022,2025,0.08,50.35
+total_recovery,504 Regular,2023,2023,17.95,43.72
+total_recovery,504 Regular,2023,2024,10.91,43.72
+total_recovery,504 Regular,2023,2025,14.86,43.72
+total_recovery,504 Regular,2024,2024,9.83,33.36
+total_recovery,504 Regular,2024,2025,23.52,33.36
+total_recovery,504 Regular,2025,2025,10.36,10.36
+total_recovery,SBIC Debentures,2017,2017,5.99,62.34
+total_recovery,SBIC Debentures,2017,2018,26.59,62.34
+total_recovery,SBIC Debentures,2017,2019,7.08,62.34
+total_recovery,SBIC Debentures,2017,2020,9.01,62.34
+total_recovery,SBIC Debentures,2017,2021,3.7,62.34
+total_recovery,SBIC Debentures,2017,2022,2.98,62.34
+total_recovery,SBIC Debentures,2017,2023,6.4,62.34
+total_recovery,SBIC Debentures,2017,2024,0.6,62.34
+total_recovery,SBIC Debentures,2017,2025,0.0,62.34
+total_recovery,SBIC Debentures,2019,2019,8.67,38.2
+total_recovery,SBIC Debentures,2019,2020,2.31,38.2
+total_recovery,SBIC Debentures,2019,2021,16.01,38.2
+total_recovery,SBIC Debentures,2019,2022,4.5,38.2
+total_recovery,SBIC Debentures,2019,2023,6.71,38.2
+total_recovery,SBIC Debentures,2019,2024,0.0,38.2
+total_recovery,SBIC Debentures,2019,2025,0.0,38.2
+total_recovery,SBIC Debentures,2020,2020,0.0,22.71
+total_recovery,SBIC Debentures,2020,2021,16.46,22.71
+total_recovery,SBIC Debentures,2020,2022,6.26,22.71
+total_recovery,SBIC Debentures,2020,2023,0.0,22.71
+total_recovery,SBIC Debentures,2020,2024,0.0,22.71
+total_recovery,SBIC Debentures,2020,2025,0.0,22.71
+total_recovery,SBIC Debentures,2023,2023,0.49,9.47
+total_recovery,SBIC Debentures,2023,2024,8.98,9.47
+total_recovery,SBIC Debentures,2023,2025,0.0,9.47
+total_recovery,SBIC Participating Securities,2017,2017,69.23,85.23
+total_recovery,SBIC Participating Securities,2017,2018,-15.13,85.23
+total_recovery,SBIC Participating Securities,2017,2019,1.05,85.23
+total_recovery,SBIC Participating Securities,2017,2020,1.37,85.23
+total_recovery,SBIC Participating Securities,2017,2021,17.17,85.23
+total_recovery,SBIC Participating Securities,2017,2022,9.4,85.23
+total_recovery,SBIC Participating Securities,2017,2023,0.0,85.23
+total_recovery,SBIC Participating Securities,2017,2024,0.78,85.23
+total_recovery,SBIC Participating Securities,2017,2025,1.37,85.23
+total_recovery,SBIC Participating Securities,2018,2018,81.18,84.34
+total_recovery,SBIC Participating Securities,2018,2019,1.96,84.34
+total_recovery,SBIC Participating Securities,2018,2020,0.0,84.34
+total_recovery,SBIC Participating Securities,2018,2021,0.0,84.34
+total_recovery,SBIC Participating Securities,2018,2022,0.0,84.34
+total_recovery,SBIC Participating Securities,2018,2023,0.72,84.34
+total_recovery,SBIC Participating Securities,2018,2024,0.49,84.34
+total_recovery,SBIC Participating Securities,2018,2025,0.0,84.34
+total_recovery,SBIC Participating Securities,2019,2019,0.0,0.0
+total_recovery,SBIC Participating Securities,2019,2020,0.0,0.0
+total_recovery,SBIC Participating Securities,2019,2021,0.0,0.0
+total_recovery,SBIC Participating Securities,2019,2022,0.0,0.0
+total_recovery,SBIC Participating Securities,2019,2023,0.0,0.0
+total_recovery,SBIC Participating Securities,2019,2024,0.0,0.0
+total_recovery,SBIC Participating Securities,2019,2025,0.0,0.0
+total_recovery,ARC 506,2016,2016,6.69,28.89
+total_recovery,ARC 506,2016,2017,8.67,28.89
+total_recovery,ARC 506,2016,2018,2.49,28.89
+total_recovery,ARC 506,2016,2019,2.56,28.89
+total_recovery,ARC 506,2016,2020,2.85,28.89
+total_recovery,ARC 506,2016,2021,0.41,28.89
+total_recovery,ARC 506,2016,2022,0.7,28.89
+total_recovery,ARC 506,2016,2023,1.97,28.89
+total_recovery,ARC 506,2016,2024,1.05,28.89
+total_recovery,ARC 506,2016,2025,1.49,28.89
+total_recovery,ARC 506,2017,2017,-8.51,16.37
+total_recovery,ARC 506,2017,2018,7.27,16.37
+total_recovery,ARC 506,2017,2019,5.1,16.37
+total_recovery,ARC 506,2017,2020,2.78,16.37
+total_recovery,ARC 506,2017,2021,0.0,16.37
+total_recovery,ARC 506,2017,2022,1.21,16.37
+total_recovery,ARC 506,2017,2023,2.57,16.37
+total_recovery,ARC 506,2017,2024,4.99,16.37
+total_recovery,ARC 506,2017,2025,0.95,16.37
+total_recovery,ARC 506,2018,2018,0.0,0.0
+total_recovery,ARC 506,2018,2019,0.0,0.0
+total_recovery,ARC 506,2018,2020,0.0,0.0
+total_recovery,ARC 506,2018,2021,0.0,0.0
+total_recovery,ARC 506,2018,2022,0.0,0.0
+total_recovery,ARC 506,2018,2023,0.0,0.0
+total_recovery,ARC 506,2018,2024,0.0,0.0
+total_recovery,ARC 506,2018,2025,0.0,0.0
+total_recovery,Dealer Floor Plan,2023,2023,0.0,-33.33
+total_recovery,Dealer Floor Plan,2023,2024,-33.33,-33.33
+total_recovery,Dealer Floor Plan,2023,2025,0.0,-33.33
+total_recovery,504 First Lien,2016,2016,0.0,0.0
+total_recovery,504 First Lien,2016,2017,0.0,0.0
+total_recovery,504 First Lien,2016,2018,0.0,0.0
+total_recovery,504 First Lien,2016,2019,0.0,0.0
+total_recovery,504 First Lien,2016,2020,0.0,0.0
+total_recovery,504 First Lien,2016,2021,0.0,0.0
+total_recovery,504 First Lien,2016,2022,0.0,0.0
+total_recovery,504 First Lien,2016,2023,0.0,0.0
+total_recovery,504 First Lien,2016,2024,0.0,0.0
+total_recovery,504 First Lien,2016,2025,0.0,0.0
+total_recovery,504 First Lien,2017,2017,0.0,0.0
+total_recovery,504 First Lien,2017,2018,0.0,0.0
+total_recovery,504 First Lien,2017,2019,0.0,0.0
+total_recovery,504 First Lien,2017,2020,0.0,0.0
+total_recovery,504 First Lien,2017,2021,0.0,0.0
+total_recovery,504 First Lien,2017,2022,0.0,0.0
+total_recovery,504 First Lien,2017,2023,0.0,0.0
+total_recovery,504 First Lien,2017,2024,0.0,0.0
+total_recovery,504 First Lien,2017,2025,0.0,0.0
+total_recovery,504 First Lien,2018,2018,0.0,0.0
+total_recovery,504 First Lien,2018,2019,0.0,0.0
+total_recovery,504 First Lien,2018,2020,0.0,0.0
+total_recovery,504 First Lien,2018,2021,0.0,0.0
+total_recovery,504 First Lien,2018,2022,0.0,0.0
+total_recovery,504 First Lien,2018,2023,0.0,0.0
+total_recovery,504 First Lien,2018,2024,0.0,0.0
+total_recovery,504 First Lien,2018,2025,0.0,0.0
+total_recovery,504 First Lien,2019,2019,0.0,0.0
+total_recovery,504 First Lien,2019,2020,0.0,0.0
+total_recovery,504 First Lien,2019,2021,0.0,0.0
+total_recovery,504 First Lien,2019,2022,0.0,0.0
+total_recovery,504 First Lien,2019,2023,0.0,0.0
+total_recovery,504 First Lien,2019,2024,0.0,0.0
+total_recovery,504 First Lien,2019,2025,0.0,0.0
+total_recovery,504 First Lien,2020,2020,0.0,0.0
+total_recovery,504 First Lien,2020,2021,0.0,0.0
+total_recovery,504 First Lien,2020,2022,0.0,0.0
+total_recovery,504 First Lien,2020,2023,0.0,0.0
+total_recovery,504 First Lien,2020,2024,0.0,0.0
+total_recovery,504 First Lien,2020,2025,0.0,0.0
+total_recovery,504 First Lien,2021,2021,0.0,0.0
+total_recovery,504 First Lien,2021,2022,0.0,0.0
+total_recovery,504 First Lien,2021,2023,0.0,0.0
+total_recovery,504 First Lien,2021,2024,0.0,0.0
+total_recovery,504 First Lien,2021,2025,0.0,0.0
+total_recovery,504 First Lien,2023,2023,0.0,0.0
+total_recovery,504 First Lien,2023,2024,0.0,0.0
+total_recovery,504 First Lien,2023,2025,0.0,0.0
+total_recovery,504 First Lien,2024,2024,0.0,0.0
+total_recovery,504 First Lien,2024,2025,0.0,0.0
+total_recovery,504 Refi,2016,2016,8.92,54.87
+total_recovery,504 Refi,2016,2017,10.04,54.87
+total_recovery,504 Refi,2016,2018,16.02,54.87
+total_recovery,504 Refi,2016,2019,2.04,54.87
+total_recovery,504 Refi,2016,2020,0.8,54.87
+total_recovery,504 Refi,2016,2021,2.94,54.87
+total_recovery,504 Refi,2016,2022,4.02,54.87
+total_recovery,504 Refi,2016,2023,9.45,54.87
+total_recovery,504 Refi,2016,2024,0.33,54.87
+total_recovery,504 Refi,2016,2025,0.3,54.87
+total_recovery,504 Refi,2017,2017,4.71,46.77
+total_recovery,504 Refi,2017,2018,25.81,46.77
+total_recovery,504 Refi,2017,2019,2.82,46.77
+total_recovery,504 Refi,2017,2020,0.79,46.77
+total_recovery,504 Refi,2017,2021,0.86,46.77
+total_recovery,504 Refi,2017,2022,8.15,46.77
+total_recovery,504 Refi,2017,2023,1.66,46.77
+total_recovery,504 Refi,2017,2024,1.14,46.77
+total_recovery,504 Refi,2017,2025,0.83,46.77
+total_recovery,504 Refi,2018,2018,11.8,42.15
+total_recovery,504 Refi,2018,2019,11.44,42.15
+total_recovery,504 Refi,2018,2020,10.8,42.15
+total_recovery,504 Refi,2018,2021,4.05,42.15
+total_recovery,504 Refi,2018,2022,1.06,42.15
+total_recovery,504 Refi,2018,2023,1.1,42.15
+total_recovery,504 Refi,2018,2024,1.11,42.15
+total_recovery,504 Refi,2018,2025,0.78,42.15
+total_recovery,504 Refi,2019,2019,3.85,36.83
+total_recovery,504 Refi,2019,2020,11.99,36.83
+total_recovery,504 Refi,2019,2021,8.66,36.83
+total_recovery,504 Refi,2019,2022,0.7,36.83
+total_recovery,504 Refi,2019,2023,9.91,36.83
+total_recovery,504 Refi,2019,2024,0.99,36.83
+total_recovery,504 Refi,2019,2025,0.73,36.83
+total_recovery,504 Refi,2020,2020,20.63,61.85
+total_recovery,504 Refi,2020,2021,6.31,61.85
+total_recovery,504 Refi,2020,2022,21.13,61.85
+total_recovery,504 Refi,2020,2023,13.1,61.85
+total_recovery,504 Refi,2020,2024,0.38,61.85
+total_recovery,504 Refi,2020,2025,0.31,61.85
+total_recovery,504 Refi,2021,2021,6.69,-20.83
+total_recovery,504 Refi,2021,2022,14.44,-20.83
+total_recovery,504 Refi,2021,2023,5.97,-20.83
+total_recovery,504 Refi,2021,2024,3.26,-20.83
+total_recovery,504 Refi,2021,2025,-51.19,-20.83
+total_recovery,504 Refi,2022,2022,10.04,58.44
+total_recovery,504 Refi,2022,2023,40.79,58.44
+total_recovery,504 Refi,2022,2024,4.22,58.44
+total_recovery,504 Refi,2022,2025,3.39,58.44
+total_recovery,504 Refi,2023,2023,13.93,18.19
+total_recovery,504 Refi,2023,2024,4.1,18.19
+total_recovery,504 Refi,2023,2025,0.16,18.19
+total_recovery,504 Refi,2024,2024,27.31,30.99
+total_recovery,504 Refi,2024,2025,3.68,30.99
+total_recovery,504 Refi,2025,2025,15.44,15.44
+total_recovery,504 Refi,2021,2021,0.01,7.38
+total_recovery,504 Refi,2021,2022,0.68,7.38
+total_recovery,504 Refi,2021,2023,1.27,7.38
+total_recovery,504 Refi,2021,2024,1.12,7.38
+total_recovery,504 Refi,2021,2025,4.3,7.38
+total_recovery,504 Refi,2022,2022,0.82,4.68
+total_recovery,504 Refi,2022,2023,1.58,4.68
+total_recovery,504 Refi,2022,2024,1.36,4.68
+total_recovery,504 Refi,2022,2025,0.92,4.68
+total_recovery,504 Refi,2023,2023,0.42,1.78
+total_recovery,504 Refi,2023,2024,0.67,1.78
+total_recovery,504 Refi,2023,2025,0.69,1.78
+total_recovery,504 Refi,2024,2024,0.62,1.65
+total_recovery,504 Refi,2024,2025,1.04,1.65
+total_recovery,504 Refi,2025,2025,0.74,0.74
+total_recovery,All Other,2016,2016,-0.15,46.7
+total_recovery,All Other,2016,2017,27.38,46.7
+total_recovery,All Other,2016,2018,0.02,46.7
+total_recovery,All Other,2016,2019,-0.16,46.7
+total_recovery,All Other,2016,2020,0.09,46.7
+total_recovery,All Other,2016,2021,-0.01,46.7
+total_recovery,All Other,2016,2022,19.43,46.7
+total_recovery,All Other,2016,2023,0.14,46.7
+total_recovery,All Other,2016,2024,-0.08,46.7
+total_recovery,All Other,2016,2025,0.05,46.7
+total_recovery,All Other,2017,2017,-1.18,27.89
+total_recovery,All Other,2017,2018,28.13,27.89
+total_recovery,All Other,2017,2019,0.01,27.89
+total_recovery,All Other,2017,2020,0.05,27.89
+total_recovery,All Other,2017,2021,0.0,27.89
+total_recovery,All Other,2017,2022,0.36,27.89
+total_recovery,All Other,2017,2023,0.19,27.89
+total_recovery,All Other,2017,2024,0.18,27.89
+total_recovery,All Other,2017,2025,0.14,27.89
+total_recovery,All Other,2018,2018,-0.0,0.59
+total_recovery,All Other,2018,2019,0.13,0.59
+total_recovery,All Other,2018,2020,-0.09,0.59
+total_recovery,All Other,2018,2021,0.0,0.59
+total_recovery,All Other,2018,2022,0.0,0.59
+total_recovery,All Other,2018,2023,0.55,0.59
+total_recovery,All Other,2018,2024,0.0,0.59
+total_recovery,All Other,2018,2025,0.0,0.59
+total_recovery,All Other,2019,2019,97.06,100.02
+total_recovery,All Other,2019,2020,2.96,100.02
+total_recovery,All Other,2019,2021,0.0,100.02
+total_recovery,All Other,2019,2022,0.0,100.02
+total_recovery,All Other,2019,2023,0.0,100.02
+total_recovery,All Other,2019,2024,0.0,100.02
+total_recovery,All Other,2019,2025,0.0,100.02
+total_recovery,All Other,2023,2023,0.0,0.62
+total_recovery,All Other,2023,2024,-5.18,0.62
+total_recovery,All Other,2023,2025,5.8,0.62

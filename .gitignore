@@ -19,3 +19,7 @@ derby.log
 crypto-ticks-refinery-glue-dynamo/data/raw/
 crypto-ticks-refinery-glue-dynamo/data/unzipped/
 crypto-ticks-refinery-glue-dynamo/__profile_*.json
+
+# sba-credit-risk: raw SBA FOIA CSVs (763 MB, each over GitHub's 100 MB limit), FDIC pulls and
+# the link-only listed file. Borrower names and addresses in the SBA files never leave this folder.
+sba-credit-risk-ecs-dynamo/data/raw/
