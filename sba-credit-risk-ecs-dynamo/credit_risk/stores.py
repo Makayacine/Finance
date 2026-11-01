@@ -69,7 +69,8 @@ class S3Store:
         for page in self.client.get_paginator("list_objects_v2").paginate(
             Bucket=self.bucket, Prefix=prefix
         ):
-            keys += [item["Key"] for item in page.get("Contents", []) if not item["Key"].endswith("/")]
+            keys += [item["Key"] for item in page.get("Contents", [])
+                     if not item["Key"].endswith("/")]
         return sorted(keys)
 
     @contextlib.contextmanager

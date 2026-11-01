@@ -7,7 +7,7 @@
                                        Done / GateFailed / ...   -> exit 0 / exit 1
 
 The runner reads the state machine and does what it says, rather than calling the two containers
-in a hard-coded order. That is what makes the local run a rehearsal of the deployed flow: the
+in a hard-coded order. That is what makes the local run a rehearsal of the flow you deploy: the
 Choice is evaluated from its ``Variable`` and ``BooleanEquals`` against the validator's real
 output at the real ``ResultPath``, a failed gate lands in the real Fail state with the
 ``CausePath`` the console would show, and a mistyped path in the JSON breaks this run the same
