@@ -16,8 +16,9 @@ Two chains, never multiplied together:
 
 - **SBA is the loan book.** A WoE scorecard on origination fields ranks loans within a vintage; a
   monthly charge-off hazard by loan age turns its bands into a 12-month PD for Basel and a lifetime
-  curve for IFRS 9; a fractional logit predicts gross charge-off severity. EL, stage and capital
-  follow for each of the 281,077 open loans.
+  curve for IFRS 9; a fractional logit on the origination bins and the loan's age at charge-off
+  predicts gross charge-off severity. EL, stage and capital follow for each of the 281,077 open
+  loans.
 - **FDIC is bank and counterparty risk.** Failure in the next 12 months from filing ratios, out of
   time; the insurer loss rate, judged first out of time; the deposit run-off ratio, as a table; and
   a dollar EL backtest against what the fund actually lost.
@@ -64,11 +65,11 @@ nullable integers declared `float64`, and the validator's answer carried by a ta
 | `credit_risk/sba.py` · `hazard.py` · `woe.py` · `capital.py` | **done** — the SBA chain |
 | `credit_risk/fdic.py` | **done** — the FDIC chain |
 | `credit_risk/metrics.py` · `results.py` · `pipeline.py` · `stores.py` | **done** — AUC/Gini/KS/PSI, Decimal items, the model run, the only AWS-aware module |
-| `docker-data-validity/` · `docker-credit-model/` | **done** — both images built and run on the full data |
+| `docker-data-validity/` · `docker-credit-model/` | **done** — the two entrypoints on `python:3.12-slim`, pinned to the releases the notebook ran on |
 | `step-functions/step-function.json` · `event-pattern.json` | **done** — seven states, no Pass; walked locally by `run_pipeline.py` |
 | `local-development/stage_landing.py` · `run_pipeline.py` · `build_sample.py` | **done** — the upload, the local state machine, the committed sample |
 | `credit-risk-walkthrough.ipynb` | **done** — executed on the full files, every figure below |
-| `tests/` | **done** — 36 tests, no AWS, no network, no mocks |
+| `tests/` | **done** — 41 tests, no AWS, no network, no mocks |
 
 ## The data
 
@@ -93,8 +94,8 @@ a clone. It is stratified, not the head of the file: 0.6% of every (fiscal year,
 cell of each SBA file with a floor of three, and on the FDIC side 35 failed banks per failure era,
 10 assisted banks, the three 2023 failures and 400 banks that never failed, every table cut to
 those banks whole. Its source line sits beside it in `data/sample/fdic/SOURCE.md`. It is small
-enough that its scorecard ranks at chance, which is the right outcome for 1,600 training loans
-and 70 coefficients; **every figure in this README is from the full files.**
+enough that its scorecard ranks at chance, which is the right outcome for 1,939 training loans
+and 55 coefficients; **every figure in this README is from the full files.**
 
 ## The SBA chain
 
@@ -116,14 +117,14 @@ full, 143,817 charged off and 281,083 are open. Individuals are dropped, and so 
 (CANCLD) and undisbursed (COMMIT) loans. The file has no loan identifier — `LocationID` is the
 lender's location — so `loan_id` is minted from the file's fiscal-year span and the row number.
 
-### The field that leaks: `TermInMonths`
+### The fields that leak: `TermInMonths` and `CollateralInd`
 
 A term is set at approval, so it looks like the safest origination field in the file. **It is
 rewritten at charge-off.** Of paid-in-full company loans, 83.4% carry a whole-year term; of
 charged-off ones, 8.9%. Loans at exactly 120 or 240 months charge off at about 0.5%; loans at
-85-119 or 181-239 months, at about 31%. In the scorecard it lifts the within-vintage AUC from
-about 0.63 to 0.88-0.92, and every point of that is the outcome. It is excluded everywhere, including from the
-severity model, and nothing in `credit_risk/` reads it.
+85-119 or 181-239 months, at about 31%. Given to the scorecard as a length band and a whole-year
+flag, it lifts the holdout AUC from 0.623 to 0.915, every single vintage from 0.560-0.639 to
+0.904-0.930 and FY2010 from 0.601 to 0.920, and every point of that is the outcome.
 
 The same rewrite rules out the amortisation-schedule test as a way of splitting LGD from EAD: any
 scheduled balance computed from that term is computed from a field the charge-off process has
@@ -131,45 +132,67 @@ already touched. The interest rate is out for a plainer reason — it is present
 approvals and 100% from FY2010, so it cannot rank loans across the crisis vintages. Bank name and
 address are the loan's *current* assignee, and the secondary-market flag is set after sale.
 
+**The collateral flag is attached on the way to charge-off.** For the FY2000-04 approvals it is
+not a fact about the loan at approval. Of the resolved FY2000-03 company loans flagged as
+collateralised, 93.0% charged off, against 11.3% of the unflagged ones, and in each of those four
+vintages the flagged rate sits at 91.5-93.4% while the unflagged one runs 9.4-13.4%. Of the 83,563
+FY2000-03 loans paid off by 2008, 12 carry the flag. The gap closes through FY2004 (59.8% against
+16.4%) and FY2005 (30.8% against 22.6%), and from FY2006 the flag is flat or protective (FY2009:
+11.7% against 17.9%). A field that leaked for five vintages cannot be trusted for the ones after
+it, so it is out of the card and the severity model for every vintage. `TermInMonths` is out of
+both too, and the loader reads neither.
+
 ### The scorecard
 
 The course's WoE scorecard, on the resolved FY2000-2009 vintages (1.3% or less of any of them
-still EXEMPT), with a stratified 30% of every (vintage, outcome) cell held out. Eleven
+still EXEMPT), with a stratified 30% of every (vintage, outcome) cell held out. Ten
 characteristics, each binned, WoE-ordered and turned into dummies with its riskiest bin as the
 reference: amount, guarantee share, NAICS sector, project state (coarse-classed into six WoE
 groups), processing method, business age (SBA's FY2018 recoding folded onto four groups),
-jobs, franchise, term or revolver, collateral and business type. The approval vintage enters as a
-**level term that is fitted and then left out of the points**: it absorbs the 15%-to-35% swing in
+jobs, franchise, term or revolver, and business type. The approval vintage enters as a
+**level term that is fitted and then left out of the points**: it absorbs the 13%-to-35% swing in
 charge-off rates across the decade, and the hazard calibration below supplies the level. p-values
 are clustered on the lender location. Points are the course's 300-850 min-max scaling.
 
 | | n | charge-offs | AUC [95% CI] | Gini | KS |
 | --- | --- | --- | --- | --- | --- |
-| Holdout, FY2000-2009 | 136,807 | 31,672 | **0.636** [0.632, 0.639] | 0.272 | 0.196 |
-| Holdout, single vintages | 8,086 - 19,994 | 1,224 - 7,104 | 0.608 - 0.681 | 0.216 - 0.361 | 0.158 - 0.284 |
-| FY2010, the next vintage | 33,631 | 3,042 | **0.585** [0.574, 0.597] | 0.171 | 0.126 |
+| Holdout, FY2000-2009 | 136,807 | 31,672 | **0.623** [0.619, 0.626] | 0.246 | 0.174 |
+| Holdout, single vintages | 8,086 - 19,994 | 1,224 - 7,104 | 0.560 - 0.639 | 0.120 - 0.279 | 0.085 - 0.198 |
+| FY2010, the next vintage | 33,631 | 3,042 | **0.601** [0.591, 0.613] | 0.202 | 0.144 |
 
-**It ranks within every vintage, modestly.** Origination fields carry a Gini of about 0.27, and
+**It ranks within every vintage, modestly.** Origination fields carry a Gini of about 0.25, and
 the strongest of them is geography: project state has the highest IV (0.083), then processing
 method (0.069) and sector (0.049). The card carries to the next vintage at a lower Gini.
 
-**The open book is drifting away from the card.** Score PSI against the development sample is
-under 0.10 for every vintage to FY2017, 0.11-0.15 for FY2018-2020, and 0.18-0.29 for FY2022-2026,
-with FY2025 and FY2026 past the 0.25 line. Most open loans are from those years, so the ranking
-below is applied to a population moving away from the one it was fitted on, and the PSI is the
-trigger for a refit once those vintages resolve. A rare bin of an ordered characteristic folds into
-its nearest neighbour, so a loan above $2m — which the FY2000-09 programme barely made, the 7(a)
-cap being $2m until the Small Business Jobs Act of 2010 — scores as the largest amount the card has
-seen.
+**The open book scores like the development sample.** Score PSI against the development sample is
+under 0.10 for every vintage except FY2010, FY2011, FY2013-2016 and FY2021, which run 0.10-0.19;
+none reaches the 0.25 line. FY2022-2026, 72% of the open loans, sit at 0.016-0.028, so the ranking
+below is applied to a population that scores like the one the card was fitted on. A PSI past 0.25
+on the open vintages would be the trigger for a refit. A rare bin of an ordered characteristic
+folds into its nearest neighbour, so a loan above $2m — which the FY2000-09 programme barely made,
+the 7(a) cap being $2m until the Small Business Jobs Act of 2010 — scores as the largest amount the
+card has seen.
 
 ### The hazard: 12-month PD for Basel, the lifetime curve for IFRS 9
 
-Every company loan with a disbursement date enters a life table at age 0 and leaves by charge-off
-(the event), by payoff (the competing exit) or on the as-of date (censored). **The dates are
-labels only; none is a feature.** Payoff competes rather than censors: a repaid loan cannot charge
-off, and treating it as censored would assume it went on carrying the hazard of the loans that did
-not repay. From origination, the book's lifetime charge-off PD is **15.4%** with payoff competing
-and 48.8% with it censored.
+Every company loan with a disbursement date enters a life table at age 0, or at its age on
+2005-08-01 if it was already open then (below), and leaves by charge-off (the event), by payoff
+(the competing exit) or on the as-of date (censored). **The dates are labels only; none is a
+feature.** Payoff competes rather than censors: a repaid loan cannot charge off, and treating it
+as censored would assume it went on carrying the hazard of the loans that did not repay. From
+origination, the book's lifetime charge-off PD is **15.8%** with payoff competing and 49.1% with it
+censored.
+
+**The table starts on 2005-08-01.** No paid-in-full date in the file is earlier than 2005-05-31.
+34,187 company payoffs carry that exact date and 6,671 more carry 2005-07-31, against about 2,000
+in an ordinary month, all of them FY2000-05 approvals. They read as placeholders, not the days
+loans were repaid, and left in they would keep loans at risk for years after they had repaid and
+thin every early hazard. So a loan still open on 2005-08-01 enters the table at its age that day,
+and every exit before it is dropped, charge-offs with the payoffs, or the early vintages would keep
+their failures and lose their repayments. That removes 46,277 loans, 42,349 payoffs and 3,928
+charge-offs, of which 45,713 are FY2000-04 approvals, a quarter of those vintages. The curve, the
+band multipliers and each early vintage's observed against expected count experience since August
+2005 as a result.
 
 Each score band is calibrated to the curve by observed over expected charge-offs across its loans'
 months at risk — a proportional-hazards assumption, which the notebook checks by overlaying each
@@ -177,13 +200,18 @@ band's own life table on its scaled curve.
 
 | Band | Loans | Charge-off multiplier | 12-month PD at origination | Lifetime PD at origination |
 | --- | --- | --- | --- | --- |
-| A (highest score) | 127,286 | 0.60 | 0.09% | 9.2% |
-| D | 123,973 | 0.99 | 0.14% | 15.1% |
-| H (lowest score) | 201,724 | 1.35 | 0.19% | 21.0% |
+| A (highest score) | 195,080 | 0.52 | 0.08% | 8.4% |
+| D | 137,165 | 0.98 | 0.15% | 15.5% |
+| H (lowest score) | 106,068 | 1.84 | 0.28% | 28.4% |
 
 The 12-month PD at origination is tiny because charge-off lags default: the median company loan
 that charges off does so 49.8 months after disbursement. A loan's Basel PD is the 12-month
-incidence **at its current age**, which for the open book averages 3.02% by exposure.
+incidence **at its current age**, which for the open book averages 2.86% by exposure.
+
+The curve stops at 277 months, where fewer than 500 loans are at risk, rather than extrapolate
+a hazard estimated from almost nobody. The 231 open loans already older, $118m of exposure, carry
+a PD of zero, and 140 more, $80m, have a 12-month window cut short at 277 months. Holding the last
+two years' hazard flat beyond the cut instead would add $0.9m to the 12-month EL.
 
 ### IFRS 9 staging
 
@@ -192,37 +220,69 @@ file shows nothing that has changed since approval — no days past due, no modi
 rating. What does arrive afterwards is the experience of the loan's own cohort. So the staging is
 collective (IFRS 9 B5.5.1-B5.5.6): **a vintage whose charge-offs ran at least twice what the
 calibrated curve expected, with a one-sided Poisson p-value under 0.01, puts its open loans in
-stage 2.** FY2006 (2.11x) and FY2007 (2.37x) qualify; FY2005 (1.64x) and FY2008 (1.85x) do not.
-That is 854 open loans and $580m of exposure. Stage 3 needs an observed default and the file shows
-none for an open loan, so it is empty by construction.
+stage 2.** Only FY2007 (2.14x) qualifies; FY2005 (1.45x), FY2006 (1.89x) and FY2008 (1.71x) do
+not, and the FY2000-04 ratios count experience since August 2005 only. That is 470 open loans and
+$311m of exposure. Stage 3 needs an observed default and the file shows none for an open loan, so
+it is empty by construction.
 
 The same table is the case for a point-in-time view. The curve is pooled over 27 vintages and
-every calendar year since 2000, so it is through the cycle — what Basel's long-run PD wants — and
-every vintage since FY2010 has run at 0.33-0.76 of it. Scaling each open loan's remaining hazard
-by its vintage's credibility-weighted experience would cut the staged ECL from $3.13bn to $1.78bn.
-That is reported as a sensitivity, beside the booked figure, not in place of it.
+every calendar year since August 2005, so it is through the cycle — what Basel's long-run PD
+wants — and every vintage since FY2010 has run at 0.35-0.76 of it. Scaling each open loan's
+remaining hazard by its vintage's credibility-weighted experience would cut the staged ECL from
+$3.27bn to $1.91bn. That is reported as a sensitivity, beside the booked figure, not in place of
+it.
 
 ### Gross charge-off severity
 
 Charged-off amount over original amount: **conditional on charge-off, gross of recoveries**, and
 not an LGD. `GrossChargeOffAmount` has no balance at default and no recovery field beside it, so
 the file proves only charged-off ≤ balance at default ≤ original. The product is what is
-identified:
+identified, and because severity (charged-off / original) depends on the age a loan charges off
+at, as below, it is summed over age bands:
 
-    EL = P(charge-off) × (charged-off / original) × original
+    EL = Σ over age bands  P(charge-off in the band) × severity for that band × original
 
 On 143,789 company charge-offs with a positive amount, 4,482 exceed their original amount — SBA's
 report defines the charged-off amount as principal *and interest*, which is the likeliest reason,
 though the FOIA field is not documented that way. **The rule is one: cap at 1**, which keeps the
 identity's upper bound. Capped, the mean is 0.744 and the median 0.820.
 
-A fractional logit on the scorecard's origination bins, fitted on FY2000-09 charge-offs and scored
-on FY2010-19 ones, against the training mean:
+**Severity falls with the age a loan charges off at.** Capped, the mean runs from 0.926 for
+charge-offs inside a loan's first year to 0.485 from the 180th month on, and every five-year group
+of vintages shows the same slope, so it is the loan's age and not the vintage mix. Across all
+company charge-offs with an age:
 
-| Out of time, 30,543 charge-offs | MAE | RMSE | R² vs constant | Spearman |
+| Age at charge-off | Charge-offs | Mean severity |
+| --- | --- | --- |
+| 0-11 months | 1,676 | 0.926 |
+| 12-23 | 15,222 | 0.906 |
+| 24-35 | 25,208 | 0.860 |
+| 36-47 | 26,169 | 0.810 |
+| 48-59 | 21,144 | 0.741 |
+| 60-71 | 16,012 | 0.669 |
+| 72-95 | 20,447 | 0.613 |
+| 96-119 | 9,743 | 0.580 |
+| 120-179 | 7,265 | 0.519 |
+| 180 or more | 822 | 0.485 |
+
+The model carries it as a term beside the scorecard's origination bins. A charge-off's age is known
+only once it has happened, so an open loan is priced across all of them: its chance of charging off
+in each age band, from the hazard, times that band's severity. The `severity` the book carries is
+the 12-month figure that mixture implies, and it fills the IRB LGD slot. 81 charge-offs have no age
+and leave the fit only. The fractional logit is fitted on FY2000-09 charge-offs and scored on
+FY2010-19 ones, each at its own age, against the training mean:
+
+| Out of time, 30,536 charge-offs | MAE | RMSE | R² vs constant | Spearman |
 | --- | --- | --- | --- | --- |
 | constant (0.746) | 0.208 | 0.256 | — | — |
-| fractional logit | **0.190** | **0.239** | **0.129** | 0.390 |
+| fractional logit | **0.168** | **0.218** | **0.275** | 0.542 |
+
+Without the age term the same model scores MAE 0.190, R² 0.135 and Spearman 0.395, and its dollars
+are off by more: predicted over actual charged-off dollars, by age band on the same window, runs
+0.76-1.39 without the term and 0.94-1.20 with it. On the open book the term alone raises the
+12-month EL by 12.4%, the lifetime EL by 3.0% and RWA by 16%, and cuts the stage-2 ECL by 18%: most
+open loans are from FY2022-26, so their next charge-offs come at young ages, which carry the
+highest severity.
 
 The rule's cost, on the open book's EL. The fitted model is kept and its level recalibrated to each
 rule's mean on the training charge-offs: a fractional logit has no room above 1 to be refitted to
@@ -231,9 +291,9 @@ the rule changes.
 
 | Severity above 1 | Charge-offs | Mean severity | Level factor | 12-month EL | Lifetime EL |
 | --- | --- | --- | --- | --- | --- |
-| **cap at 1 (used)** | 143,789 | 0.744 | 1.000 | $3.129bn | $16.52bn |
-| drop the row | 139,307 | 0.736 | 0.990 | $3.098bn | $16.36bn |
-| keep uncapped | 143,789 | 0.768 | 1.035 | $3.237bn | $17.09bn |
+| **cap at 1 (used)** | 143,789 | 0.744 | 1.000 | $3.270bn | $15.61bn |
+| drop the row | 139,307 | 0.736 | 0.990 | $3.238bn | $15.46bn |
+| keep uncapped | 143,789 | 0.768 | 1.035 | $3.383bn | $16.16bn |
 
 **Recoveries come from SBA's own report and are never added together.** Table 11 is recoveries
 after charge-off as a percent of the amount charged off, by charge-off year: 2.68-6.65% for 7(a)
@@ -251,18 +311,23 @@ Every EXEMPT company loan with a disbursement date, priced at its age on 2026-09
 | --- | --- |
 | Open loans | 281,077 |
 | Original exposure | $165.06bn, of which SBA guarantees $123.9bn |
-| Exposure-weighted 12-month PD / severity | 3.02% / 0.627 |
-| **12-month EL** | **$3.13bn** (1.90% of exposure) |
-| Lifetime EL | $16.52bn (10.0%) |
-| IFRS 9 ECL, staged | $3.13bn — stage 1 $3.125bn on 280,223 loans, stage 2 $9.8m on 854 |
-| IFRS 9 ECL, point-in-time sensitivity | $1.78bn |
-| IRB capital K × exposure / RWA | $22.8bn / $285.1bn |
+| Exposure-weighted 12-month PD / severity | 2.86% / 0.725 |
+| **12-month EL** | **$3.27bn** (1.98% of exposure) |
+| Lifetime EL | $15.61bn (9.5%) |
+| IFRS 9 ECL, staged | $3.27bn — stage 1 $3.268bn on 280,607 loans, stage 2 $5.0m on 470 |
+| IFRS 9 ECL, point-in-time sensitivity | $1.91bn |
+| IRB capital K × exposure / RWA | $25.3bn / $316.1bn |
 
 The capital is the Basel corporate IRB formula with each slot filled by what the file has: the
-12-month *charge-off* PD in the PD slot (floored at 0.05%), the predicted gross charge-off
-severity in the LGD slot, the original amount as the exposure and M = 2.5 years. The SME firm-size
-adjustment needs annual sales the file does not carry; without it these small firms get the
-correlation of a large corporate, which is why RWA runs at 173% of exposure.
+12-month *charge-off* PD in the PD slot (floored at 0.05%), the gross charge-off severity expected
+over the next 12 months' charge-offs in the LGD slot, the original amount as the exposure and
+M = 2.5 years. RWA comes to 191% of exposure, and two things the formula is not given account for
+most of it. **SBA's guarantee is not applied.** It covers 75% of the exposure, and a lender
+holding capital on its own share only, with the guaranteed share at the US government's 0%
+weight, would carry RWA of 48% of exposure. **The SME firm-size adjustment needs annual sales**
+the file does not carry; without it these small firms get the correlation of a large corporate,
+and at its fullest it would bring RWA to 146%. So the figure is the capital on the whole loan, as
+if nobody guaranteed it.
 
 ## The FDIC chain
 
@@ -272,15 +337,17 @@ A row is a bank's year-end filing. Its 12-month horizon starts one quarter after
 the embargo, because a December call report is filed well into the next quarter. Only a FAILURE
 row is a default, dated by its own FAILDATE; ASSISTANCE is not — Citibank N.A. and Bank of America
 N.A. are assistance rows and both are open — and an assisted bank's rows stop at the assistance,
-which removes the 37 banks that were assisted and failed later. Events are deduplicated on CERT,
-earliest kept: 3 duplicates go, out of the 42 FSLIC-RTC rows (21 pairs, 3 sharing a CERT).
-Features come only from filings, never from the resolution or from `institutions.csv`.
+which removes the 37 banks that were assisted and failed later. A horizon that ends after the data
+does is dropped even when the bank has already failed inside it, because the banks that will not
+fail cannot be labelled yet. Events are deduplicated on CERT, earliest kept: 3 duplicates go, out
+of the 42 FSLIC-RTC rows (21 pairs, 3 sharing a CERT). Features come only from filings, never from
+the resolution or from `institutions.csv`.
 
 | 413,302 year-end rows | |
 | --- | --- |
-| kept and labelled | 390,446 |
+| kept and labelled | 390,443 |
 | censored exit: no filing at the next year-end and no failure (mergers are not in the table) | 15,986 |
-| horizon not yet observed (the 2025 year-end) | 4,400 |
+| horizon not yet observed (the 2025 year-end, including 3 banks that failed inside it) | 4,403 |
 | assisted, from the horizon that reaches the assistance onward | 1,503 |
 | failure inside the embargo quarter (the row before holds it) | 749 |
 | filed after the bank had failed | 218 |
@@ -290,8 +357,8 @@ Features come only from filings, never from the resolution or from `institutions
 Train on horizons in 1985-2007, validate on 2008-12, test on 2013-25. Equity to assets, ROA, net
 interest margin, noncurrent loans, net charge-offs, loans to deposits and uninsured share; every
 coefficient's p-value is clustered on the bank and every one is below 0.02. `RBCRWAJ` is out (0 or
-above 100 for every bank in 1984-87, and 0 for 39% of banks from 2020, when community banks could
-opt into the leverage ratio instead), and so are total assets (p = 0.91).
+above 100 for every bank in 1984-87, and 0 for 35-39% of banks at every year-end from 2020, when
+community banks could opt into the leverage ratio instead), and so are total assets (p = 0.91).
 
 | Window | Bank-years | Failures | Full model AUC [95% CI] | Gini | KS | Equity ratio only |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -329,7 +396,7 @@ deals took all deposits), scored on later failures. The era-only model is the 19
 | Out of time | Failures | MAE era-only | MAE era + financials | R² vs era-only | Spearman |
 | --- | --- | --- | --- | --- | --- |
 | **2008-12** | 465 | 0.139 | **0.122** | **+0.206** | 0.10 |
-| **2013-26**, 2023 systemic in | 84 | 0.107 | 0.105 | **−0.109** | 0.17 |
+| **2013-26**, 2023 systemic in | 84 | 0.107 | 0.105 | **−0.108** | 0.17 |
 | 2013-26, 2023 systemic out | 81 | 0.108 | 0.106 | −0.118 | 0.14 |
 
 **The financials help in the crisis and not since.** In 2008-12 they lower the error by an eighth,
@@ -391,12 +458,19 @@ between the two outcomes: four times the losses of the ordinary failures, and le
 the three 2023 failures are in. Most of that expected loss is a tiny PD on a very large deposit
 base; the 2023 cluster is what such a tail looks like when it arrives.
 
-Refitted on every labelled row and scored on the 2025 year-end filings: **4,383 banks, 4.2
-expected failures in the next 12 months, $1.26bn of expected loss to the fund.** 17 filers with
-equity of exactly zero are left out — 15 branches of foreign banks, which hold no capital of their
-own, and 2 CERTs with no institutions record — rather than scored as the riskiest banks in the
-country. Negative equity is kept: that is a domestic bank that is insolvent, which is what the
-model is for.
+Refitted on every labelled row and scored on the 2025 year-end filings: **4,393 banks, 4.7
+expected failures in the next 12 months, $1.44bn of expected loss to the fund**, on $20.08tn of
+deposits. The forecast is made as of the filing, so every bank still open when its horizon
+begins, after the embargo quarter, is in.
+An assistance row ends a bank's training rows but not its place here: Bank of America N.A. and
+Citibank N.A. are scored, and rank third and fifth by expected loss ($105m and $68m), behind
+JPMorgan Chase and Nano Banc ($122m, PD 0.42). A bank that failed after the embargo quarter is
+scored too, since that failure is what the PD is for. A bank that failed inside it, Metropolitan
+Capital Bank & Trust on 2026-01-30, is not: no horizon of the label rule counts that failure. None
+of the top 25 has failed since the filing. 17 filers with equity of exactly zero are left out — 15
+branches of foreign banks, which hold no capital of their own, and 2 CERTs with no institutions
+record — rather than scored as the riskiest banks in the country. Negative equity is kept: that is
+a domestic bank that is insolvent, which is what the model is for.
 
 ## The pipeline
 
@@ -424,8 +498,10 @@ numbers (`BankZip`, `FranchiseCode`) are read as strings so a leading zero survi
 **The validator's answer comes back through a task token.** `ecs:runTask.sync` returns the ECS
 task description — ARNs, exit codes, timings — and nothing the container computed, so the
 validator runs as `runTask.waitForTaskToken` with `$$.Task.Token` in its environment and answers
-with `SendTaskSuccess`, or `SendTaskFailure` carrying the traceback. The model container returns
-nothing the next state needs, so it is `.sync`, and its exit code is its answer.
+with `SendTaskSuccess`, or `SendTaskFailure` carrying the traceback. A validator that dies before
+it can answer, an out-of-memory kill or an image that never starts, sends nothing, and the state
+fails only at its one-hour timeout. The model container returns nothing the next state needs, so
+it is `.sync`, and its exit code is its answer.
 
 **One marker per batch.** The EventBridge rule matches the key `new/_READY`, which
 `stage_landing.py` writes after every data file. Firing on every arrival would start eight
@@ -433,9 +509,13 @@ executions per batch and fail seven of them, and a red execution should mean som
 
 **Results, then archive.** The model container writes `results/<chain>/*.csv` and 153 DynamoDB
 items, and only then moves the batch to `archived/<entity>/`, so a crash leaves the batch where a
-re-run will find it. Items are `chain` (PK) and `item` (SK) — `book#open`, `scorecard#vintage#2006`,
-`band#H`, `vintage#2007`, `pd#test#full`, `loss#out_of_time#test#excluded`, `el_backtest#…`,
-`counterparty#rank#01` — with every number a `Decimal` built through `str`, and NaN left out.
+re-run will find it. It moves the files it read and nothing else, each only if it still holds
+what was read (on S3, a copy conditioned on the ETag), so a file that a second execution promotes
+while the model runs is left for the next run rather than archived unread. Run one batch at a
+time all the same: write the next `_READY` once the last execution has finished. Items are
+`chain` (PK) and `item` (SK) — `book#open`, `scorecard#vintage#2006`, `band#H`, `vintage#2007`,
+`pd#test#full`, `loss#out_of_time#test#excluded`, `el_backtest#…`, `counterparty#rank#01` — with
+every number a `Decimal` built through `str`, and NaN left out.
 
 **The model logic has no boto3 in it.** `credit_risk/stores.py` is the only module that knows AWS
 exists, and it imports boto3 inside its AWS classes. Everything else takes a store and a table.
@@ -450,7 +530,7 @@ the containers.
 python -m pytest tests -q
 ```
 
-The pipeline on the committed sample, the state machine walked step by step, about 5 s:
+The pipeline on the committed sample, the state machine walked step by step, in 10-17 s:
 
 ```bash
 python local-development/stage_landing.py --local --data sample --clean
@@ -481,24 +561,34 @@ python local-development/run_pipeline.py --local --engine docker
 **The flow you deploy, from its own definition.** `run_pipeline.py` reads `step-function.json` and
 executes it state by state: the validator's real output lands at the real `ResultPath`, the Choice
 is evaluated from its own `Variable`, and a failed gate ends in the real Fail state with its
-`CausePath` resolved. The full files went through both Docker images this way — all eight files
-valid, the gate passed, the model container fitted both chains, wrote 153 items and archived the
-batch, in 3 min 45 s. The in-process run gives the same EL to the dollar, $3,128,581,349, at a
-peak of 1.05 GB resident for the validator and 2.33 GB for the model.
+`CausePath` resolved. The full files went through it in-process — all eight files valid, the gate
+passed, both chains fitted, 153 items written and the batch archived, in 368 s end to end on a
+laptop. The 12-month EL in the items is $3,269,624,742, the notebook's figure to the dollar. The
+processes peak at 1.09 GB resident for the validator and 1.81 GB for the model, and at 2.5 GB and
+3.5 GB of committed memory.
 
-**36 tests, no AWS, no network, no mocks.** `test_validation.py` (11): both dtype rules, codes as
+The two images are the same two entrypoints on `python:3.12-slim`, with the releases the notebook
+and the local run use pinned: pandas 3.0.5 for the validator, and pandas 3.0.5, numpy 2.5.3, scipy
+1.18.1 and statsmodels 0.15.0 for the model. `--engine docker` runs the state machine with them as
+its two tasks.
+
+**41 tests, no AWS, no network, no mocks.** `test_validation.py` (11): both dtype rules, codes as
 strings, `never_read` columns, the committed sample against its own validator, a whole batch, a
-missing file, a stray file, an invalid file. `test_state_machine.py` (7): the task-token wiring,
-the Choice reading the key the validator returns, no Pass state and no entity named, the event
-rule, the whole sample to `Done` with every table archived and no borrower column in the loan-level
-output,
-a short batch to `GateFailed`, and items that carry `Decimal` and never a float or a NaN. `test_sba.py` (13): borrower columns never read, the company
+missing file, a stray file, an invalid file. `test_state_machine.py` (9): the task-token wiring, a
+validator that cannot import its code still answering its token, the Choice reading the key the
+validator returns, no Pass state and no entity named, the event rule, the whole sample to `Done`
+with every table archived and no borrower column in the loan-level output, a file promoted
+mid-run left for the next run and not archived, a short batch to `GateFailed`, and items that carry
+`Decimal` and never a float or a NaN. `test_sba.py` (15): borrower columns never read, the company
 filter, EXEMPT never in the target, features unmoved when every label and excluded field is
-scrambled, a five-loan life table worked by hand, competing below censoring, the IRB formula
-against the Basel Committee's 92.32% risk weight at PD 1% and LGD 45%, the stage-2 rule, the
-severity rules, the 300-850 scaling, WoE, AUC, KS and PSI. `test_fdic.py` (5): every branch of the
-label rule on five invented banks, the exits-kept variant, event dedupe, the run-off ratio left
-unclipped with the loss flags set, and bank-clustered errors.
+scrambled and `TermInMonths` and `CollateralInd` never read, a five-loan life table worked by
+hand, competing below censoring, one band's multiplier exactly 1, a left-truncated table counting
+a loan only from the age it entered, a PD split by charge-off age adding back up to the PD, the IRB
+formula against the Basel Committee's 92.32% risk weight at PD 1% and LGD 45%, the stage-2 rule,
+the severity rules, the 300-850 scaling, WoE, AUC, KS and PSI. `test_fdic.py` (6): every branch of
+the label rule on five invented banks, the exits-kept variant, the last filing scoring every bank
+that was open when its horizon began, event dedupe, the run-off ratio left unclipped with the loss
+flags set, and bank-clustered errors.
 
 **Two engine differences to carry into the deploy.** Locally the task token has nothing to carry:
 the validator's `--local` path returns its answer, which is the payload `SendTaskSuccess` sends on
@@ -513,18 +603,20 @@ atomic, and the ready count still comes out exact.
    table `sba_credit_risk_results` with partition key `chain` (String) and sort key `item`
    (String).
 2. Push the two images to ECR and register two Fargate task definitions, containers named
-   `data-validity` and `credit-model`. On the full batch the validator's process peaks at 1.05 GB
-   resident and the model's at 2.33 GB, so 4 GB and 8 GB tasks leave room; Fargate's default
-   20 GB of ephemeral storage holds the 0.85 GB batch each task downloads.
+   `data-validity` and `credit-model`, each with a task execution role that can pull from ECR and
+   write logs. On the full batch the validator's process peaks at 1.09 GB resident and 2.5 GB
+   committed, the model's at 1.81 GB and 3.5 GB, so 4 GB and 8 GB tasks leave room; Fargate's
+   default 20 GB of ephemeral storage holds the 0.85 GB batch each task downloads.
 3. Task role: `s3:ListBucket`, `GetObject`, `PutObject`, `DeleteObject` on the bucket;
    `dynamodb:PutItem` on the table; `states:SendTaskSuccess` and `SendTaskFailure` for the
    validator.
 4. Create the state machine from `step-functions/step-function.json`, replacing every `<...>`
-   value — cluster, task definitions, subnets, security group. Its role needs `ecs:RunTask`,
-   `ecs:StopTask`, `ecs:DescribeTasks`, `iam:PassRole` for both task roles, and the
-   `events:PutTargets`/`PutRule`/`DescribeRule` permissions `.sync` uses.
+   value — cluster, task definitions, subnets, security group. Its role needs `ecs:RunTask`;
+   `ecs:StopTask`, `ecs:DescribeTasks` and the `events:PutTargets`/`PutRule`/`DescribeRule`
+   permissions `.sync` uses; and `iam:PassRole` on every role the two task definitions name, the
+   task execution roles as well as the task roles, or the first `RunTask` is refused.
 5. Create the EventBridge rule from `event-pattern.json` with your bucket name, targeting the state
-   machine.
+   machine through a role EventBridge can assume that allows `states:StartExecution` on it.
 6. Upload a batch: `python local-development/stage_landing.py --bucket <landing-bucket> --data raw`.
 
 Every AWS name in these files is account-specific and set by whoever deploys it.
@@ -540,6 +632,9 @@ Every AWS name in these files is account-specific and set by whoever deploys it.
   construction.
 - **`TermInMonths` is rewritten at charge-off**, so neither the contractual term nor any schedule
   built from it is available, for a feature or for a balance.
+- **`CollateralInd` is attached at charge-off for the FY2000-04 approvals**, so whether those loans
+  were secured at approval is not available, and the flag is out of the card and the severity
+  model for every vintage.
 - **The FDIC loss rate is a proxy.** COST is an estimate revised over time, and its denominator is
   a deposit snapshot rather than the amount the fund disbursed.
 - **Mergers are not in the failures table.** A bank that stops filing has left for a reason the

@@ -9,7 +9,9 @@ fit but not in the book produces a number nobody can reconcile. So the tests are
     including ``TermInMonths``, and the features do not move;
 *   the borrower columns are never read, by the loader or into any output;
 *   the life table's at-risk counts, hazards and cumulative incidence match a five-loan example
-    worked out on paper, and competing risk sits below censoring;
+    worked out on paper, a left-truncated table counts each loan only from the age it entered,
+    a PD split by the age the charge-off comes at adds back up to the PD, and competing risk
+    sits below censoring;
 *   the IRB formula reproduces the Basel Committee's published risk weight for PD 1%, LGD 45%;
 *   the stage-2 rule, the severity rules and the scorecard's 300-850 scaling do what they say.
 """
@@ -59,7 +61,7 @@ def test_features_do_not_move_when_labels_and_excluded_fields_are_scrambled(book
         scrambled[column] = "garbage"
     pd.testing.assert_frame_equal(model.features(book), model.features(scrambled))
     assert not set(sba.FEATURE_SOURCES) & set(sba.EXCLUDED_FEATURES)
-    assert "TermInMonths" not in sba.READ_COLUMNS
+    assert not {"TermInMonths", "CollateralInd"} & set(sba.READ_COLUMNS)
 
 
 def test_life_table_matches_a_hand_worked_example():
@@ -80,7 +82,8 @@ def test_life_table_matches_a_hand_worked_example():
 
 def test_competing_risk_lifetime_pd_sits_below_censoring(book):
     table = book[book.in_life_table]
-    curve = hazard.estimate(table.exit_age.astype(int), table.outcome, min_at_risk=20)
+    curve = hazard.estimate(table.exit_age.astype(int), table.outcome, min_at_risk=20,
+                            entry_age=table.entry_age.astype(int))
     competing = curve.conditional_incidence(np.zeros(1, dtype=int), None)[0]
     censored = 1 - np.prod(1 - curve.h_event)
     assert 0 < competing < censored < 1
@@ -93,6 +96,33 @@ def test_one_band_multiplier_is_exactly_one():
     rows = hazard.band_multipliers(curve, exit_age, outcome, np.array(["A"] * 6))
     assert rows["A"]["event_multiplier"] == pytest.approx(1.0)
     assert rows["A"]["competing_multiplier"] == pytest.approx(1.0)
+
+
+def test_delayed_entry_counts_a_loan_only_from_the_age_it_entered():
+    # a: in from age 0, charged off in month 1   b: entered at 2, paid off in month 3
+    # c: entered at 1, censored in month 2
+    exit_age, entry_age = np.array([1, 3, 2]), np.array([0, 2, 1])
+    outcome = np.array(["event", "competing", "censored"])
+    curve = hazard.estimate(exit_age, outcome, min_at_risk=0, entry_age=entry_age)
+    assert list(curve.at_risk) == [1, 2, 2, 1]
+    # One band against the pooled curve is exactly 1 only if both count the same months at risk.
+    rows = hazard.band_multipliers(curve, exit_age, outcome, np.array(["A"] * 3), entry_age)
+    assert rows["A"]["event_multiplier"] == pytest.approx(1.0)
+    assert rows["A"]["competing_multiplier"] == pytest.approx(1.0)
+
+
+def test_pd_split_by_charge_off_age_adds_up_to_the_pd():
+    # The five loans above: charge-off incidence is 0.2 in months 0-1 and 0.2 more in months 2-3.
+    curve = hazard.estimate([1, 1, 2, 2, 3], ["event", "competing", "censored", "event",
+                                              "competing"], min_at_risk=0)
+    bands = pd.DataFrame({"event_multiplier": [1.0], "competing_multiplier": [1.0]}, index=["A"])
+    model = sba.HazardModel(curve, bands, book_lifetime_pd=0.4)
+    age, band = np.array([0, 2]), np.array(["A", "A"])
+    for horizon in (12, None):
+        split = model.pd_by_age(age, band, horizon, starts=(0, 2))
+        # From age 0: 0.2 before month 2, 0.2 after. From age 2 (S = 0.6): 0, then 0.2 / 0.6.
+        np.testing.assert_allclose(split, [[0.2, 0.2], [0.0, 1 / 3]])
+        np.testing.assert_allclose(split.sum(axis=1), model.pd(age, band, horizon))
 
 
 def test_irb_reproduces_the_basel_risk_weight_for_pd_one_percent():

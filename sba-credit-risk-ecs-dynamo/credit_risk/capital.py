@@ -11,7 +11,9 @@ THE IRB FORMULA, AND WHAT GOES INTO ITS SLOTS
 
 That is the Basel corporate curve without the SME firm-size adjustment, which needs annual sales
 the FOIA file does not carry. The adjustment would lower R by up to 0.04 for the smallest firms,
-so leaving it out gives these small businesses the capital of a large corporate.
+so leaving it out gives these small businesses the capital of a large corporate. Nor is SBA's
+guarantee applied: the capital is on the whole loan, where a lender would hold it on its own
+share only and give the guaranteed share, 75% of the open book, the US government's weight.
 
 What fills each slot is stated where it is filled, because none of them is the Basel quantity:
 
@@ -20,8 +22,9 @@ What fills each slot is stated where it is filled, because none of them is the B
     point Basel calls default, and a default that recovers in full never charges off at all. It
     is floored at 0.05%, the Basel III corporate floor.
 *   **LGD** is the predicted *gross charge-off severity*, charged-off amount over original
-    amount, conditional on charge-off, gross of recoveries, capped at 1. It is not discounted and
-    carries no downturn add-on.
+    amount, conditional on charge-off, gross of recoveries, capped at 1. Severity falls with the
+    age a loan charges off at, so this is its average over the charge-offs the next 12 months
+    would bring, each at its own age. It is not discounted and carries no downturn add-on.
 *   **EAD** is the original approved amount. The charged-off amount can only bound the balance at
     default from below, so the original is the one exposure the file identifies, and it is an
     upper bound.

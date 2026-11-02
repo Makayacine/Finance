@@ -1,13 +1,13 @@
 """The two places this pipeline reads and writes, each with a folder stand-in for ``--local``.
 
-    FolderStore  ->  S3Store         list, local_copy, move, delete, put_text
+    FolderStore  ->  S3Store         list, local_copy, version, move, delete, put_text
     JsonTable    ->  DynamoTable     put_item
     report_local ->  report_task     the validator's answer to the state machine
 
 This is the only module in ``credit_risk`` that knows AWS exists, and even here boto3 is imported
 inside the AWS classes, so the ``--local`` path and the test suite never import it. A port to
 another cloud replaces this file and the two container entrypoints; the model and the
-validation logic only ever see these five methods.
+validation logic only ever see these six methods.
 
 Keys are S3-style, ``/``-separated and relative to the store's root, on both paths. The folder
 store maps a key onto ``<root>/<key>`` and nothing more, so a key that works locally is the key
@@ -41,10 +41,20 @@ class FolderStore:
     def local_copy(self, key):
         yield self._path(key)
 
-    def move(self, source, target):
+    def version(self, key):
+        """What a key holds right now -- modification time and size -- or None if it is gone."""
+        path = self._path(key)
+        return (path.stat().st_mtime_ns, path.stat().st_size) if path.is_file() else None
+
+    def move(self, source, target, version=None):
+        """Move a key; given ``version``, only if it still holds it. False if it did not move."""
+        # ponytail: check then rename, a window a second writer could hit; fine for one laptop.
+        if version is not None and self.version(source) != version:
+            return False
         destination = self._path(target)
         destination.parent.mkdir(parents=True, exist_ok=True)
         os.replace(self._path(source), destination)
+        return True
 
     def delete(self, key):
         path = self._path(key)
@@ -85,9 +95,33 @@ class S3Store:
         finally:
             shutil.rmtree(folder, ignore_errors=True)
 
-    def move(self, source, target):
-        self.client.copy({"Bucket": self.bucket, "Key": source}, self.bucket, target)
+    def version(self, key):
+        from botocore.exceptions import ClientError
+
+        try:
+            return self.client.head_object(Bucket=self.bucket, Key=key)["ETag"]
+        except ClientError as error:
+            if error.response["Error"]["Code"] in ("404", "NoSuchKey"):
+                return None
+            raise
+
+    def move(self, source, target, version=None):
+        """Copy then delete; given ``version``, the copy itself refuses an object that changed."""
+        from botocore.exceptions import ClientError
+
+        extra = {} if version is None else {"CopySourceIfMatch": version}
+        try:
+            self.client.copy({"Bucket": self.bucket, "Key": source}, self.bucket, target,
+                             ExtraArgs=extra)
+        except ClientError as error:
+            if version is not None and error.response["Error"]["Code"] in (
+                    "404", "NoSuchKey", "412", "PreconditionFailed"):
+                return False
+            raise
+        # ponytail: an overwrite landing between copy and delete is deleted unread; bucket
+        # versioning closes that gap if executions ever overlap.
         self.client.delete_object(Bucket=self.bucket, Key=source)
+        return True
 
     def delete(self, key):
         self.client.delete_object(Bucket=self.bucket, Key=key)

@@ -34,7 +34,9 @@ runs twelve months:
                                                  without failing has left for a reason this
                                                  table cannot see
     otherwise                                    y = 0
-    horizon ending after the data ends           dropped: not yet observed
+    horizon ending after the data ends           dropped: not yet observed, even when the bank
+                                                 has already failed inside it, because the banks
+                                                 that will not fail cannot be labelled yet
 
 ``exits="keep"`` changes only the second-last-but-one line: censored exits stay in as
 non-failures. That is the variant most published bank-failure models use without saying so, and
@@ -62,8 +64,9 @@ FEATURES COME ONLY FROM FILINGS
 Equity to assets, ROA, net interest margin, noncurrent loans, net charge-offs, loans to deposits
 and the uninsured share of deposits. Never the resolution type, the acquirer or anything from
 ``institutions.csv``, whose fields describe the bank as it is today. ``RBCRWAJ`` is left out: it
-is 0 or above 100 for every bank in 1984-87, before risk-based capital existed, and 0 for 39% of
-banks from 2020, when community banks could opt into the leverage-ratio framework instead. Total
+is 0 or above 100 for every bank in 1984-87, before risk-based capital existed, and 0 for 35-39%
+of banks at every year-end from 2020, when community banks could opt into the leverage-ratio
+framework instead. Total
 assets were tested and dropped (p = 0.91). ``DEPINS`` exceeds total deposits on 4-6% of filings
 before 1991, so the uninsured share is clipped to [0, 1].
 """
@@ -167,7 +170,7 @@ def pd_panel(yearend, failures, exits="censor"):
     reasons = pd.Series("kept", index=panel.index)
     if exits == "censor":
         reasons[~hit & ~panel.files_next] = "censored exit"
-    reasons[~hit & (end > observed_through)] = "horizon not yet observed"
+    reasons[end > observed_through] = "horizon not yet observed"
     reasons[panel.assist_date.notna() & (panel.assist_date <= end)] = "assisted"
     reasons[panel.fail_date.notna() & (panel.fail_date <= panel.repdte)] = "after failure"
     reasons[(panel.fail_date > panel.repdte) & (panel.fail_date <= start)] = "embargo"
@@ -478,8 +481,23 @@ def el_backtest(pd_model, loss_model, panel, failures, runoff_ratio):
     return table
 
 
+def as_of_rows(panel):
+    """Every bank on the last year-end filing that was still open when its horizon began.
+
+    The forecast is made as of the filing, so the label rule decides who is in it. A bank that
+    failed on or before the filing date, or inside the embargo quarter after it, is out: no
+    horizon of the label rule would count that failure. A bank that failed later is in, because
+    on the filing date it was an open bank and that failure is what the PD is for. An assistance
+    event never removes a bank here. It ends a bank's training rows because what happened next is
+    unobserved, but Bank of America N.A. and Citibank N.A. were assisted in 2008-09 and file
+    every year since.
+    """
+    latest = panel[panel.repdte == panel.repdte.max()]
+    return latest[~latest.drop_reason.isin(["after failure", "embargo"])]
+
+
 def counterparty_el(panel, failures, prefailure, institutions, runoff_ratio, top=25):
-    """Today's banks: both models refitted on every labelled row, scored on the last filing."""
+    """The last filing's banks: both models refitted on every labelled row, scored as of it."""
     labelled = panel[panel.drop_reason == "kept"]
     pd_model = fit_pd(labelled)
     sample = loss_sample(failures, prefailure)
@@ -489,8 +507,7 @@ def counterparty_el(panel, failures, prefailure, institutions, runoff_ratio, top
     # branches of foreign banks and 2 CERTs with no institutions record. An equity-driven PD would
     # rank them the riskiest banks in the country, so they are left out. Negative equity is kept:
     # that is a domestic bank that is insolvent, which is exactly what the model is for.
-    latest = panel[(panel.repdte == panel.repdte.max()) & panel.fail_date.isna()
-                   & panel.assist_date.isna()].copy()
+    latest = as_of_rows(panel).copy()
     no_equity = int((latest.EQV == 0).sum())
     latest = latest[latest.EQV != 0]
     latest["pre_1992"] = 0.0

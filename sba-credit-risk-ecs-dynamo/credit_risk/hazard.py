@@ -2,7 +2,8 @@
 
 The FOIA file carries no default date, only a charge-off date, and only for loans that were
 charged off. That is enough for a life table. Every loan enters at age 0 on its first
-disbursement and leaves by one of three doors:
+disbursement -- or, when the table is left-truncated, at its age on the day observation starts --
+and leaves by one of three doors:
 
     CHGOFF    leaves on ChargeOffDate       the event
     P I F     leaves on PaidInFullDate      the competing exit: a repaid loan cannot charge off
@@ -19,7 +20,7 @@ the sum of survival times event hazard. That sum is the quantity both regimes wa
 Treating payoff as competing and not as censoring is not a refinement. Censoring would assume a
 repaid loan goes on carrying the hazard of the loans that did not repay, and the lifetime PD would
 then count charge-offs from loans that no longer exist. From origination, the company book's
-lifetime PD is 15.4% with payoff competing and 48.8% with payoff censored.
+lifetime PD is 15.8% with payoff competing and 49.1% with payoff censored.
 
 **The contractual term is not needed, and is not used.** A loan's scheduled maturity shows up in
 the payoff hazard, so running the incidence to the end of the curve gives the remaining-life
@@ -98,37 +99,42 @@ class HazardCurve:
                          where=base > 0)
 
 
-def estimate(exit_age, outcome, min_at_risk=500):
+def estimate(exit_age, outcome, min_at_risk=500, entry_age=None):
     """Life table from each loan's exit age and outcome (``event``/``competing``/``censored``).
 
-    A loan that leaves in month ``a`` was at risk in months 0..a inclusive.
+    A loan that enters at age ``e`` and leaves in month ``a`` was at risk in months e..a inclusive.
+    ``entry_age`` is None for a table that sees every loan from age 0; a left-truncated table
+    passes the age at which each loan came under observation.
     """
     exit_age = np.asarray(exit_age, dtype=int)
+    entry_age = np.zeros_like(exit_age) if entry_age is None else np.asarray(entry_age, dtype=int)
     outcome = np.asarray(outcome)
     length = int(exit_age.max()) + 1 if len(exit_age) else 1
-    leaving = np.bincount(exit_age, minlength=length)
-    at_risk = leaving[::-1].cumsum()[::-1].astype(float)
+    entered = np.bincount(entry_age, minlength=length).cumsum()
+    left_before = np.concatenate([[0], np.bincount(exit_age, minlength=length).cumsum()[:-1]])
+    at_risk = (entered - left_before).astype(float)
     events = np.bincount(exit_age[outcome == "event"], minlength=length).astype(float)
     competing = np.bincount(exit_age[outcome == "competing"], minlength=length).astype(float)
     keep = int(np.argmax(at_risk < min_at_risk)) if (at_risk < min_at_risk).any() else length
     return HazardCurve(at_risk[:keep], events[:keep], competing[:keep])
 
 
-def cumulative_hazard(curve, exit_age):
+def cumulative_hazard(curve, exit_age, entry_age=None):
     """Nelson-Aalen expected events for each loan over the months it was at risk."""
-    cum_event = np.concatenate([np.cumsum(curve.h_event), [np.nan]])
-    cum_comp = np.concatenate([np.cumsum(curve.h_competing), [np.nan]])
-    age = np.minimum(np.asarray(exit_age, dtype=int), curve.max_age - 1)
-    return cum_event[age], cum_comp[age]
+    cum_event = np.concatenate([[0.0], np.cumsum(curve.h_event)])
+    cum_comp = np.concatenate([[0.0], np.cumsum(curve.h_competing)])
+    last = np.minimum(np.asarray(exit_age, dtype=int), curve.max_age - 1) + 1
+    first = 0 if entry_age is None else np.minimum(np.asarray(entry_age, dtype=int), last)
+    return cum_event[last] - cum_event[first], cum_comp[last] - cum_comp[first]
 
 
-def band_multipliers(curve, exit_age, outcome, band):
+def band_multipliers(curve, exit_age, outcome, band, entry_age=None):
     """Observed over expected events and payoffs per band, against the pooled curve."""
     exit_age = np.asarray(exit_age, dtype=int)
     outcome = np.asarray(outcome)
     band = np.asarray(band)
     inside = exit_age < curve.max_age  # exits past the cut tail carry no curve to compare with
-    expected_event, expected_comp = cumulative_hazard(curve, exit_age)
+    expected_event, expected_comp = cumulative_hazard(curve, exit_age, entry_age)
     rows = {}
     for label in sorted(set(band[inside])):
         mask = inside & (band == label)
