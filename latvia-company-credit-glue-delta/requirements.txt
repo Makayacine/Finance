@@ -1,0 +1,24 @@
+# Local path: the tests, the --local chain and the notebook, on a laptop with no AWS account.
+# Python 3.11 and a Java 17 JDK on JAVA_HOME, which is what AWS Glue 5.0 runs.
+#
+# Pinned to what Glue 5.0 runs and what its local image (public.ecr.aws/glue/aws-glue-libs:5)
+# carries: Spark 3.5.4, Delta Lake 3.3.0, pandas 2.2.2, numpy 2.2.6, pyarrow 17.0.0. The first
+# Spark start fetches the Delta Lake jar from Maven Central through delta-spark and caches it.
+pyspark==3.5.4
+delta-spark==3.3.0
+pandas==2.2.2
+numpy==2.2.6
+pyarrow==17.0.0
+pytest
+
+# One test fits the same data with statsmodels to check the hand-written logit; nothing else
+# imports it, and the Glue jobs never do.
+statsmodels
+
+# The walkthrough notebook only.
+matplotlib==3.9.0
+openpyxl
+jupyter
+
+# boto3 is not listed: nothing on the --local path imports it. Glue ships it, and the bucket
+# classes in glue-jobs/lakehouse.py import it only when they are pointed at S3.
