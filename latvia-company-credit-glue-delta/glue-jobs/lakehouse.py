@@ -12,11 +12,14 @@ Glue it is ``s3://<bucket>/``. Only ``S3Bucket`` imports boto3, and only when it
 WHAT CHANGED FROM THE REFERENCE, AND WHY
 ----------------------------------------
 * **Explicit schemas, never inferSchema.** inference costs a second pass over every file, and it
-  types a column from whatever one batch holds: a quarter in which every proceeding is still open
-  has an empty ``proceeding_ended_on``, which infers as a string, and the MERGE into a date
-  column then fails. The header must also match the schema by name (``enforceSchema=False``), so
-  a reordered extract is refused instead of read into the wrong columns, and ``FAILFAST`` raises
-  on a malformed row instead of nulling it.
+  types a column from whatever one batch holds: in a quarter in which every proceeding is still
+  open, ``proceeding_ended_on`` is empty and infers as a string, and the identifiers infer as
+  numbers. Delta casts them back to the table's types on the MERGE, so such a batch commits, but
+  a value that will not cast -- an impossible date -- then surfaces only as a failed task inside
+  the MERGE's write. With the declared schema the read refuses it, naming the value. The header
+  must also match the schema by name (``enforceSchema=False``), so a reordered extract is refused
+  instead of read into the wrong columns, and ``FAILFAST`` raises on a malformed row instead of
+  nulling it.
 * **The MERGE updates only a newer, changed row.** The reference's bare ``whenMatchedUpdateAll``
   lets an older extract, delivered late, overwrite a newer one, and counts a re-delivered
   unchanged row as an update. Here the incoming row must rank after the stored one and differ
