@@ -54,8 +54,11 @@ def batch_of(dates, last_batch, cadence="quarter"):
     the tables read as of it are the same rows either way: the yearly cadence builds identical
     training rows in a quarter of the commits.
     """
+    dates = pd.to_datetime(pd.Series(dates))
+    first = pd.Timestamp(config.FIRST_BATCH)
     batch = CADENCES[cadence](dates)
-    batch = batch.where(batch > pd.Timestamp(config.FIRST_BATCH), pd.Timestamp(config.FIRST_BATCH))
+    # Anything dated on or before the first batch arrives in it, whatever its period would end on.
+    batch = batch.where(~(dates <= first), first)
     return batch.where(batch < pd.Timestamp(last_batch), pd.Timestamp(last_batch))
 
 

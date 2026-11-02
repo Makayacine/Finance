@@ -74,10 +74,11 @@ def test_restatement_share_counts_keys_seen_in_an_earlier_batch():
 
 
 def test_the_yearly_cadence_cuts_on_the_eve_of_every_observation_date():
-    days = pd.Series(["2008-05-01", "2009-09-30", "2009-10-01", "2014-12-31", "2026-10-28"])
+    days = pd.Series(["2008-05-01", "2008-12-03", "2009-09-30", "2009-10-01", "2014-12-31",
+                      "2026-10-28"])
     assert replay.batch_of(days, LAST, "year").dt.date.tolist() == [
-        date(2008, 12, 31), date(2009, 9, 30), date(2010, 9, 30), date(2015, 9, 30),
-        date(2026, 11, 1)]
+        date(2008, 12, 31), date(2008, 12, 31), date(2009, 9, 30), date(2010, 9, 30),
+        date(2015, 9, 30), date(2026, 11, 1)]
     # Both cadences have a boundary on every 30 September, so an as-of read there sees the same
     # rows: a date on or before it is in a batch on or before it under either cadence.
     for cadence in ("quarter", "year"):
