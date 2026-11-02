@@ -23,3 +23,7 @@ crypto-ticks-refinery-glue-dynamo/__profile_*.json
 # sba-credit-risk: raw SBA FOIA CSVs (763 MB, each over GitHub's 100 MB limit), FDIC pulls and
 # the link-only listed file. Borrower names and addresses in the SBA files never leave this folder.
 sba-credit-risk-ecs-dynamo/data/raw/
+
+# latvia-company-credit: the full register, annual accounts and insolvency files (~650 MB). The
+# register names individual merchants and the insolvency file names debtors; both stay here.
+latvia-company-credit-glue-delta/data/raw/
