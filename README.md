@@ -1,6 +1,6 @@
 # Finance Projects
 
-A curated collection of quantitative finance analyses, featuring exploratory data analysis, backtesting of trading strategies, and predictive modeling — alongside AWS data-engineering pipelines over banking, crypto-market, consumer-lending and small-business loan data.
+A curated collection of quantitative finance analyses, featuring exploratory data analysis, backtesting of trading strategies, and predictive modeling — alongside AWS data-engineering pipelines over banking, crypto-market, consumer-lending, small-business loan and company-accounts data.
 
 ## Current Projects
 
@@ -10,6 +10,7 @@ A curated collection of quantitative finance analyses, featuring exploratory dat
 * **`credit-mailer-watermark-glue-redshift`**: Incremental ETL with a DynamoDB watermark over 58,168 randomised loan offers from a South African lender, orchestrated by Step Functions into a Redshift star, with an off-policy bandit evaluation.
 * **`credit-mailer-watermark-azure-sql`**: The credit-mailer pipeline ported to Azure — a Blob Storage landing zone, a Table Storage watermark and an Azure SQL Database star in T-SQL — tested offline against Azurite and SQL Server 2022, and matched row for row against the AWS version's own local run.
 * **`sba-credit-risk-ecs-dynamo`**: PD, gross charge-off severity, expected loss, IFRS 9 stage and IRB capital for the 281,077 open loans among 1,639,728 SBA 7(a) small-business loans, with FDIC bank-failure PD and a dollar EL backtest beside it, run as two ECS Fargate containers gated by Step Functions into DynamoDB.
+* **`latvia-company-credit-glue-delta`**: A 12-month PD for 115,088 Latvian companies from the annual accounts they file and the insolvency register, fitted out of time on 2,354,336 company-years since 2009, with the Register's files replayed as 73 quarterly batches into Delta Lake by Glue 5.0 MERGE jobs and the training rows read back from the tables by time travel.
 
 *(More projects coming soon.)*
 
@@ -64,13 +65,13 @@ walks every step on every path.
 
 ## AWS data-engineering pipelines
 
-Four of the projects here are AWS data-engineering pipelines. Each is self-contained: the
+Five of the projects here are AWS data-engineering pipelines. Each is self-contained: the
 exploratory notebook it grew out of, the production jobs, the orchestration, and whatever the
 destination store needs — Redshift DDL, a DynamoDB key schema, or both.
 
 ### Layout
 
-The four pipelines share a shape, so a reader who has seen one can navigate the rest:
+The five pipelines share a shape, so a reader who has seen one can navigate the rest:
 
 ```
 <project>/
@@ -94,6 +95,12 @@ it extracts from and `dynamodb/` for the one control-plane table that holds its 
 container images rather than jobs, so `docker-data-validity/` and `docker-credit-model/` take
 that slot; the code both images run lives in one `credit_risk/` package, with `tests/` and
 `local-development/` beside it.
+`latvia-company-credit-glue-delta` has **no `airflow-dag/` either**: its two Glue jobs run in a
+fixed order, the three MERGEs and then the model, and `local-development/run_chain.py` runs them
+that way locally. `glue-jobs/` holds the two jobs and the `lakehouse.py` they share; the rules,
+the replay, the label and the scorecard live in one `company_credit/` package that both jobs, the
+tests and the notebook import, with `tests/` and `local-development/` beside it, and a
+`local-docker-development.sh` runs the chain inside AWS's own Glue 5.0 image.
 
 The notebook is kept deliberately. It is where the logic was worked out, and it carries the
 executed outputs, so the production job can be diffed against something that is known to be
@@ -284,18 +291,69 @@ The interesting problems were about what the file can and cannot identify:
 
 Full detail, the label rules for both chains and every verified figure are in the project README.
 
+### `latvia-company-credit-glue-delta`
+
+A 12-month probability of default for Latvian companies, from the annual accounts they file with
+the Register of Enterprises and labelled from its insolvency register: 2,354,336 company-years since
+2009, and 115,088 companies scored on 1 October 2026. The lab it imitates MERGEs batches into Delta
+tables; here the batches are today's files replayed as the quarterly extracts they would have been,
+so a company comes back when it is terminated and a proceeding when it ends, the MERGE restates
+rather than appends, and the model reads its training rows from the tables as they stood on each
+observation date.
+
+```
+S3 raw_zone/  ->  Glue 5.0: glue-delta-merge.py   ->  Delta: companies, proceedings,
+73 dated          explicit schema, one winner per      statements (by fiscal year)
+batches           key, conditional MERGE, batch date         |  VERSION AS OF each 30 September
+                  in userMetadata, archive last              v
+                                                     Glue 5.0: glue-credit-model.py
+                                                     WoE scorecard, out of time  ->  results/
+                                                     today's book  ->  Delta: scored_companies
+```
+
+| Measure | Full data |
+| --- | --- |
+| MERGE restatements: companies / proceedings / statements | 151,477 of 498,530 / 15,755 of 33,303 / 547 of 1,703,441 |
+| PD AUC: train 2009-17 / validate 2018-20 / test 2021-25 | 0.801 / 0.803 / 0.818, against 0.647 / 0.651 / 0.654 for the equity ratio |
+| Calibration on the test years, observed 0.26% | mean PD 0.51% through the cycle, 0.31% at the 2018-20 level |
+| Today's book | 115,088 of 141,319 live companies scored, 576 / 350 expected defaults, €53.8bn of liabilities |
+
+The interesting problems were about what the files know, and when:
+
+- **`created_at` is a load stamp until 18 January 2021.** 1,152,314 statements, 99.87% of them for
+  FY2019 or earlier, carry stamps from the Register's bulk load of August 2020 to January 2021, at a
+  median of 17,534 a day on its busy days. Read as filing times they would leave 2009-19 with no
+  accounts at all, so a statement stamped before then is dated nine months after its period end,
+  when 91.6-95.1% of FY2020-24 accounts had really been filed. The test years have real stamps, so
+  they measure the rule's cost: re-dated the bulk way, their AUC moves from 0.8176 to 0.8182, and
+  from 0.8080 to 0.8151 among companies scored on last year's accounts alone.
+- **Late filing is a signal the bulk load hides.** Whether a company's latest accounts are last
+  year's or the year before's has an IV of 0.016 on the training years and 0.096 on the test years,
+  where filing dates are real. The IV screen would drop it, so it is kept by design and must still
+  pass the sign and p-value checks.
+- **Time travel by batch date, not by wall clock.** A replay commits a table's 73 batches within
+  minutes — the proceedings table's span 244 seconds — so `timestampAsOf` cannot find the version
+  of a business date. Each commit carries its batch date in `userMetadata`, and the as-of reads
+  look it up there. And a bare MERGE inserts a key twice when a batch repeats it and the table
+  does not hold it yet, so each batch is cut to one row per key first.
+
+Full detail, the label rule and every figure are in the project README.
+
 
 ### Running the pipelines
 
-Each project's README carries its own prerequisites. For the two Spark projects you need
+Each project's README carries its own prerequisites. For bank-marketing and crypto-ticks you need
 Python 3.11, `pyspark==3.5.5`, and a Java 11 or 17 JDK on `JAVA_HOME` — Spark 3.5 does not support
-Java 21+. `credit-mailer-watermark-glue-redshift` needs none of that: it is Python Shell
-throughout, so `pip install -r requirements.txt` and a `duckdb>=1.4` is the whole prerequisite.
+Java 21+. `latvia-company-credit-glue-delta` needs Python 3.11, a Java 17 JDK, `pyspark==3.5.4` and
+`delta-spark==3.3.0`, the versions of the Glue 5.0 runtime it deploys to, with pandas 2.2.2, numpy
+2.2.6 and pyarrow 17.0.0 pinned to match; the first Spark start fetches the Delta Lake jar.
+`credit-mailer-watermark-glue-redshift` needs none of that: it is Python Shell throughout, so `pip
+install -r requirements.txt` and a `duckdb>=1.4` is the whole prerequisite.
 `sba-credit-risk-ecs-dynamo` needs Python 3.12 and pandas 3, because its validator compares dtype
 names exactly and pandas 3 names a text column differently from pandas 2; its own
-`requirements.txt` covers the rest, and Docker is needed only to run the two images.
-The Spark jobs take a `--local` flag that runs them against plain filesystem paths, so every
-pipeline can be exercised end to end without an AWS account.
+`requirements.txt` covers the rest, and Docker is needed only to run the two images. The Spark jobs
+take a `--local` flag that runs them against plain filesystem paths, so every pipeline can be
+exercised end to end without an AWS account.
 
 `crypto-ticks-refinery-glue-dynamo` can also be run against the runtime it actually deploys to,
 without installing any of the above:
@@ -306,14 +364,20 @@ cd crypto-ticks-refinery-glue-dynamo && ./local-docker-development.sh
 
 That runs all five jobs inside `amazon/aws-glue-libs:glue_libs_4.0.0_image_01` — Spark 3.3.0,
 Python 3.10, Java 8 — which is a stricter check than local Spark 3.5.5, because it is the API
-surface the jobs are written against rather than a superset of it.
+surface the jobs are written against rather than a superset of it. The Latvian project's script
+does the same with `public.ecr.aws/glue/aws-glue-libs:5`, Spark 3.5.4-amzn-0 and Delta Lake 3.3.0,
+on its committed sample:
 
-The AWS-side values in each DAG are account-specific and must be set to your own before
-deploying: EMR Serverless application id, IAM execution role ARN, S3 bucket and the
-`redshift_default` Airflow connection for the bank-marketing pipeline; S3 bucket, Glue job names
-and the DynamoDB table for the crypto-ticks one; the cluster, task definitions, subnets and
-security group in the state machine definition for the SBA one. Each project README states
-exactly what its own verification covers.
+```bash
+cd latvia-company-credit-glue-delta && ./local-docker-development.sh
+```
+
+The AWS-side values in each DAG are account-specific and must be set to your own before deploying:
+EMR Serverless application id, IAM execution role ARN, S3 bucket and the `redshift_default` Airflow
+connection for the bank-marketing pipeline; S3 bucket, Glue job names and the DynamoDB table for
+the crypto-ticks one; the cluster, task definitions, subnets and security group in the state
+machine definition for the SBA one; the bucket passed as `--bucket` and the names given to its two
+Glue jobs for the Latvian one. Each project README states exactly what its own verification covers.
 
 ---
 
