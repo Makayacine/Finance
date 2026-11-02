@@ -43,22 +43,6 @@ entryway, fork, and all three paths — executed end to end on a committed sampl
 Airflow submits each Glue job with boto3 and polls `JobRunState`, following
 `Lab2-Airflow-Spark-Dynamo`.
 
-## Status
-
-| File | State |
-| --- | --- |
-| `glue-ingest-bars.py` | **done** — verified at both scales, see below |
-| `refinery_common.py` | **done** — `verdict()`, `build_session()`, `load_bars()` |
-| `refinery-walkthrough.ipynb` | **done** — 119 cells, executed, all three paths |
-| `test_ingest_bars.py` | **done** — every bar checked against a `Decimal` reference |
-| `glue-refinery-path3.py` | **done** — Steps 4–10 of the bandit path, reproduces the notebook's numbers exactly |
-| `glue-refinery-path1.py` | **done** — Steps 4-10 of the continuous path, reproduces the notebook's numbers exactly |
-| `glue-refinery-path2.py` | **done** — Steps 4-10 of the categorical path, reproduces the notebook's numbers exactly |
-| `glue-dynamo.py` | **done** — Python shell job, 96 items; designed rather than lifted, so see *What "verified" means here* |
-| `dag-glue-workflow.py` | **done** — monthly Glue workflow, DagBag-verified on Airflow 2.9.3 |
-| `test_dag_workflow.py` | **done** — the DAG's graph and two provider assumptions, no AWS |
-| `local-docker-development.sh` | **done** — the whole chain inside the Glue 4.0 image, one stage per argument |
-
 ## The data
 
 Binance publishes monthly spot trade archives, free and unauthenticated:
