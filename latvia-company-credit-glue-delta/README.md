@@ -275,7 +275,7 @@ IV screen at 0.0395 but carries a p-value of 0.473 once the accounts are in.
 **Late filing is in by design.** `accounts_lag` says whether the latest accounts are for the last
 fiscal year or the one before. Its IV is 0.0157 on 2009-17, under the screen's 0.02, and 0.0962 on
 2021-25. The difference is the bulk load: in the training years a statement filed two years late is
-dated as if it had been filed on time, so most late filers look like on-time ones. With real dates,
+dated as if it had been filed on time, so many late filers look like on-time ones. With real dates,
 the 7.7% of test company-years scored on the year-before's accounts default at 0.60% against 0.23%.
 So it skips the IV screen by design and must still pass the other two: its coefficient is −0.557
 with a clustered p-value of 8.4 × 10⁻⁸. Left to the screen, it goes, and the AUC is 0.8001, 0.8012
