@@ -13,7 +13,9 @@ without raising anything. The banks below are built so each branch fires on a kn
                                      data does (the latest event here is bank 99, mid-2013)
 
 Plus the event table's own rules: one FAILURE per CERT with the earliest kept, ASSISTANCE never
-a failure, and a run-off ratio that is never clipped at 1.
+a failure, and a run-off ratio that is never clipped at 1. And the scoring universe on the last
+filing, which follows the same rule: an assisted bank and a bank that failed inside the horizon
+are scored, a bank closed by the end of the embargo quarter is not.
 """
 
 import numpy as np
@@ -82,6 +84,17 @@ def test_keeping_exits_changes_only_the_censored_rows(toy):
     changed = censor.drop_reason != keep.drop_reason
     assert set(censor.drop_reason[changed]) == {"censored exit"}
     assert outcome(keep, 5, 2012)[0] == "horizon not yet observed"
+
+
+def test_the_last_filing_scores_every_bank_open_when_its_horizon_began():
+    filings = yearend({10: [2012], 11: [2012], 12: [2012], 13: [2012], 14: [2012]})
+    events = failures([(10, "10/02/1991", "ASSISTANCE"), (11, "02/15/2013", "FAILURE"),
+                       (12, "06/30/2013", "FAILURE"), (13, "06/29/2012", "FAILURE")])
+    panel = fdic.pd_panel(filings, events)
+    # Bank 12 failed inside a horizon that ends after the data does: not a training row.
+    assert outcome(panel, 12, 2012) == ("horizon not yet observed", 1)
+    scored = set(fdic.as_of_rows(panel).CERT)
+    assert scored == {10, 12, 14}  # 11 failed in the embargo quarter, 13 before the filing
 
 
 def test_one_failure_per_cert_earliest_kept_and_assistance_is_not_failure():

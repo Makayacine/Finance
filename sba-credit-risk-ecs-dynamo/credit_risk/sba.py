@@ -4,7 +4,7 @@
     company_book()      corporations and partnerships, cancelled and undisbursed loans gone
     fit_pd()            WoE scorecard on origination fields, vintage as a level term
     fit_hazard()        monthly charge-off hazard by loan age, calibrated per score band
-    fit_severity()      gross charge-off severity, fractional logit against a constant
+    fit_severity()      gross charge-off severity by age at charge-off, fractional logit
     live_book()         every open loan on the as-of date: PD, severity, EL, stage, capital
 
 WHAT "DEFAULT" CAN MEAN IN THIS FILE
@@ -26,6 +26,16 @@ the scorecard.
 **Dates are labels only.** Disbursement, charge-off and paid-in-full dates decide when and how a
 loan left the book. None of them reaches a feature.
 
+**The life table starts on 2005-08-01.** No paid-in-full date in the file is earlier than
+2005-05-31. 34,187 company payoffs carry that exact date and 6,671 more carry 2005-07-31, against
+about 2,000 in an ordinary month, all of them FY2000-05 approvals: a date stamped when the records
+were converted, not the day the loan was repaid. Left in, those loans would count as open until
+2005 and thin out every early hazard. So the table is left-truncated: a loan still open on
+2005-08-01 enters it at its age that day, and every exit before then is dropped, the charge-offs
+with the payoffs, or the early vintages would keep their failures and lose their repayments. That
+drops 46,277 loans, a quarter of FY2000-04, and makes an FY2000-04 vintage's observed against
+expected its experience since August 2005 rather than over its whole life.
+
 WHAT IS LEFT OUT OF THE FEATURES, AND WHY
 -----------------------------------------
 
@@ -33,9 +43,14 @@ WHAT IS LEFT OUT OF THE FEATURES, AND WHY
 The one that matters most is ``TermInMonths``: it is rewritten when a loan is charged off. Of
 paid-in-full company loans 83.4% carry a whole-year term; of charged-off ones, 8.9%. With it in,
 the scorecard's within-vintage AUC goes from about 0.65 to about 0.9, and every point of that is
-the outcome leaking back. The interest rate is present for 0% of FY2000-04 approvals and 100%
-from FY2010, so it cannot rank loans across the crisis vintages. Bank name and address are the
-loan's current assignee, and the secondary-market flag is set after sale.
+the outcome leaking back. ``CollateralInd`` leaks the same way for the early vintages: of FY2000-03
+approvals flagged as collateralised, 93.0% charged off against 11.3% of the rest, and of the
+83,563 FY2000-03 loans paid off by 2008 just 12 carry the flag. It was attached on the way to
+charge-off, not at approval. From FY2006 it is flat or protective, but a field that leaked for
+FY2000-04 cannot be trusted for the vintages after, so it is out everywhere. The interest rate is
+present for 0% of FY2000-04 approvals and 100% from FY2010, so it cannot rank loans across the
+crisis vintages. Bank name and address are the loan's current assignee, and the secondary-market
+flag is set after sale.
 
 LGD AND EAD CANNOT BE SEPARATED, SO THE PRODUCT IS MODELLED
 -----------------------------------------------------------
@@ -50,11 +65,19 @@ where the middle term is the **gross charge-off severity**: conditional on charg
 recoveries, on the original amount. It is neither a Basel LGD nor an LGD times a CCF, and it is
 never called either.
 
-**One rule for severity above 1.** 4,966 charge-offs on FY2000-2019 approvals exceed their
-original amount -- SBA's own report defines the charged-off amount as principal *and interest*,
-which is the likeliest reason, though the FOIA field is not documented that way. They are capped
-at 1, which keeps the identity's bound. ``severity_sensitivity`` re-prices the book under "drop
-them" and "keep them uncapped" so the cost of the rule is on the page.
+**One rule for severity above 1.** 4,482 company charge-offs exceed their original amount, 4,076
+of them on FY2000-2019 approvals -- SBA's own report defines the charged-off amount as principal
+*and interest*, which is the likeliest reason, though the FOIA field is not documented that way.
+They are capped at 1, which keeps the identity's bound. ``severity_sensitivity`` re-prices the
+book under "drop them" and "keep them uncapped" so the cost of the rule is on the page.
+
+**Severity falls with the age a loan charges off at.** Capped, it averages 0.93 in a loan's first
+year, 0.74 at 48-59 months, 0.58 at 96-119 and 0.49 from 180 months on, and every five-year group
+of vintages shows the same slope, so it is the loan's age and not the vintage mix. The fractional
+logit carries the age at charge-off as a term, which doubles its out-of-time R-squared against a
+constant (0.14 to 0.27), and the open book is priced month by month: the chance of charging
+off at each future age times the severity for that age. Most open loans are young, and a young
+loan that charges off loses more, so the term raises the 12-month EL by 12%.
 """
 
 import re
@@ -74,6 +97,7 @@ DROPPED_STATUSES = ("CANCLD", "COMMIT")
 PAID, CHARGED_OFF, OPEN = "P I F", "CHGOFF", "EXEMPT"
 DEVELOPMENT_VINTAGES = range(2000, 2010)  # resolved: 1.3% or less still EXEMPT in each
 NEXT_VINTAGE = 2010
+LEFT_TRUNCATION = pd.Timestamp("2005-08-01")  # the first month whose payoff dates are real
 HOLDOUT_SHARE = 0.30
 SEED = 20261101
 BANDS = "ABCDEFGH"  # A is the highest score and the lowest risk
@@ -84,12 +108,12 @@ SEVERITY_CAP = 1.0
 FEATURE_SOURCES = (
     "GrossApproval", "SBAGuaranteedApproval", "NaicsCode", "FranchiseCode", "ProjectState",
     "ProcessingMethod", "BusinessType", "BusinessAge", "JobsSupported", "RevolverStatus",
-    "CollateralInd",
 )
 LABEL_SOURCES = ("LoanStatus", "FirstDisbursementDate", "ChargeOffDate", "PaidInFullDate",
                  "GrossChargeOffAmount")
 EXCLUDED_FEATURES = {
     "TermInMonths": "rewritten at charge-off",
+    "CollateralInd": "attached at charge-off for FY2000-04 approvals",
     "InitialInterestRate": "absent before FY2005, complete only from FY2010",
     "FixedorVariableInterestInd": "absent wherever the rate is absent",
     "BankName": "current assignee, not the originator",
@@ -106,7 +130,7 @@ EXCLUDED_FEATURES = {
 READ_COLUMNS = ("AsOfDate", "LocationID", "ApprovalFY") + FEATURE_SOURCES + LABEL_SOURCES
 
 FEATURES = ("amount_band", "guarantee_band", "sector", "state_group", "processing",
-            "business_age", "jobs_band", "franchise", "facility", "collateral", "business_type")
+            "business_age", "jobs_band", "franchise", "facility", "business_type")
 
 AMOUNT_EDGES = [0, 25e3, 50e3, 100e3, 150e3, 250e3, 500e3, 1e6, 2e6, np.inf]
 AMOUNT_LABELS = ["<25k", "25-50k", "50-100k", "100-150k", "150-250k", "250-500k", "0.5-1m",
@@ -177,7 +201,9 @@ def company_book(loans, as_of=AS_OF):
                                            OPEN: "censored"})
     book["charged_off"] = (book.LoanStatus == CHARGED_OFF).astype(int)
     usable = book.disbursed.notna() & book.exit_date.notna() & (book.disbursed <= as_of)
-    book["in_life_table"] = usable
+    book["in_life_table"] = usable & (book.exit_date >= LEFT_TRUNCATION)
+    book["entry_age"] = hazard.age_in_months(
+        book.disbursed, pd.Series(LEFT_TRUNCATION, index=book.index)).where(book.in_life_table)
     book["exit_age"] = hazard.age_in_months(book.disbursed, book.exit_date).where(usable)
     book["age_now"] = hazard.age_in_months(book.disbursed, pd.Series(as_of, index=book.index))
     return book
@@ -215,7 +241,6 @@ class Binning:
         code = book.FranchiseCode.fillna("").str.strip()
         out["franchise"] = np.where(code.isin(["", "0", "00000"]), "independent", "franchise")
         out["facility"] = book.RevolverStatus.map({"Y": "revolver", "N": "term"}).fillna("term")
-        out["collateral"] = book.CollateralInd.map({"Y": "yes", "N": "no"}).fillna("no")
         out["business_type"] = book.BusinessType.str.lower()
         for feature, kept in self.kept.items():
             out[feature] = out[feature].where(out[feature].isin(kept), self.fallback[feature])
@@ -377,28 +402,46 @@ class HazardModel:
     def pd(self, age, band, horizon, factor=None):
         """Charge-off PD over ``horizon`` months from ``age``, per loan, for its band.
 
+        ``horizon`` is one number of months or one per loan; None runs to the end of the curve.
         ``factor`` multiplies the band's event hazard loan by loan; the point-in-time
         sensitivity passes each loan's vintage experience factor, everything else passes None.
         """
         age = np.asarray(age, dtype=int)
         band = np.asarray(band)
+        if horizon is not None:
+            horizon = np.broadcast_to(np.asarray(horizon, dtype=int), age.shape)
         factor = np.ones(len(age)) if factor is None else np.asarray(factor, dtype=float)
         out = np.zeros(len(age))
         for label, row in self.bands.iterrows():
             for value in np.unique(factor[band == label]):
                 mask = (band == label) & (factor == value)
                 out[mask] = self.curve.conditional_incidence(
-                    age[mask], horizon, row.event_multiplier * value, row.competing_multiplier)
+                    age[mask], None if horizon is None else horizon[mask],
+                    row.event_multiplier * value, row.competing_multiplier)
         return out
+
+    def pd_by_age(self, age, band, horizon, starts, factor=None):
+        """``pd`` split by the loan age the charge-off would come at: one column per age band.
+
+        ``starts`` are each band's first month and the last band is open-ended, so every row
+        sums to ``pd`` over the same horizon.
+        """
+        age = np.asarray(age, dtype=int)
+        stop = np.maximum(age, self.curve.max_age) if horizon is None else age + horizon
+        reached = [self.pd(age, band, np.clip(start, age, stop) - age, factor)
+                   for start in starts[1:]]
+        reached = [np.zeros(len(age)), *reached, self.pd(age, band, stop - age, factor)]
+        return np.diff(np.column_stack(reached), axis=1)
 
 
 def fit_hazard(model, book, min_at_risk=MIN_AT_RISK):
     """Pooled life table, band multipliers, and each vintage's charge-offs against the curve."""
     table = book[book.in_life_table]
     exit_age = table.exit_age.astype(int).values
-    curve = hazard.estimate(exit_age, table.outcome, min_at_risk)
+    entry_age = table.entry_age.astype(int).values
+    curve = hazard.estimate(exit_age, table.outcome, min_at_risk, entry_age)
     band = model.band(model.score(table))
-    rows = hazard.band_multipliers(curve, exit_age, table.outcome.values, band)
+    rows = hazard.band_multipliers(curve, exit_age, table.outcome.values, band, entry_age)
     bands = pd.DataFrame(rows).T.reindex(list(BANDS)).dropna(how="all").astype(float)
     zero = np.zeros(1, dtype=int)
     bands["pd_12m_at_origination"] = [
@@ -409,7 +452,7 @@ def fit_hazard(model, book, min_at_risk=MIN_AT_RISK):
         for r in bands.itertuples()]
     fitted = HazardModel(curve, bands, curve.conditional_incidence(zero, None)[0])
 
-    expected_event, _ = hazard.cumulative_hazard(curve, exit_age)
+    expected_event, _ = hazard.cumulative_hazard(curve, exit_age, entry_age)
     multiplier = pd.Series(band).map(bands.event_multiplier).values
     frame = pd.DataFrame({"vintage": table.vintage.values,
                           "observed": table.charged_off.values,
@@ -434,6 +477,15 @@ def fit_hazard(model, book, min_at_risk=MIN_AT_RISK):
 
 SEVERITY_TRAIN_VINTAGES = range(2000, 2010)
 SEVERITY_TEST_VINTAGES = range(2010, 2020)
+SEVERITY_AGE_STARTS = (0, 12, 24, 36, 48, 60, 72, 96, 120, 180)  # months to charge-off
+SEVERITY_AGE_LABELS = [f"{a}-{b - 1}m" for a, b in zip(SEVERITY_AGE_STARTS,
+                                                         SEVERITY_AGE_STARTS[1:])] + ["180m+"]
+SEVERITY_TERMS = (*FEATURES, "age_band")
+
+
+def age_band(months):
+    edges = [*SEVERITY_AGE_STARTS, np.inf]
+    return pd.cut(months, edges, right=False, labels=SEVERITY_AGE_LABELS).astype(str)
 
 
 def severity_frame(book, rule="cap"):
@@ -472,10 +524,15 @@ class SeverityModel:
     def predict(self, X):
         return np.asarray(self.result.predict(self.design(X)))
 
+    def by_age(self, X):
+        """Each loan's severity were it charged off in each age band: (loans, age bands)."""
+        return np.column_stack([self.predict(X.assign(age_band=label))
+                                for label in SEVERITY_AGE_LABELS])
+
 
 def _fit_fractional_logit(X, y):
     reference = {}
-    for feature in FEATURES:
+    for feature in SEVERITY_TERMS:
         counts = X[feature].astype(str).value_counts()
         reference[feature] = [level for level in counts.index[1:]]  # most common is the base
     model = SeverityModel(reference, None, float(np.mean(y)), {}, None)
@@ -488,11 +545,14 @@ def _fit_fractional_logit(X, y):
 
 
 def fit_severity(pd_model, book, rule="cap"):
-    """Fractional logit on origination fields, trained FY2000-09, scored on FY2010-19."""
+    """Fractional logit on origination fields and the age at charge-off, trained FY2000-09,
+    scored on FY2010-19 at each charge-off's own age."""
     charged = severity_frame(book, rule)
+    charged = charged[charged.exit_age.notna()]  # no disbursement or charge-off date, no age
     X = pd_model.features(charged)
     for feature in FEATURES:  # unseen bins go to "other" exactly as the scorecard folds them
         X[feature] = X[feature].astype(str)
+    X["age_band"] = age_band(charged.exit_age)
     train = charged.vintage.isin(SEVERITY_TRAIN_VINTAGES).values
     test = charged.vintage.isin(SEVERITY_TEST_VINTAGES).values
     model = _fit_fractional_logit(X[train], charged.severity[train])
@@ -521,18 +581,35 @@ def fit_severity(pd_model, book, rule="cap"):
 # ------------------------------------------------------------------------------------------------
 
 def live_book(pd_model, hazard_model, severity_model, book):
-    """Every EXEMPT company loan with a disbursement date: PD, severity, EL, stage and capital."""
+    """Every EXEMPT company loan with a disbursement date: PD, severity, EL, stage and capital.
+
+    Severity depends on the age a loan charges off at, so each horizon's EL is a sum over age
+    bands: the chance of charging off inside the band before the horizon ends, times the
+    severity predicted for that band. ``severity`` is the 12-month figure that sum implies, so
+    ``el_12m = pd_12m * severity * exposure`` still holds and capital takes it as its LGD; a loan
+    whose 12-month PD is zero carries its severity at today's age instead.
+    """
     open_ = book[(book.LoanStatus == OPEN) & book.in_life_table].copy()
     X = pd_model.features(open_)
     open_["score"] = pd_model.card.score(X)
     open_["band"] = pd_model.band(open_.score.values)
     age = open_.age_now.astype(int).values
-    open_["pd_12m"] = hazard_model.pd(age, open_.band.values, 12)
-    open_["pd_lifetime"] = hazard_model.pd(age, open_.band.values, None)
-    open_["severity"] = severity_model.predict(X)
+    severity = severity_model.by_age(X)
+
+    def priced(horizon, factor=None):
+        """``(pd, pd x severity)`` per loan over the horizon."""
+        split = hazard_model.pd_by_age(age, open_.band.values, horizon, SEVERITY_AGE_STARTS,
+                                       factor)
+        return split.sum(axis=1), (split * severity).sum(axis=1)
+
+    open_["pd_12m"], loss_12m = priced(12)
+    open_["pd_lifetime"], loss_lifetime = priced(None)
+    today = severity[np.arange(len(age)), np.searchsorted(SEVERITY_AGE_STARTS, age, "right") - 1]
+    open_["severity"] = np.divide(loss_12m, open_.pd_12m.values, out=today,
+                                  where=open_.pd_12m.values > 0)
     open_["exposure"] = open_.GrossApproval.astype(float)
-    open_["el_12m"] = open_.pd_12m * open_.severity * open_.exposure
-    open_["el_lifetime"] = open_.pd_lifetime * open_.severity * open_.exposure
+    open_["el_12m"] = loss_12m * open_.exposure
+    open_["el_lifetime"] = loss_lifetime * open_.exposure
     open_["stage"] = np.where(open_.vintage.isin(hazard_model.stage2), 2, 1)
     open_["ecl"] = np.where(open_.stage == 2, open_.el_lifetime, open_.el_12m)
     open_["capital_k"] = capital.irb_capital(open_.pd_12m, open_.severity)
@@ -542,10 +619,9 @@ def live_book(pd_model, hazard_model, severity_model, book):
     # the through-the-cycle curve, shrunk towards 1 by credibility, scale its remaining hazard.
     factor = open_.vintage.map(hazard_model.experience.credibility_factor).fillna(1.0).values
     open_["pit_factor"] = factor
-    pit_12m = hazard_model.pd(age, open_.band.values, 12, factor)
-    pit_life = hazard_model.pd(age, open_.band.values, None, factor)
-    open_["ecl_pit"] = open_.severity * open_.exposure * np.where(open_.stage == 2, pit_life,
-                                                                    pit_12m)
+    _, pit_12m = priced(12, factor)
+    _, pit_life = priced(None, factor)
+    open_["ecl_pit"] = open_.exposure * np.where(open_.stage == 2, pit_life, pit_12m)
     columns = ["loan_id", "vintage", "age_now", "score", "band", "pd_12m", "pd_lifetime",
                "severity", "exposure", "el_12m", "el_lifetime", "stage", "ecl", "pit_factor",
                "ecl_pit", "capital_k", "rwa", "guaranteed_share"]

@@ -9,6 +9,12 @@ mid-model leaves the batch in the ready folders, the Step Functions execution re
 able to start again from exactly the files that failed. Archiving first would leave a batch that
 had moved and no results to show for it.
 
+The archive step moves the keys this run read and nothing else, and each only while it still
+holds what was read. Nothing stops a second execution's validator promoting a file into a ready
+folder while this run is modelling, and re-listing the folders at the end would archive that
+file unread. So a new file is left where it is, and so is a file replaced under a key that was
+read, both for the next run to pick up.
+
 Nothing here knows whether ``store`` is a folder or a bucket, or whether ``table`` is a JSON file
 or DynamoDB. The two container entrypoints decide that and pass them in.
 """
@@ -25,13 +31,18 @@ from credit_risk.config import ENTITIES, RESULTS
 
 @contextlib.contextmanager
 def ready_files(store, entities=ENTITIES):
-    """``{entity: [local paths]}`` for every ready file, downloaded once if the store is remote."""
+    """``({entity: [local paths]}, {entity: {key: version}})`` for every ready file.
+
+    Each key's version is taken before the file is read, so a file replaced mid-run can only
+    look changed when the archive step checks it, never unchanged.
+    """
     with contextlib.ExitStack() as stack:
-        paths = {}
+        paths, read = {}, {}
         for entity in entities:
             keys = store.list(f"{entity.ready}/")
+            read[entity.name] = {key: store.version(key) for key in keys}
             paths[entity.name] = [stack.enter_context(store.local_copy(k)) for k in keys]
-        yield paths
+        yield paths, read
 
 
 def pick(paths, fragment):
@@ -123,7 +134,7 @@ def run_fdic(failure_path, prefailure_path, yearend_path, institution_path, n_bo
 
 def run_models(store, table, n_boot=500, log=print):
     """Fit both chains from the ready folders, write results and items, then archive the batch."""
-    with ready_files(store) as paths:
+    with ready_files(store) as (paths, read):
         missing = [e.name for e in ENTITIES if len(paths[e.name]) != e.expected_files]
         if missing:
             raise RuntimeError(f"ready folders short of their expected files: {missing}")
@@ -149,6 +160,7 @@ def run_models(store, table, n_boot=500, log=print):
     log(f"{len(items)} items written")
 
     for entity in ENTITIES:
-        for key in store.list(f"{entity.ready}/"):
-            store.move(key, f"{entity.archived}/{key.split('/')[-1]}")
+        for key, version in read[entity.name].items():
+            if not store.move(key, f"{entity.archived}/{key.split('/')[-1]}", version):
+                log(f"{key}: replaced or moved since it was read, left for the next run")
     return {"items": len(items), "sba": sba_out["book"], "fdic": fdic_out["counterparty_summary"]}

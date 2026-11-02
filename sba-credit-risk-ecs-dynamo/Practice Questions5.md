@@ -11,8 +11,8 @@ borrower identity columns in each header: 4
 **After Execution** (`[sba.read_loans(paths)]` | `[Materialized Loan Frame]`):
 
 ```text
-rows: 1,639,728 | columns: 20 (19 read + loan_id)
-memory: 1.26 GB
+rows: 1,639,728 | columns: 19 (18 read + loan_id)
+memory: 1.18 GB
 borrower identity columns in frame: 0
 
 ```
@@ -32,13 +32,13 @@ frame = pd.read_csv(path, usecols=list(READ_COLUMNS),
 
 **Notes**:
 
-* **Core Execution Mechanic:** `nrows=0` parses the header line alone, and `usecols` then tells the CSV tokenizer to convert only the 19 listed fields on every row.
+* **Core Execution Mechanic:** `nrows=0` parses the header line alone, and `usecols` then tells the CSV tokenizer to convert only the 18 listed fields on every row.
 
 
 * **Core Execution Mechanic (Dummy Translation):** You read the label on the box, tick the items you want, and the reader never takes the names and addresses out at all.
 
 
-* **Boundary / Memory Constraint:** Keeping 19 of 42 columns holds 1,639,728 rows in 1.26 GB, small enough for one Fargate task.
+* **Boundary / Memory Constraint:** Keeping 18 of 42 columns holds 1,639,728 rows in 1.18 GB, small enough for one Fargate task.
 
 
 * **Boundary / Memory Constraint (Dummy Translation):** Taking fewer than half the columns is what lets a 762 MB extract fit on one small cloud machine.
@@ -119,8 +119,8 @@ wrong = [
 **Before Execution** (`[sba.fit_pd(book)]` | `[Scorecard With And Without The Field]`):
 
 ```text
-holdout AUC, 11 origination characteristics: 0.636
-holdout AUC, whole-year term flag added:     0.899
+holdout AUC, 10 origination characteristics:        0.623
+holdout AUC, term length and whole-year flag added: 0.915
 
 ```
 
@@ -132,8 +132,9 @@ CHGOFF       0.0892
 EXEMPT       0.7597
 P I F        0.8342
 
-term exactly 120 or 240:   0.53% charged off
-term 85-119 or 181-239:   31.53% charged off
+resolved loans charged off:
+term exactly 120 or 240:     0.53%
+term 85-119 or 181-239:     31.53%
 
 ```
 
@@ -164,7 +165,7 @@ display(whole_year.groupby(company.LoanStatus).mean().rename("whole-year term sh
 * **Boundary / Memory Constraint (Dummy Translation):** You train nothing to catch this; a quick count on a handful of columns shows it.
 
 
-* **Failure Mode / Downstream Impact:** Left in, the field lifts holdout AUC from 0.636 to 0.899, yet a new loan still carries its approval term, so the score fails on live data.
+* **Failure Mode / Downstream Impact:** Left in, the field lifts holdout AUC from 0.623 to 0.915, yet a new loan still carries its approval term, so the score fails on live data.
 
 
 * **Failure Mode / Downstream Impact (Dummy Translation):** The model looks brilliant in testing because it is reading the answer, then falls apart on new loans.
@@ -178,19 +179,19 @@ display(whole_year.groupby(company.LoanStatus).mean().rename("whole-year term sh
 **Before Execution** (`[resolved.groupby("vintage")]` | `[Vintage Level Swing]`):
 
 ```text
-charge-off rate: FY2002 13.4% | FY2007 35.5% | FY2009 14.7%
-train 319,213 | holdout 136,807 | 11 characteristics
+charge-off rate, resolved loans: FY2002 13.4% | FY2007 35.5% | FY2009 14.7%
+train 319,213 | holdout 136,807 | 10 characteristics
 
 ```
 
 **After Execution** (`[sba.fit_pd(book)]` | `[Holdout Discrimination]`):
 
 ```text
-converged in 7 iterations | training scores 367 to 797
+converged in 7 iterations | training scores 335 to 800
 
-holdout FY2000-2009   AUC 0.636 | Gini 0.272 | KS 0.196
-single vintages       AUC 0.608 to 0.681
-FY2010, next vintage  AUC 0.585 | Gini 0.171 | KS 0.126
+holdout FY2000-2009   AUC 0.623 | Gini 0.246 | KS 0.174
+single vintages       AUC 0.560 to 0.639
+FY2010, next vintage  AUC 0.601 | Gini 0.202 | KS 0.144
 
 ```
 
@@ -237,7 +238,7 @@ model = sm.Logit(np.asarray(y, dtype=float), X)
 
 ```text
 reference: 319,213 training scores
-edges: 506, 526, 541, 554, 566, 581, 601
+edges: 480, 501, 516, 529, 542, 558, 580
 
 ```
 
@@ -245,11 +246,11 @@ edges: 506, 526, 541, 554, 566, 581, 601
 
 ```text
 vintage   loans    psi
-2017      51,065   0.083
-2020      34,058   0.151
-2022      39,426   0.176
-2025      58,464   0.251
-2026      33,431   0.288
+2007      67,117   0.017
+2014      40,532   0.190
+2017      51,065   0.055
+2021      42,697   0.190
+2025      58,464   0.020
 
 ```
 
@@ -281,10 +282,10 @@ return float(np.sum((a - e) * np.log(a / e)))
 * **Boundary / Memory Constraint (Dummy Translation):** You do not wait years to learn who failed; the alarm can ring on approval day.
 
 
-* **Failure Mode / Downstream Impact:** FY2022 onward holds 66% of open exposure at a PSI of 0.18 to 0.29, so the ranking runs outside its fitted population until a refit.
+* **Failure Mode / Downstream Impact:** No vintage reaches 0.25, but seven sit between 0.10 and 0.19 and hold 16% of open exposure, so their ranking needs watching.
 
 
-* **Failure Mode / Downstream Impact (Dummy Translation):** Two-thirds of the money sits in loans unlike the ones the model learned from, so trust its order less there.
+* **Failure Mode / Downstream Impact (Dummy Translation):** About a sixth of the money sits in loans noticeably unlike the ones the model learned from, so trust their order less.
 
 
 
@@ -295,9 +296,10 @@ return float(np.sum((a - e) * np.log(a / e)))
 **Before Execution** (`[book.outcome]` | `[Three Exit Doors]`):
 
 ```text
-loans in the life table: 1,198,332
-event      CHGOFF    143,712
-competing  P I F     773,543
+loans in the life table: 1,152,055
+left before 2005-08-01, excluded: 46,277
+event      CHGOFF    139,784
+competing  P I F     731,194
 censored   EXEMPT    281,077
 
 ```
@@ -306,8 +308,8 @@ censored   EXEMPT    281,077
 
 ```text
 months on the curve: 277
-lifetime PD, payoff competing: 15.4%
-lifetime PD, payoff censored:  48.8%
+lifetime PD, payoff competing: 15.8%
+lifetime PD, payoff censored:  49.1%
 median months to charge-off:   49.8
 
 ```
@@ -323,23 +325,23 @@ return survival, incidence
 
 ```
 
-**Answer:** Build a monthly life table with charge-off as the event, payoff as the competing exit and open loans censored at the as-of date. Cumulative incidence is the running sum of survival times event hazard.
+**Answer:** Build a monthly life table with charge-off as the event, payoff as the competing exit and open loans censored, entering loans open on 2005-08-01 at their age then. Cumulative incidence is the running sum of survival times event hazard.
 
 **Notes**:
 
-* **Core Execution Mechanic:** `np.bincount` on exit age counts exits per month, at-risk is their reverse cumulative sum, and each hazard divides one by the other.
+* **Core Execution Mechanic:** `np.bincount` counts entries and exits per month of age, and at-risk is the entries so far minus the exits before that month.
 
 
-* **Core Execution Mechanic (Dummy Translation):** Each month you ask how many open loans failed and how many repaid; a repaid loan can never fail later.
+* **Core Execution Mechanic (Dummy Translation):** Each month you count the loans that have joined and not yet left, and a loan older than the records joins on the day they start.
 
 
-* **Boundary / Memory Constraint:** The curve stops at month 277, where fewer than 500 loans would remain and one charge-off would move the hazard by whole points.
+* **Boundary / Memory Constraint:** The curve stops at month 277, where 499 loans remain, under the floor of 500, so one charge-off would move the hazard 0.2 points.
 
 
 * **Boundary / Memory Constraint (Dummy Translation):** So few very old loans remain that one failure would swing the numbers, so the chart ends rather than guesses.
 
 
-* **Failure Mode / Downstream Impact:** Censoring payoff assumes repaid loans keep carrying hazard, which inflates the lifetime PD from 15.4% to 48.8%.
+* **Failure Mode / Downstream Impact:** Censoring payoff assumes repaid loans keep carrying hazard, which inflates the lifetime PD from 15.8% to 49.1%.
 
 
 * **Failure Mode / Downstream Impact (Dummy Translation):** Pretending repaid loans could still fail triples the estimate, counting losses on loans that no longer exist.
@@ -354,9 +356,9 @@ return survival, incidence
 
 ```text
 band   observed   expected   multiplier
-A        10,069     16,731   0.60
-D        15,320     15,490   0.99
-H        29,608     21,961   1.35
+A        12,781     24,604   0.52
+D        16,263     16,667   0.98
+H        24,050     13,036   1.84
 
 ```
 
@@ -364,9 +366,9 @@ H        29,608     21,961   1.35
 
 ```text
 months open   12-month PD   remaining lifetime PD
-  0            0.14%         15.07%
- 48            3.37%         13.69%
-120            4.10%         13.01%
+  0            0.15%         15.49%
+ 48            3.47%         14.16%
+120            4.06%         13.02%
 
 ```
 
@@ -390,7 +392,7 @@ return np.divide(incidence[end] - incidence[age], base, out=np.zeros(len(age)),
 * **Core Execution Mechanic:** `cumulative_hazard` gives each loan's expected charge-offs, and a band's observed total over that expected total is its `event_multiplier`.
 
 
-* **Core Execution Mechanic (Dummy Translation):** A multiplier of 0.60 means the band fails at 60% of the average rate.
+* **Core Execution Mechanic (Dummy Translation):** A multiplier of 0.52 means band A fails at 52% of the average rate.
 
 
 * **Boundary / Memory Constraint:** This is a proportional-hazards assumption: every band shares one curve shape and only the level moves.
@@ -399,10 +401,10 @@ return np.divide(incidence[end] - incidence[age], base, out=np.zeros(len(age)),
 * **Boundary / Memory Constraint (Dummy Translation):** All eight bands use one curve stretched up or down, which keeps thin bands stable.
 
 
-* **Failure Mode / Downstream Impact:** Reading PD at origination gives 0.14%, because charge-off lags default, while the open book at its current age averages 3.02% by exposure.
+* **Failure Mode / Downstream Impact:** Reading PD at origination gives 0.15% by exposure, because charge-off lags default, while the open book at its current age averages 2.86%.
 
 
-* **Failure Mode / Downstream Impact (Dummy Translation):** A new loan almost never reaches charge-off in year one, so treating every loan as new understates the risk about twenty times.
+* **Failure Mode / Downstream Impact (Dummy Translation):** A new loan almost never reaches charge-off in year one, so treating every loan as new understates the risk about nineteen times.
 
 
 
@@ -414,18 +416,18 @@ return np.divide(incidence[end] - incidence[age], base, out=np.zeros(len(age)),
 
 ```text
 vintage   open   observed   expected   O/E    p-value
-2005       314     14,827      9,056   1.64   <0.0001
-2006       384     20,068      9,521   2.11   <0.0001
-2007       470     23,667     10,003   2.37   <0.0001
+2006       384     20,068     10,615   1.89   <0.0001
+2007       470     23,667     11,038   2.14   <0.0001
+2008       547     14,692      8,616   1.71   <0.0001
 
 ```
 
 **After Execution** (`[sba.live_book()]` | `[Collective Staging]`):
 
 ```text
-stage 2 vintages: [2006, 2007]
-stage 1   280,223 loans   ECL $3,124.7m   12-month
-stage 2       854 loans   ECL $9.8m       lifetime
+stage 2 vintages: [2007]
+stage 1   280,607 loans   ECL $3,267.8m   12-month
+stage 2       470 loans   ECL $5.0m       lifetime
 stage 3         0 loans
 
 ```
@@ -447,7 +449,7 @@ return sorted(int(v) for v in experience.index[hit])
 * **Core Execution Mechanic:** `poisson.sf(observed - 1, expected)` is the chance of at least this many charge-offs if the curve were right.
 
 
-* **Core Execution Mechanic (Dummy Translation):** The curve expected about 10,000 FY2007 failures and 23,667 happened, which is far too many for luck.
+* **Core Execution Mechanic (Dummy Translation):** The curve expected about 11,000 FY2007 failures and 23,667 happened, which is far too many for luck.
 
 
 * **Boundary / Memory Constraint:** Every open loan is `EXEMPT`, with no days past due or modification flag, so IFRS 9's collective route (B5.5.1-B5.5.6) is the one available.
@@ -456,7 +458,7 @@ return sorted(int(v) for v in experience.index[hit])
 * **Boundary / Memory Constraint (Dummy Translation):** We cannot see how any single open loan is paying, so we judge it by its year group.
 
 
-* **Failure Mode / Downstream Impact:** A score-band rule leaves stage 2 empty, because a band is fixed at origination and shows no increase since then.
+* **Failure Mode / Downstream Impact:** A score-band rule cannot move a loan to stage 2, because a band is fixed at origination and shows no increase since then.
 
 
 * **Failure Mode / Downstream Impact (Dummy Translation):** Staging asks whether risk got worse, not whether it was high, and a day-one grade cannot say.
@@ -479,29 +481,30 @@ capped at 1: mean 0.744, median 0.820
 **After Execution** (`[sba.fit_severity()]` | `[Scored Out Of Time]`):
 
 ```text
-trained on FY2000-09, scored on 30,543 FY2010-19 charge-offs
+trained on FY2000-09, scored on 30,536 FY2010-19 charge-offs
 
-                   MAE     RMSE    R2 vs constant
-constant 0.746     0.208   0.256   -
-fractional logit   0.190   0.239   0.129
+                       MAE     RMSE    R2 vs constant
+constant 0.746         0.208   0.256   -
+fractional logit       0.190   0.238   0.135
+  + age at charge-off  0.168   0.218   0.275
 
 ```
 
 **Code**:
 
 ```python
-# Papke-Wooldridge fractional logit: a Bernoulli likelihood on a [0, 1] outcome, with
-# sandwich standard errors because the variance is not the binomial one.
+# Age at charge-off is one more term
+X["age_band"] = age_band(charged.exit_age)
 model.result = sm.GLM(np.asarray(y, float), design,
                       family=sm.families.Binomial()).fit(cov_type="HC1")
 
 ```
 
-**Answer:** Cap the ratio at 1 under one stated rule, then fit a fractional logit: a binomial GLM on a continuous 0-1 outcome with robust errors. Judge it out of time against the training mean.
+**Answer:** Cap the ratio at 1 under one stated rule, then fit a fractional logit, with the age at charge-off as a term: a binomial GLM on a 0-1 outcome with robust errors. Judge it out of time.
 
 **Notes**:
 
-* **Core Execution Mechanic:** The binomial GLM maximises a Bernoulli quasi-likelihood on a fractional target, and `cov_type="HC1"` supplies sandwich errors.
+* **Core Execution Mechanic:** The Papke-Wooldridge fractional logit is a binomial GLM maximising a Bernoulli quasi-likelihood, `cov_type="HC1"` gives sandwich errors, and the age enters as ten bands.
 
 
 * **Core Execution Mechanic (Dummy Translation):** Ordinary regression can predict losing 130% of a loan; the logit curve keeps every prediction between 0% and 100%.
@@ -510,10 +513,10 @@ model.result = sm.GLM(np.asarray(y, float), design,
 * **Boundary / Memory Constraint:** The target is conditional on charge-off and gross of recoveries, because the file holds no balance at default.
 
 
-* **Boundary / Memory Constraint (Dummy Translation):** This only says how much was written off once a loan had failed, before any money came back.
+* **Boundary / Memory Constraint (Dummy Translation):** This says how much was written off once a loan had failed, before any money came back; a young failure loses more.
 
 
-* **Failure Mode / Downstream Impact:** A Bernoulli variance has no room above 1, so the sensitivity recalibrates the level: uncapped values move 12-month EL from $3.129bn to $3.237bn.
+* **Failure Mode / Downstream Impact:** A Bernoulli variance has no room above 1, so the sensitivity recalibrates the level: uncapped values move 12-month EL from $3.270bn to $3.383bn.
 
 
 * **Failure Mode / Downstream Impact (Dummy Translation):** A few strange records reach 464 times the loan, so they are capped, and changing that rule moves total loss by only 3.5%.
@@ -528,8 +531,8 @@ model.result = sm.GLM(np.asarray(y, float), design,
 
 ```text
 FY2022 | band D | $250,000 original
-pd_12m 3.368% | severity 0.797
-el_12m $6,710 | capital_k 0.188
+pd_12m 3.412% | severity 0.672
+el_12m $5,728 | capital_k 0.159
 
 ```
 
@@ -537,8 +540,8 @@ el_12m $6,710 | capital_k 0.188
 
 ```text
 open loans 281,077 | exposure $165.06bn
-12-month EL $3.13bn | lifetime EL $16.52bn
-capital $22.8bn | RWA $285.1bn
+12-month EL $3.27bn | lifetime EL $15.61bn
+capital $25.3bn | RWA $316.1bn
 formula check, PD 1% and 45% severity: risk weight 92.32%
 
 ```
@@ -546,33 +549,36 @@ formula check, PD 1% and 45% severity: risk weight 92.32%
 **Code**:
 
 ```python
-# EL is linear in all three terms; capital uses the same PD and severity
-open_["el_12m"] = open_.pd_12m * open_.severity * open_.exposure
+# Each age band prices its own severity
+open_["pd_12m"], loss_12m = priced(12)
+open_["severity"] = np.divide(loss_12m, open_.pd_12m.values, out=today,
+                              where=open_.pd_12m.values > 0)
+open_["el_12m"] = loss_12m * open_.exposure
 open_["capital_k"] = capital.irb_capital(open_.pd_12m, open_.severity)
 open_["rwa"] = 12.5 * open_.capital_k * open_.exposure
 
 ```
 
-**Answer:** Multiply each loan's charge-off PD, predicted gross charge-off severity and original amount as vectorised columns. Feed the same PD and severity into the IRB formula for capital and RWA.
+**Answer:** Split each loan's PD by the age its charge-off would come at, price each slice with that age's severity, and multiply by the original amount. The implied 12-month severity feeds the IRB formula.
 
 **Notes**:
 
-* **Core Execution Mechanic:** The identity is `P(charge-off) * (charged-off / original) * original`; the file identifies the product even though it cannot split balance from loss.
+* **Core Execution Mechanic:** EL sums, over ten age bands, the band's charge-off PD times its severity; `severity` is that sum over the 12-month PD, so `el_12m = pd_12m * severity * exposure` still holds.
 
 
-* **Core Execution Mechanic (Dummy Translation):** Chance it fails, times the share lost if it does, times the loan size; capital is the extra cushion for a very bad year.
+* **Core Execution Mechanic (Dummy Translation):** Chance it fails at each age, times the share lost then, times the loan size; capital is the cushion for a very bad year.
 
 
-* **Boundary / Memory Constraint:** Each formula slot takes what the file has: charge-off PD floored at 0.05%, predicted severity, the original amount as the exposure, and M = 2.5.
+* **Boundary / Memory Constraint:** Each formula slot takes what the file has: PD floored at 0.05%, the implied severity, the original amount, and M = 2.5.
 
 
 * **Boundary / Memory Constraint (Dummy Translation):** Basel's formula wants inputs this file lacks, so each slot takes the closest measured quantity.
 
 
-* **Failure Mode / Downstream Impact:** The SME firm-size adjustment needs annual sales the file lacks, so small firms get a large corporate's correlation and RWA runs at 173% of exposure.
+* **Failure Mode / Downstream Impact:** The SME adjustment needs sales the file lacks and SBA's guarantee on 75.1% of exposure is not applied, so RWA runs at 191.5% of exposure.
 
 
-* **Failure Mode / Downstream Impact (Dummy Translation):** Without sales figures the formula treats a small shop like a big company, so capital comes out high.
+* **Failure Mode / Downstream Impact (Dummy Translation):** A small shop is treated like a big company, and the guaranteed part is charged in full, so capital comes out high.
 
 
 
@@ -591,9 +597,9 @@ failures table: 3,524 FAILURE, 593 ASSISTANCE rows
 **After Execution** (`[panel.drop_reason.value_counts()]` | `[Label Waterfall]`):
 
 ```text
-kept                       390,446   (2,713 failures)
+kept                       390,443   (2,710 failures)
 censored exit               15,986
-horizon not yet observed     4,400
+horizon not yet observed     4,403
 assisted                     1,503
 embargo                        749
 after failure                  218
@@ -605,7 +611,7 @@ after failure                  218
 ```python
 # Later lines win, so the order below is the precedence, weakest first.
 reasons = pd.Series("kept", index=panel.index)
-reasons[~hit & (end > observed_through)] = "horizon not yet observed"
+reasons[end > observed_through] = "horizon not yet observed"
 reasons[panel.assist_date.notna() & (panel.assist_date <= end)] = "assisted"
 reasons[panel.fail_date.notna() & (panel.fail_date <= panel.repdte)] = "after failure"
 reasons[(panel.fail_date > panel.repdte) & (panel.fail_date <= start)] = "embargo"
@@ -622,10 +628,10 @@ reasons[(panel.fail_date > panel.repdte) & (panel.fail_date <= start)] = "embarg
 * **Core Execution Mechanic (Dummy Translation):** Each row asks whether the bank failed in the year after its report went public, and every skipped row records why.
 
 
-* **Boundary / Memory Constraint:** The embargo exists because a December call report is filed well into the next quarter.
+* **Boundary / Memory Constraint:** The embargo exists because a December call report is filed well into the next quarter. Three of the 4,403 "horizon not yet observed" rows are banks that failed inside it.
 
 
-* **Boundary / Memory Constraint (Dummy Translation):** A report filed in February cannot warn you about a bank that closed in January.
+* **Boundary / Memory Constraint (Dummy Translation):** A report filed in February cannot warn you about a bank that closed in January, and an unfinished year cannot say who survived.
 
 
 * **Failure Mode / Downstream Impact:** Citibank N.A. and Bank of America N.A. appear as `ASSISTANCE` and are open, so counting assistance as failure labels survivors as defaults.
@@ -709,13 +715,18 @@ rows["el"] = rows.pd * rows.loss_rate_hat.clip(lower=0) * rows.DEP * runoff_rati
 ```text
 8 files landed, then new/_READY
 
-no     new/fdic_failures/failures.csv
-no     new/fdic_financials/financials_yearend.csv
+no     new/sba_loans/FOIA_7a_FY2000_FY2009_asof_260930.csv
+no     new/sba_loans/FOIA_7a_FY2010_FY2019_asof_260930.csv
 no     new/sba_loans/FOIA_7a_FY2020_Present_asof_260930.csv
+no     new/fdic_failures/failures.csv
+no     new/fdic_financials/financials_prefailure.csv
+no     new/fdic_financials/financials_yearend.csv
+no     new/fdic_institutions/institutions.csv
 no     new/sba_recovery_rates/sba_recovery_rates.csv
 MATCH  new/_READY
 
 objects 9 | rule matches 1
+a run per arrival instead: 8 executions, 7 failed gates
 
 ```
 
@@ -787,6 +798,8 @@ answer size: 871 bytes
 # The token goes back with the answer, or with the traceback
 token = os.environ["TASK_TOKEN"]
 try:
+    from credit_risk.validation import run_validation
+
     output = run_validation(S3Store(os.environ["BUCKET"]))
 except Exception:
     report_task(token, error=traceback.format_exc())
@@ -805,10 +818,10 @@ report_task(token, output=output)
 * **Core Execution Mechanic (Dummy Translation):** The state machine hands the container a claim ticket, and the container brings it back with its results attached.
 
 
-* **Boundary / Memory Constraint:** `TimeoutSeconds` bounds the wait, because a container that dies before sending its token would otherwise leave the state open.
+* **Boundary / Memory Constraint:** `TimeoutSeconds` bounds the wait, because a container killed before it sends its token would otherwise leave the state open; an exception, even from the import, fails it at once.
 
 
-* **Boundary / Memory Constraint (Dummy Translation):** If the container dies without answering, the one-hour timeout ends the wait instead of leaving the run stuck.
+* **Boundary / Memory Constraint (Dummy Translation):** If the container dies without answering, the one-hour timeout ends the wait; if it can still answer, a crash is reported straight away.
 
 
 * **Failure Mode / Downstream Impact:** `ecs:runTask.sync` returns the ECS task description of ARNs, exit codes and timings, so a Choice could never read the counts the container computed.
@@ -837,7 +850,7 @@ test batch: one SBA file removed, one CERT overwritten with text
 
 ```text
 -> GateFailed (Fail)
-FAILED ValidationGateFailed: sba_loans 2/3, fdic_failures 0/1, ...
+FAILED ValidationGateFailed: sba_loans 2/3, fdic_failures 0/1, ...; 1 invalid: new/fdic_failures/failures.csv
 
 stray fourth file:          sba_loans 4/3 -> GateFailed
 both fixed, fresh marker:   sba_loans 3/3 -> Done
@@ -884,8 +897,8 @@ passed = not invalid and all(ready[name] == expected[name] for name in expected)
 **Before Execution** (`[TypeSerializer().serialize()]` | `[boto3 Number Rules]`):
 
 ```text
-0.1                            TypeError: Float types are not supported.
-Decimal(0.1)                   Inexact, Rounded (55 significant digits)
+0.1                            TypeError: Float types are not supported. Use Decimal types instead.
+Decimal(0.1)                   Inexact: [<class 'decimal.Inexact'>, <class 'decimal.Rounded'>]
 Decimal("NaN")                 TypeError: Infinity and NaN not supported
 Decimal(str(round(0.1, 10)))   {'N': '0.1'}
 
@@ -895,8 +908,8 @@ Decimal(str(round(0.1, 10)))   {'N': '0.1'}
 
 ```text
 153 items written: sba 91 | fdic 61 | run 1
-largest item: 467 bytes
-sba | book#open | el_12m 3128581349.077191
+largest item: 263 bytes by DynamoDB's sizing rule
+sba | book#open | el_12m 3269624741.94296
 
 ```
 
@@ -953,42 +966,42 @@ new/ 0 | ready 8 | results 8 | archived 0
 -> Done (Succeed)
 new/ 0 | ready 0 | results 8 | archived 8
 
-source left in new/ between copy and delete:
-re-validated: sba_loans 3/3, new/ empty
+crash between copy and delete: re-validated sba_loans 3/3, new/ empty
+file replaced and file added mid-run: sba_loans archived 2 | ready 2
 
 ```
 
 **Code**:
 
 ```python
-# S3 has no rename: a server-side copy, then a delete
-def move(self, source, target):
-    self.client.copy({"Bucket": self.bucket, "Key": source}, self.bucket, target)
-    self.client.delete_object(Bucket=self.bucket, Key=source)
+# S3 has no rename; the copy refuses a changed object
+extra = {} if version is None else {"CopySourceIfMatch": version}
+self.client.copy({"Bucket": self.bucket, "Key": source}, self.bucket, target,
+                 ExtraArgs=extra)
 
-for entity in ENTITIES:
-    for key in store.list(f"{entity.ready}/"):
-        store.move(key, f"{entity.archived}/{key.split('/')[-1]}")
+for key, version in read[entity.name].items():
+    if not store.move(key, f"{entity.archived}/{key.split('/')[-1]}", version):
+        log(f"{key}: replaced or moved since it was read, left for the next run")
 
 ```
 
-**Answer:** Write the results and DynamoDB items first and archive last, so a failure leaves the batch in its ready folders. A re-run writes onto the same key, which makes the two-step move idempotent.
+**Answer:** Write results and items first, archive last, so a failure leaves the batch in its ready folders. Move only the keys this run read, while unchanged; a re-run onto the same key is idempotent.
 
 **Notes**:
 
-* **Core Execution Mechanic:** `client.copy` runs a server-side managed copy into `archived/<entity>/`, and `delete_object` then removes the source key.
+* **Core Execution Mechanic:** `client.copy` copies server-side into `archived/<entity>/`, refused if the ETag changed since the read, then `delete_object` removes the source.
 
 
-* **Core Execution Mechanic (Dummy Translation):** S3 copies the file to the archive folder and deletes the original, all inside AWS, without downloading it.
+* **Core Execution Mechanic (Dummy Translation):** S3 copies the file to the archive only if it is still the one read, then deletes the original, all inside AWS.
 
 
-* **Boundary / Memory Constraint:** Archiving moves no bytes through the container, so the 0.85 GB batch costs the task no memory at this step.
+* **Boundary / Memory Constraint:** Archiving moves no bytes through the container, so the 0.85 GB batch costs the task no memory here.
 
 
 * **Boundary / Memory Constraint (Dummy Translation):** The container only sends commands here, so even large files cost it nothing.
 
 
-* **Failure Mode / Downstream Impact:** Archiving before writing results would leave a batch that had moved with nothing to show, and the next run would find no files to model.
+* **Failure Mode / Downstream Impact:** Archiving before the results leaves a moved batch with nothing to show, and re-listing at the end would archive a file promoted mid-run, unread.
 
 
-* **Failure Mode / Downstream Impact (Dummy Translation):** Tidy up only after the work is saved; file the paperwork first, then crash, and you have nothing in place.
+* **Failure Mode / Downstream Impact (Dummy Translation):** Tidy up only after the work is saved, and only what you used.
