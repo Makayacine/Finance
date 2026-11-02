@@ -1,6 +1,6 @@
 # Finance Projects
 
-A curated collection of quantitative finance analyses, featuring exploratory data analysis, backtesting of trading strategies, and predictive modeling — alongside AWS data-engineering pipelines over banking, crypto-market and consumer-lending data.
+A curated collection of quantitative finance analyses, featuring exploratory data analysis, backtesting of trading strategies, and predictive modeling — alongside AWS data-engineering pipelines over banking, crypto-market, consumer-lending and small-business loan data.
 
 ## Current Projects
 
@@ -9,6 +9,7 @@ A curated collection of quantitative finance analyses, featuring exploratory dat
 * **`crypto-ticks-refinery-glue-dynamo`**: A ten-step statistical refinery over 340,971,834 Binance spot trades, aggregated into 5-second OHLCV bars and forked into continuous, categorical and Thompson Sampling bandit paths, landing in DynamoDB.
 * **`credit-mailer-watermark-glue-redshift`**: Incremental ETL with a DynamoDB watermark over 58,168 randomised loan offers from a South African lender, orchestrated by Step Functions into a Redshift star, with an off-policy bandit evaluation.
 * **`credit-mailer-watermark-azure-sql`**: The credit-mailer pipeline ported to Azure — a Blob Storage landing zone, a Table Storage watermark and an Azure SQL Database star in T-SQL — tested offline against Azurite and SQL Server 2022, and matched row for row against the AWS version's own local run.
+* **`sba-credit-risk-ecs-dynamo`**: PD, gross charge-off severity, expected loss, IFRS 9 stage and IRB capital for the 281,077 open loans among 1,639,728 SBA 7(a) small-business loans, with FDIC bank-failure PD and a dollar EL backtest beside it, run as two ECS Fargate containers gated by Step Functions into DynamoDB.
 
 *(More projects coming soon.)*
 
@@ -63,15 +64,13 @@ walks every step on every path.
 
 ## AWS data-engineering pipelines
 
-Three of the projects here are AWS data-engineering pipelines. Each is self-contained: the
+Four of the projects here are AWS data-engineering pipelines. Each is self-contained: the
 exploratory notebook it grew out of, the production jobs, the orchestration, and whatever the
 destination store needs — Redshift DDL, a DynamoDB key schema, or both.
 
-**`sba-credit-risk-ecs-dynamo`** is the credit-risk capstone on ECS Fargate rather than Glue or EMR: PD, gross charge-off severity, EL, IFRS 9 stage and IRB capital for 281,077 open SBA 7(a) company loans, with FDIC bank-failure PD, insurer loss rate and a dollar EL backtest beside it, gated by Step Functions into DynamoDB and runnable with `--local` on a laptop; its README carries the detail.
-
 ### Layout
 
-The three pipelines share a shape, so a reader who has seen one can navigate the rest:
+The four pipelines share a shape, so a reader who has seen one can navigate the rest:
 
 ```
 <project>/
@@ -91,6 +90,10 @@ because every path in it is written relative to there.
 `credit-mailer-watermark-glue-redshift` has **no `airflow-dag/` at all** — it is orchestrated by
 Step Functions, so `step-functions/` takes that slot — and adds `mysql/` for the source database
 it extracts from and `dynamodb/` for the one control-plane table that holds its load state.
+`sba-credit-risk-ecs-dynamo` is orchestrated by Step Functions too, and its compute is two
+container images rather than jobs, so `docker-data-validity/` and `docker-credit-model/` take
+that slot; the code both images run lives in one `credit_risk/` package, with `tests/` and
+`local-development/` beside it.
 
 The notebook is kept deliberately. It is where the logic was worked out, and it carries the
 executed outputs, so the production job can be diffed against something that is known to be
@@ -235,6 +238,52 @@ rather than decorative.
 
 Full detail, the verified figures and the three banned steps are in the project README.
 
+### `sba-credit-risk-ecs-dynamo`
+
+Credit risk on company lending, end to end: PD, a loss measure, exposure and expected loss on
+1,639,728 SBA 7(a) small-business loans approved from FY2000 to 2026-09-30, with bank and
+counterparty risk from every FDIC failure since 1984 beside it. The two chains are never
+multiplied together. An SBA borrower charging off and its lender failing are different events on
+different populations, and a product of the two would describe neither.
+
+```
+S3 new/  ->  ECS: data-validity  ->  Choice: gate passed?  ->  ECS: credit-model  ->  DynamoDB
+             exact dtypes and           no: Fail state,         SBA and FDIC chains    153 items
+             file counts, answers       its cause names         results/, then the
+             through a task token       the short entity        batch is archived
+```
+
+| Chain | Measure | Full data |
+| --- | --- | --- |
+| SBA scorecard | holdout AUC, FY2000-09 / the next vintage, FY2010 | 0.623 / 0.601 |
+| SBA open book | 281,077 loans, $165.06bn of exposure | 12-month EL $3.27bn, lifetime EL $15.61bn |
+| IFRS 9 | collective stage 2 | FY2007 only: 470 loans, $311m |
+| IRB capital | RWA on the whole loan, SBA's guarantee not applied | $316.1bn, 191% of exposure |
+| FDIC failure PD | AUC, validate 2008-12 / test 2013-25 | 0.961 / 0.963 |
+| FDIC counterparty | the 2025 year-end filings | 4,393 banks, 4.7 expected failures, $1.44bn EL |
+
+The interesting problems were about what the file can and cannot identify:
+
+- **The file records charge-off, not default, and charged-off amount, not LGD.** Charge-off
+  follows the lender's liquidation, months or years after the 90 days past due Basel calls
+  default, and the file has no balance at default and no recovery beside the amount. So the
+  chain models exactly those and names them that way: a 12-month *charge-off* PD fills the Basel
+  PD slot, gross charge-off severity the LGD slot, and the original amount, an upper bound, the
+  exposure.
+- **Two origination fields are written after the outcome.** `TermInMonths` is rewritten at
+  charge-off: 83.4% of paid-in-full company loans carry a whole-year term against 8.9% of
+  charged-off ones, and given to the scorecard it lifts the holdout AUC from 0.623 to 0.915, every
+  point of it the outcome. `CollateralInd` is attached on the way to charge-off for the FY2000-04
+  approvals: 93.0% of the flagged FY2000-03 loans charged off, against 11.3% of the rest. Both are
+  out of every model.
+- **Payoff dates before August 2005 are a conversion stamp.** No paid-in-full date is earlier than
+  2005-05-31, and 34,187 company payoffs carry that exact date against about 2,000 in an ordinary
+  month. Left in, they would keep repaid loans at risk for years and thin every early hazard, so
+  the life table is left-truncated: a loan still open on 2005-08-01 enters at its age that day,
+  and every exit before it is dropped, charge-offs with the payoffs.
+
+Full detail, the label rules for both chains and every verified figure are in the project README.
+
 
 ### Running the pipelines
 
@@ -242,6 +291,9 @@ Each project's README carries its own prerequisites. For the two Spark projects 
 Python 3.11, `pyspark==3.5.5`, and a Java 11 or 17 JDK on `JAVA_HOME` — Spark 3.5 does not support
 Java 21+. `credit-mailer-watermark-glue-redshift` needs none of that: it is Python Shell
 throughout, so `pip install -r requirements.txt` and a `duckdb>=1.4` is the whole prerequisite.
+`sba-credit-risk-ecs-dynamo` needs Python 3.12 and pandas 3, because its validator compares dtype
+names exactly and pandas 3 names a text column differently from pandas 2; its own
+`requirements.txt` covers the rest, and Docker is needed only to run the two images.
 The Spark jobs take a `--local` flag that runs them against plain filesystem paths, so every
 pipeline can be exercised end to end without an AWS account.
 
@@ -259,8 +311,9 @@ surface the jobs are written against rather than a superset of it.
 The AWS-side values in each DAG are account-specific and must be set to your own before
 deploying: EMR Serverless application id, IAM execution role ARN, S3 bucket and the
 `redshift_default` Airflow connection for the bank-marketing pipeline; S3 bucket, Glue job names
-and the DynamoDB table for the crypto-ticks one. Each project README states exactly what its own
-verification covers.
+and the DynamoDB table for the crypto-ticks one; the cluster, task definitions, subnets and
+security group in the state machine definition for the SBA one. Each project README states
+exactly what its own verification covers.
 
 ---
 
