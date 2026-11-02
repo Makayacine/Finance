@@ -54,23 +54,6 @@ The reference lab's shape, with five changes, each argued below under *The pipel
 list drives every entity, an expected file count per entity, a gate that fails into a Fail state,
 nullable integers declared `float64`, and the validator's answer carried by a task token.
 
-## Status
-
-| File | State |
-| --- | --- |
-| `local-development/fetch_raw_data.py` | **done** — SBA FOIA files, FDIC tables, recovery report; byte-checked, sha256 manifest |
-| `local-development/parse_sba_recovery.py` | **done** — SBA's Tables 10 and 11 into one tidy CSV, self-checking against each row's printed total |
-| `credit_risk/config.py` | **done** — the one entity list: folders, file counts, dtypes, the gate |
-| `credit_risk/validation.py` | **done** — exact dtypes with one widening; promotes valid files; the gate |
-| `credit_risk/sba.py` · `hazard.py` · `woe.py` · `capital.py` | **done** — the SBA chain |
-| `credit_risk/fdic.py` | **done** — the FDIC chain |
-| `credit_risk/metrics.py` · `results.py` · `pipeline.py` · `stores.py` | **done** — AUC/Gini/KS/PSI, Decimal items, the model run, the only AWS-aware module |
-| `docker-data-validity/` · `docker-credit-model/` | **done** — the two entrypoints on `python:3.12-slim`, pinned to the releases the notebook ran on |
-| `step-functions/step-function.json` · `event-pattern.json` | **done** — seven states, no Pass; walked locally by `run_pipeline.py` |
-| `local-development/stage_landing.py` · `run_pipeline.py` · `build_sample.py` | **done** — the upload, the local state machine, the committed sample |
-| `credit-risk-walkthrough.ipynb` | **done** — executed on the full files, every figure below |
-| `tests/` | **done** — 41 tests, no AWS, no network, no mocks |
-
 ## The data
 
 | Source | Rows | As of |
@@ -86,8 +69,12 @@ nullable integers declared `float64`, and the validator's answer carried by a ta
 
 The three SBA files share one 42-column layout. Together they are 763 MB, and each is over
 GitHub's 100 MB limit, so `data/raw/` is gitignored and `fetch_raw_data.py` downloads it in about
-15 minutes. **The borrower's name, street, city and ZIP are never read**: every loader drops them
-by `usecols` before a row is in memory, because some 7(a) borrowers are sole proprietors.
+15 minutes. A file is renamed into place only once its byte count matches the server's, and the
+manifest records each one's row count and sha256. `parse_sba_recovery.py` reads Tables 10 and 11
+out of SBA's report and stops unless every row's yearly rates add up, within rounding, to the
+Total the report prints beside them. **The borrower's name, street, city and ZIP are never
+read**: every loader drops them by `usecols` before a row is in memory, because some 7(a)
+borrowers are sole proprietors.
 
 **`data/sample/` is committed** so the pipeline, both containers and the tests run straight after
 a clone. It is stratified, not the head of the file: 0.6% of every (fiscal year, loan status)

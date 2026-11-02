@@ -51,27 +51,6 @@ cluster would spend longer starting than the whole chain takes to run.
 Step Functions chains the six job runs. It is a chain and not a `Parallel` state for a reason
 given below: every table lands on one fixed S3 key that each run overwrites.
 
-## Status
-
-
-| File                                    | State                                                                        |
-| --------------------------------------- | ---------------------------------------------------------------------------- |
-| `glue-jobs/mysql-extraction.py`         | **done** — the watermark. Four-run demo verified, including the zero-row run |
-| `glue-jobs/redshift-raw-ingestion.py`   | **done** — COPY + MERGE + TRUNCATE, two reference-lab bugs fixed             |
-| `glue-jobs/redshift-processed-layer.py` | **done** — the star: `dim_client` and `fact_mailer`                          |
-| `glue-jobs/glue-refinery-path3.py`      | **done** — Steps 4–10, reproduces the notebook's posterior exactly           |
-| `glue-jobs/warehouse_common.py`         | **done** — connection, statement runner, the `--local` flags                 |
-| `redshift/redshift-create-tables.sql`   | **done** — 9 tables, `dim_offer_arm` seeded with 18 arms                     |
-| `local-development/build_source_db.py`  | **done** — the normalisation, and the staged local source                    |
-| `local-development/apply_ddl.py`        | **done** — applies the deployed DDL to the local warehouse                   |
-| `dynamodb/write-to-dynamo.py`           | **done** — seeds and resets the two config rows                              |
-| `step-functions/step-functions.json`    | **done** — six states, one chain                                             |
-| `refinery-walkthrough.ipynb`            | **done** — 58 cells, executed, the 13-section clean plus the fork            |
-| `tests/`                                | **done** — 18 tests, no AWS, no network, no mocks                            |
-
-
-
-
 ## The data
 
 Bertrand, Karlan, Mullainathan, Shafir & Zinman, *"What's Advertising Content Worth? Evidence from
@@ -415,7 +394,8 @@ kept alongside the real one, because two schema files drift and they drift silen
 
 ## What the local run covers
 
-**Covered end to end on a laptop.** The four-run watermark demo including the zero-row run; the
+**Covered end to end on a laptop**, and by 18 tests with no AWS, no network and no mocks. The
+four-run watermark demo including the zero-row run; the
 split accounting for all 37 source columns; the MERGE text parsing and applying, being idempotent
 on re-run, and no-opping on an empty staging table; the arm binner against all 18 declared bands
 and both sides of every cut point; SNIPS against a hand-computed two-arm case; that the Thompson
