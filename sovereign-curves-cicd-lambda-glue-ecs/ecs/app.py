@@ -255,9 +255,11 @@ def run(lake, load_type: str = "incremental", start: Optional[dt.date] = None, e
         at = tables["curve_params"].iloc[0]["params_at_bound"]
         if at:
             bounded.append(f"{day}:{at}")
-            log.warning("%s: Svensson fit ended on a bound: %s", day, at)
+            log.info("%s: Svensson fit ended on a bound: %s", day, at)
         load.write_watermark(lake, "engine", day, svensson=list(warm))
         log.info("%s: %d securities", day, len(quotes))
+    if bounded:
+        log.warning("%d of %d Svensson fits ended on a bound; each is in curve_params and fit_errors", len(bounded), len(days))
     return {"dates": len(days), "seconds": round(time.perf_counter() - t0, 1), "fits_on_a_bound": bounded or "none"}
 
 
