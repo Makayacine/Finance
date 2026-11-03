@@ -191,3 +191,18 @@ def test_without_a_warehouse_the_voucher_query_still_works(chain):
     assert answer["errors"][0]["message"] == "warehouse unavailable"
     assert ask(client, token, '{ voucher(code: "VCH-00000000") { code } }')[1] == \
         {"data": {"voucher": None}}
+
+
+def test_the_wsgi_entry_point_reads_its_settings_from_the_environment(chain):
+    from voucher_service import wsgi
+    con, service_db, _ = chain
+    environ = {"VOUCHER_DB_PATH": str(service_db), "VOUCHER_JWT_SECRET": SECRET,
+               "VOUCHER_FINANCE_PASSWORD": "rotated-finance-pass"}
+    assert wsgi.warehouse_from(environ) is None
+    assert isinstance(wsgi.warehouse_from({**environ, "VOUCHER_WAREHOUSE_PATH": "w.duckdb"}),
+                      DuckDBWarehouse)
+    app = wsgi.build(environ)
+    assert app.config["JWT_SECRET"] == SECRET
+    client = app.test_client()
+    token = login(client, "finance", "rotated-finance-pass")
+    assert ask(client, token, '{ voucher(code: "VCH-00000000") { code } }')[0] == 200
