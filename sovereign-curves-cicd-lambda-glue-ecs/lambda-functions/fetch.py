@@ -1,7 +1,7 @@
 """Fetch the day's raw sources into S3, then start the Glue load for that date.
 
-Started each weekday evening by an EventBridge schedule. Four sources, each fetched on its own so
-that one failing never stops the others:
+Started each weekday evening by an EventBridge schedule. Eight sources, four for each market,
+each fetched on its own so that one failing never stops the others. United States:
 
 - ``fedinvest``: the Treasury's FedInvest end-of-day prices. The page wants the ``_csrf``
   token and session cookie from a GET before it accepts the POST of ``priceDate``; a bare POST
@@ -10,6 +10,15 @@ that one failing never stops the others:
 - ``auctions``: the Treasury's auction records from the Fiscal Data API, the last 14 days of
   them, which carry each new CUSIP's issue and dated dates and its original term.
 - ``nyfed``: SOFR, BGCR and TGCR from the New York Fed's markets API.
+
+South Africa:
+
+- ``nt_auctions``: the National Treasury's fixed-rate bond auction results for the fiscal year
+  the date falls in, the whole spreadsheet as published.
+- ``nt_schedule``: the latest "Schedule of domestic government bonds" PDF in the Treasury's
+  folder, for each bond's coupon, interest dates and redemption.
+- ``oecd``: the OECD's monthly long-term interest rate for South Africa, from 2010.
+- ``imf``: the IMF's monthly South African government bond yield, as FRED distributes it.
 
 Each source lands as one object per date under ``raw/<source>/date=<YYYY-MM-DD>/`` as it was
 received. A source that fails is reported in the response and logged, and the Glue job is still
@@ -21,12 +30,14 @@ Standard library and boto3 only, so the deployment package is this one file.
 from __future__ import annotations
 
 import datetime as dt
+import html
 import http.cookiejar
 import json
 import logging
 import os
 import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import PurePosixPath
@@ -36,6 +47,14 @@ FEDINVEST_URL = "https://www.treasurydirect.gov/GA-FI/FedInvest/selectSecurityPr
 GSW_URL = "https://www.federalreserve.gov/data/yield-curve-tables/feds200628.csv"
 AUCTIONS_URL = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query"
 NYFED_URL = "https://markets.newyorkfed.org/api/rates/secured/all/search.json"
+NT_ROOT = "https://investor.treasury.gov.za/Debt%20Operations%20and%20Data/"
+NT_AUCTIONS_URL = NT_ROOT + "Historical%20Results/Fixed-rate%20bonds/"
+NT_SCHEDULE_URL = NT_ROOT + "Schedule%20of%20Domestic%20Debt/"
+OECD_URL = (
+    "https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_FINMARK,4.0/ZAF.M.IRLT.PA....."
+    "?startPeriod=2010-01&format=csvfilewithlabels"
+)
+IMF_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=INTGSBZAM193N&cosd=2010-01-01"
 AUCTION_FIELDS = (
     "cusip,security_type,original_security_term,auction_date,issue_date,dated_date,maturity_date,"
     "int_rate,first_int_period,first_int_payment_date,reopening,inflation_index_security,floating_rate"
@@ -47,6 +66,12 @@ log = logging.getLogger()
 log.setLevel(logging.INFO)
 
 _CSRF = re.compile(r'name="_csrf"\s+value="([^"]+)"')
+_HREF = re.compile(r'href="([^"]+)"')
+_AS_AT = re.compile(r"as at (\d{1,2}) ([A-Za-z]+) (\d{4})\.pdf$", re.I)
+_FISCAL = re.compile(r"(\d{4}-\d{2})\.(xlsx?)$", re.I)
+_MONTHS = {m: i for i, m in enumerate(
+    ("january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november",
+     "december"), start=1)}
 
 
 class FetchError(RuntimeError):
@@ -130,11 +155,125 @@ def fetch_nyfed(day: dt.date, opener=None) -> bytes:
     return data
 
 
-SOURCES: Dict[str, Tuple[Callable, str]] = {
+# --- South Africa -------------------------------------------------------------------------------
+
+
+def nt_fiscal_year(day: dt.date) -> str:
+    """``2026-27`` for any day from April 2026 to March 2027: the Treasury's file for that day."""
+    start = day.year if day.month >= 4 else day.year - 1
+    return f"{start}-{(start + 1) % 100:02d}"
+
+
+def nt_auctions_name(day: dt.date) -> str:
+    """The raw object's name: ``fixed-rate-bonds-2026-27.xlsx``. The Treasury writes .xlsx from 2020-21."""
+    fy = nt_fiscal_year(day)
+    return f"fixed-rate-bonds-{fy}.{'xlsx' if int(fy[:4]) >= 2020 else 'xls'}"
+
+
+def _spreadsheet(data: bytes, what: str) -> bytes:
+    if not (data[:4] == b"PK\x03\x04" or data[:8] == bytes.fromhex("d0cf11e0a1b11ae1")):
+        raise FetchError(f"{what} is not a spreadsheet")
+    return data
+
+
+def _nt_get(url: str, opener, attempts: int = 3, wait: float = 2.0, sleep=time.sleep) -> bytes:
+    """GET from the Treasury's site, which now and then resets a connection: three tries, 2 s then 4 s apart."""
+    for i in range(attempts):
+        try:
+            with opener.open(url, timeout=TIMEOUT) as resp:
+                return resp.read()
+        except (urllib.error.URLError, ConnectionError) as exc:
+            if isinstance(exc, urllib.error.HTTPError) or i == attempts - 1:
+                raise
+            log.warning("retrying %s after %s", url, exc)
+            sleep(wait * 2**i)
+    raise FetchError(url)  # not reached
+
+
+def _listing(url: str, opener) -> list:
+    page = _nt_get(url, opener).decode("utf-8", "replace")
+    return [html.unescape(h) for h in _HREF.findall(page)]
+
+
+def fetch_nt_auctions(day: dt.date, opener=None) -> bytes:
+    opener = opener or _opener()
+    ext = nt_auctions_name(day).rsplit(".", 1)[1]
+    name = f"Fixed-rate bond auctions - {nt_fiscal_year(day)}.{ext}"
+    return _spreadsheet(_nt_get(NT_AUCTIONS_URL + urllib.parse.quote(name), opener), name)
+
+
+def fetch_nt_auction_history(opener=None, pause_seconds: float = 2.0, sleep=time.sleep) -> Dict[str, bytes]:
+    """Every fiscal year's file in the Treasury's folder, from 2010-13: {raw object name: body}."""
+    opener = opener or _opener()
+    out = {}
+    for href in _listing(NT_AUCTIONS_URL, opener):
+        m = _FISCAL.search(href)
+        if not m or "auctions" not in href.lower():
+            continue
+        if out:
+            sleep(pause_seconds)
+        name = href.rsplit("/", 1)[-1]
+        body = _nt_get(NT_AUCTIONS_URL + urllib.parse.quote(name), opener)
+        out[f"fixed-rate-bonds-{m.group(1)}.{m.group(2).lower()}"] = _spreadsheet(body, name)
+    return out
+
+
+def nt_schedules_listed(opener=None) -> Dict[dt.date, str]:
+    """{as-at date: file name} for every schedule PDF in the Treasury's folder."""
+    opener = opener or _opener()
+    out = {}
+    for href in _listing(NT_SCHEDULE_URL, opener):
+        name = href.rsplit("/", 1)[-1]
+        m = _AS_AT.search(name.replace("Janaury", "January"))
+        if m and m.group(2).lower() in _MONTHS:
+            out[dt.date(int(m.group(3)), _MONTHS[m.group(2).lower()], int(m.group(1)))] = name
+    return out
+
+
+def fetch_nt_schedule_as_at(name: str, opener=None) -> bytes:
+    opener = opener or _opener()
+    data = _nt_get(NT_SCHEDULE_URL + urllib.parse.quote(name), opener)
+    if not data.startswith(b"%PDF"):
+        raise FetchError(f"{name} is not a PDF")
+    return data
+
+
+def fetch_nt_schedule(day: dt.date, opener=None) -> bytes:
+    """The newest schedule dated on or before ``day``."""
+    opener = opener or _opener()
+    listed = {d: n for d, n in nt_schedules_listed(opener).items() if d <= day}
+    if not listed:
+        raise FetchError(f"no debt schedule dated on or before {day}")
+    return fetch_nt_schedule_as_at(listed[max(listed)], opener)
+
+
+def fetch_oecd(day: dt.date, opener=None) -> bytes:
+    opener = opener or _opener()
+    with opener.open(OECD_URL, timeout=TIMEOUT) as resp:
+        data = resp.read()
+    if b"IRLT" not in data[:4000]:
+        raise FetchError("the OECD file has no IRLT rows near its top")
+    return data
+
+
+def fetch_imf(day: dt.date, opener=None) -> bytes:
+    opener = opener or _opener()
+    with opener.open(IMF_URL, timeout=TIMEOUT) as resp:
+        data = resp.read()
+    if not data.lstrip(b"\xef\xbb\xbf").startswith(b"observation_date,INTGSBZAM193N"):
+        raise FetchError("the FRED file does not start with its INTGSBZAM193N header")
+    return data
+
+
+SOURCES: Dict[str, Tuple[Callable, object]] = {
     "fedinvest": (fetch_fedinvest, "prices.html"),
     "gsw": (fetch_gsw, "feds200628.csv"),
     "auctions": (fetch_auctions, "auctions.json"),
     "nyfed": (fetch_nyfed, "rates.json"),
+    "nt_auctions": (fetch_nt_auctions, nt_auctions_name),
+    "nt_schedule": (fetch_nt_schedule, "schedule.pdf"),
+    "oecd": (fetch_oecd, "irlt.csv"),
+    "imf": (fetch_imf, "INTGSBZAM193N.csv"),
 }
 
 
@@ -150,7 +289,7 @@ def fetch_all(day: dt.date, put: Callable[[str, bytes], None], sources=None, fet
         fn, filename = fetchers[name]
         try:
             body = fn(day)
-            key = raw_key(name, day, filename)
+            key = raw_key(name, day, filename(day) if callable(filename) else filename)
             put(key, body)
             status[name] = f"ok {key}"
         except Exception as exc:  # isolate one source from the rest

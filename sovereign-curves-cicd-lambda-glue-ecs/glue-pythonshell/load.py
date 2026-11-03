@@ -11,6 +11,10 @@ through ``--additional-python-modules``; ``bond_analytics`` comes in with ``--ex
 | fedinvest | raw/fedinvest/date=D/prices.html     | prices/date=D/prices.parquet            |
 | gsw       | raw/gsw/date=D/feds200628.csv        | reference_curves/year=Y/gsw.parquet     |
 | nyfed     | raw/nyfed/date=D/rates.json          | funding/year=Y/rates.parquet            |
+| nt_schedule | raw/nt_schedule/date=D/schedule.pdf | sa_bonds/sa_bonds.parquet, one row a bond |
+| nt_auctions | raw/nt_auctions/date=D/fixed-rate-bonds-<fiscal year>.xls(x) | sa_auctions/year=Y/sa_auctions.parquet |
+| oecd      | raw/oecd/date=D/irlt.csv             | sa_reference/year=Y/sa_reference.parquet |
+| imf       | raw/imf/date=D/INTGSBZAM193N.csv     | sa_reference/year=Y/sa_reference.parquet |
 
 ``control/watermarks.json`` in the lake holds, per source, the last raw date loaded. An
 incremental run loads the raw dates after it, up to ``--date_filter`` when given; a full run
@@ -19,13 +23,18 @@ prices see that day's new CUSIPs. A date that fails stops its own source there, 
 watermark never skips a day; the other sources carry on, and the run fails at the end.
 
 The loader parses, converts clean to dirty, validates and flags. It never changes a price: a
-quote it doubts keeps its value and gains a flag.
+quote it doubts keeps its value and gains a flag. The same holds for the National Treasury's
+figures: an auction row whose clearing yield falls outside its own bids keeps the yield, gains
+``clearing_outside_bids`` and stays out of the curve. Every South African row carries its source.
+The Treasury's spreadsheets and PDFs are read with openpyxl, xlrd and pypdf, which the job adds
+with ``--additional-python-modules``.
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fnmatch
 import io
 import json
 import logging
@@ -35,14 +44,17 @@ from typing import Dict, Iterable, List, Optional
 
 import pandas as pd
 
-from bond_analytics import dates, gsw, quality, schemas
+from bond_analytics import dates, gsw, nt_auctions, nt_schedule, quality, sa_reference, schemas
 from bond_analytics.fedinvest import parse_prices, parse_us_date, security_from_row
 from bond_analytics.securities import static_by_cusip
 
 log = logging.getLogger("load")
 
-SOURCES = ("auctions", "fedinvest", "gsw", "nyfed")
-RAW_FILES = {"auctions": "auctions.json", "fedinvest": "prices.html", "gsw": "feds200628.csv", "nyfed": "rates.json"}
+SOURCES = ("auctions", "fedinvest", "gsw", "nyfed", "nt_schedule", "nt_auctions", "oecd", "imf")
+RAW_FILES = {
+    "auctions": "auctions.json", "fedinvest": "prices.html", "gsw": "feds200628.csv", "nyfed": "rates.json",
+    "nt_schedule": "schedule.pdf", "nt_auctions": "fixed-rate-bonds-*", "oecd": "irlt.csv", "imf": "INTGSBZAM193N.csv",
+}
 WATERMARKS = "control/watermarks.json"
 FEDINVEST_START = dt.date(2008, 6, 1)
 FUNDING_RATES = ("SOFR", "BGCR", "TGCR")
@@ -157,7 +169,7 @@ def raw_dates(raw, source: str) -> List[dt.date]:
     out = set()
     for k in raw.list(key("raw", source) + "/"):
         part = PurePosixPath(k).parent.name
-        if part.startswith("date=") and PurePosixPath(k).name == RAW_FILES[source]:
+        if part.startswith("date=") and fnmatch.fnmatchcase(PurePosixPath(k).name, RAW_FILES[source]):
             out.add(dt.date.fromisoformat(part[5:]))
     return sorted(out)
 
@@ -277,13 +289,17 @@ def load_fedinvest(raw, lake, days: List[dt.date], static) -> Optional[dt.date]:
 # --- reference curves and funding: yearly files, rows upserted by date ------------------------
 
 
-def upsert_by_year(lake, table: str, name: str, df: pd.DataFrame, key_cols: List[str]) -> None:
+def _as_date(v):
+    return v if isinstance(v, dt.date) or v is None else pd.Timestamp(v).date()
+
+
+def upsert_by_year(lake, table: str, name: str, df: pd.DataFrame, key_cols: List[str], date_col: str = "date") -> None:
     df = df.reindex(columns=schemas.columns(table))
-    for year, part in df.groupby(df["date"].map(lambda d: d.year)):
+    for year, part in df.groupby(df[date_col].map(lambda d: d.year)):
         k = key(table, f"year={year}", name)
         old = from_parquet(lake.get(k))
         if old is not None:
-            old["date"] = old["date"].map(lambda v: v if isinstance(v, dt.date) else pd.Timestamp(v).date())
+            old[date_col] = old[date_col].map(_as_date)
             part = pd.concat([old, part], ignore_index=True)
         part = part.drop_duplicates(subset=key_cols, keep="last").sort_values(key_cols)
         lake.put(k, to_parquet(part.reset_index(drop=True), table))
@@ -322,6 +338,105 @@ def load_nyfed(raw, lake, days: List[dt.date], rebuild: bool) -> None:
     write_watermark(lake, "nyfed", days[-1])
 
 
+# --- South Africa: the Treasury's schedule and auctions, the OECD and IMF series --------------
+
+
+def _raw_objects(raw, source: str, day: dt.date) -> List[str]:
+    prefix = key("raw", source, f"date={day.isoformat()}") + "/"
+    return [k for k in raw.list(prefix) if fnmatch.fnmatchcase(PurePosixPath(k).name, RAW_FILES[source])]
+
+
+def read_sa_bonds(lake) -> Dict[str, dict]:
+    df = from_parquet(lake.get("sa_bonds/sa_bonds.parquet"))
+    if df is None:
+        return {}
+    out = {}
+    for rec in df.to_dict("records"):
+        for c in ("issue_date", "pricing_maturity", "schedule_date"):
+            rec[c] = _as_date(rec[c]) if rec[c] == rec[c] else None
+        rec["redemptions"] = [dt.date.fromisoformat(x) for x in rec["redemptions"].split(",")]
+        out[rec["bond_code"]] = rec
+    return out
+
+
+def write_sa_bonds(lake, bonds: Dict[str, dict]) -> None:
+    rows = [{**b, "redemptions": ",".join(d.isoformat() for d in b["redemptions"])} for b in bonds.values()]
+    df = pd.DataFrame(rows, columns=schemas.columns("sa_bonds")).sort_values("bond_code")
+    lake.put("sa_bonds/sa_bonds.parquet", to_parquet(df.reset_index(drop=True), "sa_bonds"))
+
+
+def load_nt_schedule(raw, lake, days: List[dt.date], rebuild: bool) -> None:
+    """Every schedule in the run, merged over what the lake holds: each bond from its latest schedule."""
+    parsed = [] if rebuild else [read_sa_bonds(lake)]
+    for d in days:
+        for k in _raw_objects(raw, "nt_schedule", d):
+            one = nt_schedule.parse_pdf(raw.get(k))
+            if not one:
+                raise LoadError(f"nt_schedule {d}: no fixed-rate bond lines in {k}")
+            parsed.append(one)
+    merged = nt_schedule.merge(parsed)
+    write_sa_bonds(lake, merged)
+    flagged = sorted(c for c, b in merged.items() if b["quality_flags"])
+    log.info("nt_schedule: %d fixed-rate bonds, flagged %s", len(merged), flagged or "none")
+
+
+def read_sa_auctions(lake) -> List[dict]:
+    rows = []
+    for k in lake.list("sa_auctions/"):
+        if not k.endswith("sa_auctions.parquet"):
+            continue
+        df = from_parquet(lake.get(k))
+        df = df.astype(object).where(df.notna(), None)
+        for rec in df.to_dict("records"):
+            rec["auction_date"], rec["settle_date"] = _as_date(rec["auction_date"]), _as_date(rec["settle_date"])
+            rows.append(rec)
+    return rows
+
+
+def write_sa_auctions(lake, rows: List[dict], rebuild: bool = False) -> List[dict]:
+    """Merge new auction rows with the lake's, check every bond against its neighbouring auctions
+    afresh, and write one file a year. A later row for the same auction date and bond replaces an
+    earlier one, unless it would lose the best and worst bids the earlier one has."""
+    merged = nt_auctions.deduplicate(([] if rebuild else read_sa_auctions(lake)) + list(rows))
+    merged = nt_auctions.flag_neighbours(merged)
+    lake.delete_prefix("sa_auctions/")
+    cols = schemas.columns("sa_auctions")
+    for year in sorted({r["auction_date"].year for r in merged}):
+        df = pd.DataFrame([r for r in merged if r["auction_date"].year == year], columns=cols)
+        lake.put(key("sa_auctions", f"year={year}", "sa_auctions.parquet"), to_parquet(df, "sa_auctions"))
+    return merged
+
+
+def load_nt_auctions(raw, lake, days: List[dt.date], rebuild: bool) -> None:
+    bonds = read_sa_bonds(lake)
+    if not bonds:
+        raise LoadError("nt_auctions: no sa_bonds in the lake to check the auctions against; load nt_schedule first")
+    rows: List[dict] = []
+    for d in days:
+        for k in sorted(_raw_objects(raw, "nt_auctions", d)):
+            rows.extend(nt_auctions.parse_file(raw.get(k), PurePosixPath(k).name))
+    rows = nt_auctions.deduplicate(nt_auctions.flag(rows, bonds))
+    merged = write_sa_auctions(lake, rows, rebuild)
+    bad = sum(1 for r in merged if not nt_auctions.usable(r))
+    log.info("nt_auctions: %d bond auctions in the lake, %d kept out of the curve by their flags", len(merged), bad)
+
+
+def load_reference(raw, lake, source: str, days: List[dt.date], rebuild: bool) -> None:
+    """The newest file of a monthly series replaces that series' months in ``sa_reference``."""
+    newest = days[-1]
+    body = raw.get(key("raw", source, f"date={newest.isoformat()}", RAW_FILES[source]))
+    rows = sa_reference.parse_oecd(body, newest) if source == "oecd" else sa_reference.parse_imf(body)
+    if rebuild:
+        series = rows[0]["series"]
+        for k in lake.list("sa_reference/"):
+            old = from_parquet(lake.get(k))
+            keep = old[old["series"] != series]
+            lake.put(k, to_parquet(keep.reset_index(drop=True), "sa_reference"))
+    upsert_by_year(lake, "sa_reference", "sa_reference.parquet", pd.DataFrame(rows), ["date", "series"])
+    log.info("%s: %d months, %s to %s", source, len(rows), rows[0]["date"], rows[-1]["date"])
+    write_watermark(lake, source, newest)
+
+
 # --- the job ----------------------------------------------------------------------------------
 
 
@@ -349,6 +464,14 @@ def run(raw, lake, load_type: str, date_filter: Optional[dt.date] = None, source
                 load_gsw(raw, lake, days, rebuild=load_type == "full")
             elif source == "nyfed":
                 load_nyfed(raw, lake, days, rebuild=load_type == "full")
+            elif source == "nt_schedule":
+                load_nt_schedule(raw, lake, days, rebuild=load_type == "full")
+                write_watermark(lake, "nt_schedule", days[-1])
+            elif source == "nt_auctions":
+                load_nt_auctions(raw, lake, days, rebuild=load_type == "full")
+                write_watermark(lake, "nt_auctions", days[-1])
+            elif source in ("oecd", "imf"):
+                load_reference(raw, lake, source, days, rebuild=load_type == "full")
             status[source] = f"loaded {days[0]} to {days[-1]}"
         except Exception as exc:
             log.exception("%s failed", source)

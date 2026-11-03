@@ -254,3 +254,146 @@ TBLPROPERTIES (
 --   FROM sovereign_curves.fit_errors
 --  WHERE "date" BETWEEN '2026-10-01' AND '2026-10-30' AND kind IN ('note', 'bond') AND years >= 0.25
 --  GROUP BY 1, 2 ORDER BY 1, 2;
+
+-- South Africa
+
+-- the National Treasury's fixed-rate bonds from its debt schedules: coupon, cycle, redemption, the leg it is priced on
+CREATE EXTERNAL TABLE IF NOT EXISTS sovereign_curves.sa_bonds (
+  `bond_code` string,
+  `coupon` double,
+  `issue_date` date,
+  `issue_price` double,
+  `interest_dates_listed` string,
+  `coupon_months` string,
+  `coupon_days` string,
+  `redemptions` string,
+  `pricing_maturity` date,
+  `legs` double,
+  `nominal_rand` double,
+  `schedule_date` date,
+  `quality_flags` string,
+  `source` string
+)
+STORED AS PARQUET
+LOCATION 's3://<lake-bucket>/sa_bonds/';
+
+
+-- the Treasury's fixed-rate bond auctions, figures as published, flags where a check fails; one file per year
+CREATE EXTERNAL TABLE IF NOT EXISTS sovereign_curves.sa_auctions (
+  `auction_date` date,
+  `settle_date` date,
+  `bond_code` string,
+  `bond_label` string,
+  `coupon_quoted` double,
+  `redemption_year_quoted` double,
+  `offered_rand` double,
+  `allocated_rand` double,
+  `non_comps_rand` double,
+  `bids_received_rand` double,
+  `number_of_bids` double,
+  `clearing_yield` double,
+  `best_bid` double,
+  `worst_bid` double,
+  `bid_to_cover` double,
+  `yield_unit` string,
+  `source_file` string,
+  `sheet` string,
+  `quality_flags` string,
+  `source` string
+)
+PARTITIONED BY (`year` int)
+STORED AS PARQUET
+LOCATION 's3://<lake-bucket>/sa_auctions/'
+TBLPROPERTIES (
+  'projection.enabled' = 'true',
+  'projection.year.type' = 'integer',
+  'projection.year.range' = '2010,2100',
+  'storage.location.template' = 's3://<lake-bucket>/sa_auctions/year=${year}/'
+);
+
+
+-- the OECD's long-term rate and the IMF's government bond yield for South Africa, monthly, with their citations
+CREATE EXTERNAL TABLE IF NOT EXISTS sovereign_curves.sa_reference (
+  `date` date,
+  `series` string,
+  `percent` double,
+  `source` string
+)
+PARTITIONED BY (`year` int)
+STORED AS PARQUET
+LOCATION 's3://<lake-bucket>/sa_reference/'
+TBLPROPERTIES (
+  'projection.enabled' = 'true',
+  'projection.year.type' = 'integer',
+  'projection.year.range' = '2010,2100',
+  'storage.location.template' = 's3://<lake-bucket>/sa_reference/year=${year}/'
+);
+
+
+-- each usable auction's bond priced with the JSE formula: all-in, accrued, clean, DV01, duration, convexity
+CREATE EXTERNAL TABLE IF NOT EXISTS sovereign_curves.sa_prices (
+  `auction_date` date,
+  `settle_date` date,
+  `bond_code` string,
+  `coupon` double,
+  `maturity` date,
+  `years` double,
+  `clearing_yield` double,
+  `cum` boolean,
+  `all_in` double,
+  `accrued` double,
+  `clean` double,
+  `dv01` double,
+  `modified_duration` double,
+  `convexity` double,
+  `fia_ytm` double,
+  `source` string
+)
+PARTITIONED BY (`year` int)
+STORED AS PARQUET
+LOCATION 's3://<lake-bucket>/sa_prices/'
+TBLPROPERTIES (
+  'projection.enabled' = 'true',
+  'projection.year.type' = 'integer',
+  'projection.year.range' = '2010,2100',
+  'storage.location.template' = 's3://<lake-bucket>/sa_prices/year=${year}/'
+);
+
+
+-- zero and par yields per auction date from FIA's bootstrap of that day's bonds, extrapolation marked
+CREATE EXTERNAL TABLE IF NOT EXISTS sovereign_curves.sa_curves (
+  `auction_date` date,
+  `tenor` double,
+  `zero_rate` double,
+  `par_yield` double,
+  `discount_factor` double,
+  `extrapolated` boolean,
+  `n_bonds` double,
+  `shortest` double,
+  `longest` double
+)
+PARTITIONED BY (`year` int)
+STORED AS PARQUET
+LOCATION 's3://<lake-bucket>/sa_curves/'
+TBLPROPERTIES (
+  'projection.enabled' = 'true',
+  'projection.year.type' = 'integer',
+  'projection.year.range' = '2010,2100',
+  'storage.location.template' = 's3://<lake-bucket>/sa_curves/year=${year}/'
+);
+
+
+-- the 10-year par yield by month against the OECD and IMF series, in bp
+CREATE EXTERNAL TABLE IF NOT EXISTS sovereign_curves.sa_crosscheck (
+  `month` date,
+  `auction_dates` double,
+  `inside_knots` double,
+  `par_10y` double,
+  `zero_10y` double,
+  `oecd_irlt` double,
+  `imf_ifs` double,
+  `par_minus_oecd_bp` double,
+  `par_minus_imf_bp` double
+)
+STORED AS PARQUET
+LOCATION 's3://<lake-bucket>/sa_crosscheck/';
