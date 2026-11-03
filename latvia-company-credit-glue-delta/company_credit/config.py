@@ -21,11 +21,12 @@ insolvency-only label is the sensitivity.
 WHEN ACCOUNTS EXIST
 -------------------
 ``created_at`` is a real filing time only from 2021-01-18. Every statement the Register published
-before then -- all 1,152,314 of them, every fiscal year up to 2019 -- carries a stamp from the bulk
-load of 2020-08-12 to 2021-01-17, at about 18,000 a day. Such a statement is dated nine months
-after its period end, the embargo, and never later than its stamp, which is an upper bound on
-when it was filed. Nine months is measured: of companies' accounts for December year ends in
-FY2020-24, 91.6-95.1% were filed by 30 September.
+before then -- all 1,152,314 of them, for fiscal years 2006 to 2020 and 99.87% of them FY2019 or
+earlier -- carries a stamp from the bulk load of 2020-08-11 to 2021-01-17, at a median of 17,534
+a day on its 73 busiest days. Such a statement is dated nine months after its period end, the
+embargo, and never later than its stamp, which is an upper bound on when it was filed. Nine
+months is measured: of companies' accounts for December year ends in FY2020-24, 91.6-95.1% were
+filed by 30 September.
 """
 
 from datetime import date
@@ -59,7 +60,7 @@ FIRST_OBSERVATION_YEAR = 2009  # the first statements in the file are for FY2008
 TRAIN = (2009, 2017)
 VALIDATE = (2018, 2020)
 TEST = (2021, 2025)  # every statement used here carries a real filing time or predates the window
-TRAIN_SENSITIVITY = (2011, 2017)  # 2009 and 2010 have 15% and 28% accounts coverage
+TRAIN_SENSITIVITY = (2011, 2017)  # 2009 and 2010 have 15.0% and 29.4% accounts coverage
 
 # --- the replay --------------------------------------------------------------------------------
 FIRST_BATCH = date(2008, 12, 31)  # everything dated on or before it arrives in the first batch

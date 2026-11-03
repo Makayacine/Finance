@@ -2,12 +2,12 @@
 
 A 12-month probability of default for Latvian companies, from the annual accounts they file and
 labelled from the insolvency register: **115,088 companies scored on 1 October 2026**, by a
-scorecard fitted, calibrated and tested out of time on **2,354,336 company-years since 2009**. Two
-AWS Glue 5.0 jobs on Delta Lake: one MERGEs dated batches of the company register, the insolvency
-register and the accounts into three Delta tables; the other reads those tables as they stood on
-each observation date, fits the scorecard and MERGEs today's scores into a fourth. A `--local` mode
-runs both on a laptop with no AWS account, and `local-docker-development.sh` runs them inside AWS's
-own Glue 5.0 image.
+scorecard fitted, calibrated and tested out of time on **1,607,967 scored company-years since
+2009**, out of 2,354,336 live ones. Two AWS Glue 5.0 jobs on Delta Lake: one MERGEs dated batches of
+the company register, the insolvency register and the accounts into three Delta tables; the other
+reads those tables as they stood on each observation date, fits the scorecard and MERGEs today's
+scores into a fourth. A `--local` mode runs both on a laptop with no AWS account, and
+`local-docker-development.sh` runs them inside AWS's own Glue 5.0 image.
 
 The point of the project is the lesson of the lab it imitates:
 
@@ -218,7 +218,7 @@ as-of view to come back row for row unchanged.
 **The cadence does not change the model.** Every observation date is a 1 October, so a batch
 boundary on each 30 September is all the as-of reads need. `--cadence year` cuts one batch a year
 there. On the sample, the quarterly chain (73 batches) and the yearly one (20) built the same
-35,282 rows and the same coefficients, in 384 s against 855 s.
+35,282 rows and the same coefficients, in 855 s against 384 s.
 
 ## The PD
 
@@ -232,16 +232,16 @@ A company is scored when it has accounts no more than two fiscal years old.
 | validate, 2018-20 | 434,288 | 346,494 (79.8%) | 1,330 | 1,253 (94.2%) |
 | test, 2021-25 | 672,328 | 560,508 (83.4%) | 1,613 | 1,455 (90.2%) |
 
-By year, the scored share runs from 15.0% of live companies in 2009 and 29.5% in 2010 to 60.8% in
+By year, the scored share runs from 15.0% of live companies in 2009 and 29.4% in 2010 to 60.8% in
 2013 and 82.3-83.8% from 2019, and the share of defaulters scored from 18.0% in 2009 to 88.5-95.6%
 from 2016.
 
 The early years are thin because the published accounts start with FY2008 and reach most companies
 only from about FY2013. A company with no recent accounts is not, on the whole, a riskier one: in
 2021-25 the unscored default at 0.14% a year against 0.26% for the scored, and in 2018-20 at 0.09%
-against 0.36%. In 2009-17, when accounts reached barely half the population, the two rates are the
-same, 0.74% and 0.74%. A dormant company that stops filing is usually struck off rather than taken
-to court.
+against 0.36%. In 2009-17, when accounts reached barely half the population, the two rates are all
+but the same: 0.74% for the unscored and 0.73% for the scored. A dormant company that stops filing
+is usually struck off rather than taken to court.
 
 ### The scorecard
 
@@ -336,7 +336,7 @@ shift moves no ranking, so the AUC is the same under both; only the level differ
 Through the cycle, observed over expected sits near 1 for 2011-14, falls through 2015-18 and runs
 0.44-0.58 from 2019: Latvian companies now default at about half the rate of the years the model
 learned from. The validation level runs 0.73-0.95 from 2019. 2009 and 2010 sit far above both: the
-crisis years, scored on the 15.0% and 29.5% of companies that had accounts. Score PSI against the
+crisis years, scored on the 15.0% and 29.4% of companies that had accounts. Score PSI against the
 training years stays under 0.10 every year but 2023, at 0.102, so the population scored today looks
 like the one the scorecard was built on; it is the default rate that has moved, not the companies.
 
@@ -350,7 +350,7 @@ like the one the scorecard was built on; it is the default rate that has moved, 
 | insolvency-only label, same score | 0.7903 | 0.7898 | 0.8009 | |
 | test years re-dated the bulk way | | | 0.8182 | |
 
-Dropping 2009-10, whose accounts cover 15.0% and 29.5% of live companies, from the training years
+Dropping 2009-10, whose accounts cover 15.0% and 29.4% of live companies, from the training years
 changes the test AUC by −0.003 and lowers the through-the-cycle level a little. Judged against
 insolvency alone, 1,043 of the 1,455 test defaults, the same score ranks at 0.801, so the ranking
 does not rest on counting legal protection as default.
@@ -395,8 +395,8 @@ What changed from the reference, and why:
    1.0.0 jar. Glue 5.0 runs Delta Lake 3.3.0 through `--datalake-formats delta`, and its local
    image carries the jar, so nothing is downloaded or pinned by hand; the local pip pins are the
    image's own: Spark 3.5.4, Delta Lake 3.3.0, Python 3.11, pandas 2.2.2, numpy 2.2.6, pyarrow
-   17.0.0. Glue 5.1, AWS's default, runs Spark 3.5.6 and Delta Lake 3.3.2 and has no local image,
-   so the jobs target 5.0, the newest runtime a Docker run can match exactly.
+   17.0.0. Glue 5.1, AWS's default, runs Spark 3.5.6 and Delta Lake 3.3.2, and AWS documents no
+   local image for it, so the jobs target 5.0, the newest runtime a Docker run can match exactly.
 2. **Explicit schemas, a header checked by name, `FAILFAST`.** Inference costs a pass over the file
    before the read the job wants — 1.3 s against none on the 12 MB statements batch of 2018-09-30 —
    and types each column from whatever that batch holds. In the sample's 2009-09-30 proceedings cut
@@ -542,7 +542,7 @@ single-driver log store*, which keeps concurrent writers apart only inside one d
 writing one table at once can lose a commit. Run the three merge jobs in parallel if you like, but
 never two runs of one table, and give the model job's `scored_companies` one writer too. *The image
 is Glue 5.0, not 5.1*: Glue 5.1 is AWS's default and runs Spark 3.5.6 and Delta Lake 3.3.2, and AWS
-publishes no local image for it, so the jobs target 5.0, the runtime the Docker run matches
+documents no local image for it, so the jobs target 5.0, the runtime the Docker run matches
 exactly.
 
 ## Deploying it
@@ -584,7 +584,7 @@ Every AWS name in these files is an account-specific placeholder the deployer su
 - **A company struck off is not a default.** A dormant company the registrar removes without
   insolvency proceedings leaves the population as a non-default, though some of them owed money
   they never paid.
-- **Accounts cover few companies before about FY2013**: 15.0% and 29.5% of live companies in 2009
+- **Accounts cover few companies before about FY2013**: 15.0% and 29.4% of live companies in 2009
   and 2010.
 - **Insolvency applications are recorded only to 2012.** M01, a dismissed insolvency application,
   occurs for applications made in 2008-12 and never after; since 2013 an insolvency is in the file

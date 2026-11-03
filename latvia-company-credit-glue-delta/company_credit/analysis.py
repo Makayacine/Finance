@@ -111,7 +111,7 @@ def run(rows, live_rows=None, bulk_rows=None):
         for name, part in scored.groupby("window")
     ])
 
-    # Trained without 2009-10, whose accounts cover 15% and 28% of live companies.
+    # Trained without 2009-10, whose accounts cover 15.0% and 29.4% of live companies.
     first, last = config.TRAIN_SENSITIVITY
     alt = scorecard.fit(covered[covered.observation_year.between(first, last)])
     alt.calibrate(covered[covered.window == "validate"])

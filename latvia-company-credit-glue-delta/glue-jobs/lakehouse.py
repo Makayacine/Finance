@@ -28,8 +28,10 @@ WHAT CHANGED FROM THE REFERENCE, AND WHY
   -- and the batch date only after that, so even a stale extract under a new date cannot reopen
   a closed proceeding, and ``numTargetRowsUpdated`` is the true number of restatements.
 * **One row per key per batch.** Delta refuses a MERGE in which two source rows match one target
-  row. Two statements for the same company and year in one quarter are normal (a short year, a
-  refiling), so each batch is first cut to its winner by the same ordering.
+  row, but it inserts two source rows that share a key the table does not hold yet, and the table
+  then holds that key twice. Two statements for the same company and year in one quarter are
+  normal (a short year, a refiling), so each batch is first cut to its winner by the same
+  ordering.
 * **The batch date travels in the commit.** ``timestampAsOf`` is the wall-clock commit time,
   which on a replay is the same afternoon for every batch, so each commit carries its batch date
   in ``userMetadata`` and time travel looks versions up by it.
@@ -258,9 +260,9 @@ def merge_batch(spark, path, frame, key, order, values, note, partition_by=None)
     """Write the first batch, MERGE every later one; return the commit's operation metrics.
 
     ``order`` ranks two versions of one key, newest last: column names, or SQL with ``{}.`` where
-    the table alias goes. ``values`` are the columns whose change makes a restatement. A matched row is updated only when it ranks after the stored row and
-    differs from it in at least one of ``values`` (null-safe), so a replayed or unchanged row is
-    counted, but not written.
+    the table alias goes. ``values`` are the columns whose change makes a restatement. A matched
+    row is updated only when it ranks after the stored row and differs from it in at least one of
+    ``values`` (null-safe), so a replayed or unchanged row is counted, but not written.
     """
     from delta.tables import DeltaTable
 
@@ -293,7 +295,8 @@ def merge_batch(spark, path, frame, key, order, values, note, partition_by=None)
 
 
 def _term(item, alias):
-    """An ordering term for one side: a column name, or an expression with ``{}.`` for the alias."""
+    """An ordering term for one side: a column name, or an expression with ``{}.`` for the
+    alias."""
     return item.format(alias) if "{}" in item else f"{alias}.{item}"
 
 
