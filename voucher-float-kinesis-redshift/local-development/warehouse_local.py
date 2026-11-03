@@ -130,6 +130,7 @@ def reconciliation(con):
 
 def build(service_db=LOCAL / "voucher-service.db", bucket_dir=LOCAL / "bucket",
           warehouse=LOCAL / "warehouse.duckdb", as_of=None):
+    fresh = not Path(warehouse).exists()
     con = connect(warehouse)
     create(con)
     landed = copy_new(con, bucket_dir)
@@ -143,6 +144,9 @@ def build(service_db=LOCAL / "voucher-service.db", bucket_dir=LOCAL / "bucket",
     except BaseException:
         con.execute("rollback")
         con.close()
+        if fresh:  # a refused first build would leave events with no as_of, reading as zero
+            for leftover in (Path(warehouse), Path(f"{warehouse}.wal")):
+                leftover.unlink(missing_ok=True)
         raise
     con.execute("commit")
     return con, landed
