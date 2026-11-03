@@ -367,14 +367,45 @@ old. Its horizon runs to 1 October 2027, so nothing here is labelled yet.
 | Mean PD, through the cycle / validation level | 0.50% / 0.30% |
 | Expected defaults by 1 October 2027 | 576 / 350 |
 | Exposure proxy, total liabilities at the last filing | €53.8bn |
-| Liabilities-weighted PD, validation level | 1.45% |
+| Liabilities-weighted PD, validation level | 1.45%, which overstates: in 2021-25 it was 1.42% against 0.55% observed |
 
-The book is concentrated, and the concentration is where the risk is: the 100 companies with the
-largest liabilities hold 34.1% of the exposure proxy at a mean PD of 1.39%, and the 1,000 largest
-hold 65.1% at 1.38%, against a median PD of 0.15% across the book. The scores are MERGEd into
-`lakehouse-dwh/scored_companies` on (regcode, observation date), so next year's run adds a date
-beside this one rather than overwriting it, and a re-run on the same date replaces only the scores
-that changed.
+The book is concentrated: the 100 companies with the largest liabilities hold 34.1% of the exposure
+proxy and the 1,000 largest 65.1%, and the scorecard gives them a mean PD of 1.39% and 1.38%,
+against a median of 0.15% across the book. The test years say that is not where the defaults are.
+Each year's scored companies ranked by total liabilities, 2021-25:
+
+| Liabilities band, within each year | Company-years | Defaults | Observed | PD, TTC | PD, validation | O/E, validation | Share of liabilities |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| top 100 | 500 | 1 | 0.20% | 2.56% | 1.56% | 0.13 | 34.0% |
+| 101-1,000 | 4,500 | 33 | 0.73% | 2.34% | 1.43% | 0.51 | 29.5% |
+| 1,001-10,000 | 45,000 | 364 | 0.81% | 1.61% | 0.98% | 0.82 | 28.1% |
+| the rest | 510,508 | 1,057 | 0.21% | 0.40% | 0.24% | 0.86 | 8.3% |
+| all | 560,508 | 1,455 | 0.26% | 0.51% | 0.31% | 0.83 | 100% |
+
+Below the thousand largest the scorecard holds: observed over expected is 0.82 and 0.86 in the two
+smaller bands against 0.83 for the window, and the 1,001-10,000 band, which defaults at three times
+the window's rate, carries three times its PD. In the thousand largest it does not: one default in
+500 company-years among the hundred largest at a predicted 1.56%, and 33 in 4,500 among the next 900
+at 1.43%. Weighted by liabilities, the test years' PD was 1.42% and the share of liabilities owed by
+companies that defaulted within the year 0.55%, so today's 1.45% overstates the same way.
+
+**This is an SME scorecard, and the largest exposures need their own treatment.** It was fitted on
+companies whose median company-year has two employees (one since 2021), and in 2009-17 the larger of
+them did default more: 1.9-2.8% a year in each band of the 10,000 largest by liabilities against
+0.47% below them. So its size bins rise in risk with size and then stop: total assets open their
+last bin at €426,626 and employees at nine, each the riskiest bin on a reported value at −15 points,
+and a company with €500m of assets scores on total assets exactly as one with €0.5m does. The
+largest also hold little cash: in 2021-25 the hundred largest had a median 3.1% of their assets in
+cash against 19.9% across the book, and a current ratio of 1.07 against 1.44, which costs them 20
+and 8 points against a company at the book's medians. On today's book their figures are 1.9% and
+0.98, and 28% of them report one employee or none. In the training years the hundred largest
+defaulted at 1.89%, 17 in 900 company-years; since 2021, once in 500. The PD ranks and prices small
+companies; for the few hundred that hold most of the liabilities it is no measure of their risk, and
+they need a model or ratings built on large companies before this book's PD is applied to them.
+
+The scores are MERGEd into `lakehouse-dwh/scored_companies` on (regcode, observation date), so next
+year's run adds a date beside this one rather than overwriting it, and a re-run on the same date
+replaces only the scores that changed.
 
 **Exposure is a proxy, and there is no LGD.** The files carry no loan, no balance at default and no
 recovery, so the exposure column is the company's total liabilities at its last filing and expected
@@ -578,6 +609,9 @@ Every AWS name in these files is an account-specific placeholder the deployer su
   none can be replayed, and the restatement shares are lower bounds.
 - **Before 2021, when accounts were filed is not in the file.** The nine-month rule stands in for
   it in 2009-20, and the test years measure what that costs.
+- **The largest companies are outside what the scorecard learned.** It was fitted on micro and
+  small companies, and on the thousand largest by liabilities it overstated the 2021-25 PD two- to
+  eightfold, so their PD needs a model of its own.
 - **There is no LGD and no exposure.** No recovery amount exists anywhere in these files; total
   liabilities at the last filing is a proxy for what creditors are owed, not for any one lender's
   exposure.
