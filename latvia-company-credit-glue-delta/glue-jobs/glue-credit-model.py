@@ -10,7 +10,8 @@ AWS Glue 5.0 entrypoint. Runs after the three MERGE jobs::
     -> results/model/*.csv        every table the README quotes
     -> results/pd_rows/           the company-year rows, Parquet (and the test years re-dated
                                   the bulk way, results/pd_rows_bulk_dated/)
-    -> lakehouse-dwh/scored_companies   MERGE on (regcode, observation_date)
+    -> lakehouse-dwh/scored_companies   MERGE on (regcode, observation_date): a new date adds
+                                        rows; a re-run on the same date replaces changed scores
 
 **Why time travel and not today's tables with date filters.** A filter on today's table can drop
 rows dated after the observation date, but it cannot bring back a value that has since been
@@ -31,7 +32,7 @@ import json
 import logging
 import sys
 import time
-from datetime import timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -52,7 +53,12 @@ STATEMENT_COLUMNS = (["regcode", "statement_id", "fiscal_year", "year_started_on
                       "created_at", "available_on", "bulk_dated", "employees"]
                      + list(config.AMOUNTS))
 SCORED_COLUMNS = ["regcode", "observation_date", "fiscal_year", "statement_id", "accounts_lag",
-                  "score", "pd_ttc", "pd_validation", "exposure_proxy", "model_trained"]
+                  "score", "pd_ttc", "pd_validation", "exposure_proxy", "model_trained",
+                  "scored_at"]
+# What a re-run on the same observation date may change. scored_at is not among them: it changes
+# on every run, and a row whose score did not move is left as it was, with the time it was set.
+SCORE_VALUES = ["fiscal_year", "statement_id", "accounts_lag", "score", "pd_ttc", "pd_validation",
+                "exposure_proxy", "model_trained"]
 
 
 class Lake:
@@ -158,19 +164,27 @@ def write_csv(bucket, key, frame):
     bucket.put_text(key, buffer.getvalue())
 
 
-def merge_scores(spark, bucket, live, trained):
+def merge_scores(spark, bucket, live, trained, scored_at=None):
+    """MERGE the live book into scored_companies on (regcode, observation_date).
+
+    A new observation date inserts its rows beside the earlier dates'. A re-run on a date already
+    there -- after a correction to the accounts, say -- ranks after the stored rows by
+    ``scored_at``, the run's own time, and so replaces every score that changed; a row whose
+    score is the same is counted and left alone.
+    """
     obs = panel.observation_date(int(live.observation_year.iloc[0]))
-    out = live.assign(observation_date=obs, model_trained=f"{config.TRAIN[0]}-{config.TRAIN[1]}")
+    scored_at = scored_at or datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
+    out = live.assign(observation_date=obs, model_trained=f"{trained[0]}-{trained[1]}",
+                      scored_at=scored_at)
     out = out[SCORED_COLUMNS].copy()
     out["fiscal_year"] = out.fiscal_year.astype("int64")
     out["statement_id"] = out.statement_id.astype("int64")
-    frame = spark.createDataFrame(out).withColumn("observation_date",
-                                                  F.col("observation_date").cast("date"))
+    frame = (spark.createDataFrame(out)
+             .withColumn("observation_date", F.col("observation_date").cast("date"))
+             .withColumn("scored_at", F.col("scored_at").cast("timestamp")))
     note = json.dumps({"batch_date": obs.isoformat(), "rows": len(out)})
     return lh.merge_batch(spark, lh.table_path(bucket, "scored_companies"), frame,
-                          ["regcode", "observation_date"], ["observation_date"],
-                          ["score", "pd_ttc", "pd_validation", "exposure_proxy", "statement_id"],
-                          note)
+                          ["regcode", "observation_date"], ["scored_at"], SCORE_VALUES, note)
 
 
 def main():

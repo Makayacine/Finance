@@ -1,7 +1,7 @@
 """The MERGE job against real Delta tables in a temporary folder: restatement, replay, time travel,
 duplicate keys, the curation, and the batches it must refuse."""
 
-from datetime import date
+from datetime import date, datetime
 from pathlib import PureWindowsPath
 
 import pandas as pd
@@ -12,6 +12,7 @@ from company_credit import config, replay
 from conftest import load_job
 
 merge_job = load_job("glue-delta-merge")
+model_job = load_job("glue-credit-model")
 LAST = pd.Timestamp("2026-11-01")
 
 
@@ -224,3 +225,33 @@ def test_bucket_keys_use_forward_slashes_on_every_os(bucket):
     path = root / "raw_zone" / "register" / "register_2020-09-30.csv"
     assert "\\" in str(path.relative_to(root))
     assert lh.key_of(path, root) == "raw_zone/register/register_2020-09-30.csv"
+
+
+def test_a_rerun_on_the_same_date_replaces_only_the_scores_that_changed(spark, bucket):
+    live = pd.DataFrame({
+        "observation_year": 2026, "regcode": ["40003000001", "40003000002", "40003000003"],
+        "fiscal_year": 2025, "statement_id": [11, 12, 13], "accounts_lag": "current",
+        "score": [-5.0, -4.0, -3.0], "pd_ttc": [0.006, 0.018, 0.047],
+        "pd_validation": [0.004, 0.011, 0.029], "exposure_proxy": [1e5, 2e5, 3e5]})
+    trained = config.TRAIN
+    first = datetime(2026, 10, 2, 6, 0)
+    model_job.merge_scores(spark, bucket, live, trained, scored_at=first)
+
+    # The same date again, after one company's accounts were corrected.
+    corrected = live.copy()
+    corrected.loc[1, ["statement_id", "score", "pd_ttc", "pd_validation"]] = [22, -4.5, 0.011,
+                                                                             0.007]
+    rerun = datetime(2026, 10, 3, 6, 0)
+    _, metrics = model_job.merge_scores(spark, bucket, corrected, trained, scored_at=rerun)
+    assert (metrics["numTargetRowsInserted"], metrics["numTargetRowsUpdated"]) == ("0", "1")
+    table = read(spark, bucket, "scored_companies").set_index("regcode")
+    assert table.loc["40003000002", "statement_id"] == 22
+    assert table.loc["40003000002", "pd_validation"] == pytest.approx(0.007)
+    assert table.scored_at.tolist().count(pd.Timestamp(rerun)) == 1
+
+    # An older run delivered late changes nothing, and next year's date adds rows beside these.
+    _, stale = model_job.merge_scores(spark, bucket, live, trained, scored_at=first)
+    assert stale["numTargetRowsUpdated"] == "0"
+    _, later = model_job.merge_scores(spark, bucket, live.assign(observation_year=2027), trained)
+    assert later["numTargetRowsInserted"] == "3"
+    assert len(read(spark, bucket, "scored_companies")) == 6
