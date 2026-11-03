@@ -1,0 +1,10 @@
+# The Glue Python Shell 3.9 runtime: the "analytics" library set's own versions, and the Parquet
+# engine the job adds with --additional-python-modules. The Glue workflow's test job pins these.
+pandas==1.4.2
+numpy==1.22.3
+boto3==1.21.21
+pyarrow==7.0.0
+
+# Tests only.
+moto>=5.0,<6
+pytest
