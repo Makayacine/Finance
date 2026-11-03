@@ -1,0 +1,107 @@
+{
+  "parameters": {
+    "seed": 20241104,
+    "start": "2024-11-04T00:00:00Z",
+    "days": 728,
+    "scale": 1.0,
+    "weekday_rate": 72.0,
+    "saturday_factor": 0.55,
+    "sunday_factor": 0.35,
+    "month_end_business_days": 3,
+    "month_end_factor": 2.0,
+    "open_hour_utc": 7,
+    "close_hour_utc": 19,
+    "denominations_cents": [
+      [
+        5000,
+        0.2
+      ],
+      [
+        10000,
+        0.3
+      ],
+      [
+        20000,
+        0.2
+      ],
+      [
+        25000,
+        0.1
+      ],
+      [
+        50000,
+        0.12
+      ],
+      [
+        100000,
+        0.03
+      ]
+    ],
+    "store_credit_share": 0.05,
+    "store_credit_range_cents": [
+      500,
+      30000
+    ],
+    "never_redeem_share": 0.18,
+    "delay_distribution": "weibull",
+    "delay_shape": 0.8,
+    "delay_scale_days": 9.0,
+    "term_days": 30,
+    "retry_share": 0.02,
+    "sweep_hour_utc": 1,
+    "sweep_outage": [
+      "2026-03-09",
+      "2026-03-15"
+    ]
+  },
+  "as_of": "2026-11-02T00:00:00Z",
+  "true_breakage_rate": 0.239698,
+  "true_redeemed_within_days": {
+    "0": 0.0,
+    "1": 0.129872,
+    "2": 0.212659,
+    "3": 0.278653,
+    "4": 0.333809,
+    "5": 0.381024,
+    "6": 0.422051,
+    "7": 0.458076,
+    "8": 0.489955,
+    "9": 0.518339,
+    "10": 0.543735,
+    "11": 0.566551,
+    "12": 0.587121,
+    "13": 0.605721,
+    "14": 0.622585,
+    "15": 0.63791,
+    "16": 0.651865,
+    "17": 0.664596,
+    "18": 0.676232,
+    "19": 0.686881,
+    "20": 0.696643,
+    "21": 0.705601,
+    "22": 0.713834,
+    "23": 0.721407,
+    "24": 0.728381,
+    "25": 0.73481,
+    "26": 0.740742,
+    "27": 0.746221,
+    "28": 0.751284,
+    "29": 0.755967,
+    "30": 0.760302
+  },
+  "realised": {
+    "issued": 49209,
+    "issued_cents": 1000433678,
+    "replays": 997,
+    "redeemed": 37144,
+    "redeemed_cents": 754274536,
+    "refused_lapsed": 2717,
+    "expired": 11235,
+    "sweeps": 721,
+    "open_at_as_of": 830,
+    "open_cents_at_as_of": 17179516,
+    "outbox_events": 97588,
+    "code_draws": 49209,
+    "code_collisions_redrawn": 0
+  }
+}
