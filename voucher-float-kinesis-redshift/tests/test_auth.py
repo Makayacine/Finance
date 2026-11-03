@@ -53,6 +53,14 @@ def test_a_malformed_login_body_is_400(client, payload):
     assert response.status_code == 400 and body(response) == {"error": "invalid request"}
 
 
+@pytest.mark.parametrize("raw", [b'{"username": "\\ud800", "password": "issuer-pass"}',
+                                 b'{"username": "issuer", "password": "\\ud800"}'])
+def test_a_lone_surrogate_in_a_login_is_400_not_500(client, raw):
+    """Valid JSON escapes, but no UTF-8 text can carry them, and the password hash needs one."""
+    response = client.post("/login", data=raw, content_type="application/json")
+    assert response.status_code == 400 and body(response) == {"error": "invalid request"}
+
+
 def test_json_nested_past_the_parsers_limit_is_400_not_500(app, client, tokens):
     deep = "[" * 15_000  # inside the 16 KB limit, far past Python's recursion limit
     response = client.post("/login", data=deep, content_type="application/json")
