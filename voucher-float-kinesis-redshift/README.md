@@ -275,7 +275,8 @@ also caught the estimator's one bias.** An earlier version read an open voucher'
 start of its last day, ignoring the part of that day it had already come through without
 redeeming; with day 0's hazard at 13%, every young cohort came out about half a point low, -0.0060
 against the truth. It now interpolates across the day, the same assumption the half-day censoring
-makes, and two four-voucher tests pin the arithmetic, one for each half of it.
+makes, and three four-voucher tests pin the arithmetic: survival across the day, the expired share
+across it, and the expired share the day starts with.
 
 ### The reconciliation
 
@@ -285,15 +286,18 @@ makes, and two four-voucher tests pin the arithmetic, one for each half of it.
 | Unredeemed vouchers | 830 | 830 |
 | Difference | | **0** |
 
-Beside it, `reconciliation` counts exits whose issue never arrived and vouchers with two exits --
-either would explain a difference, and both are zero -- and the copies the dedupe dropped, which
-is informational: the relay delivers at least once by design, and the copies are gone before
-anything is summed. The comparison is like with like only when the control total is taken
-straight after a sweep: until a lapsed voucher is swept its row still says `unredeemed`, while the
-warehouse, dating the lapse at expiry, has already taken it off. And the service can only be read
-as it is now, so `warehouse_local.py` refuses an `--as-of` earlier than the service's latest
-issue, redemption or sweep rather than put that label on a later balance; without one it reports
-as of that latest change.
+What moves the difference is a lost event: a redemption that never arrived leaves its voucher open
+in the warehouse. Beside it, `reconciliation` counts exits whose issue never arrived and vouchers
+with two exits -- both zero here, and neither moves the difference: the views place a voucher by
+its issue and take its earliest exit, so each count flags a broken event history the totals
+cannot show. It also counts the copies the dedupe dropped, which is informational: the relay
+delivers at least once by design, and the copies are gone before anything is summed. The
+comparison is like with like only when the control total is taken straight after a sweep: until
+a lapsed voucher is swept its row still says `unredeemed`, while the warehouse, dating the lapse
+at expiry, has already taken it off. And the service can only be read as it is now, so
+`warehouse_local.py` refuses an `--as-of` earlier than the service's latest issue, redemption or
+sweep rather than put that label on a later balance; without one it reports as of that latest
+change.
 
 ## Running it
 
@@ -347,9 +351,10 @@ paths. The simulator drives all 49,209 vouchers through the real endpoints.
 | The transform Lambda | the same file, called in-process | all of it: the handler is the one you deploy |
 | Redshift and its `COPY` | DuckDB and `read_json` | `warehouse/views.sql`, unchanged; the landing columns and types |
 
-**176 tests, no AWS, no network.** `test_auth.py` (22): Argon2id at rest, the same 401 for a
+**181 tests, no AWS, no network.** `test_auth.py` (24): Argon2id at rest, the same 401 for a
 wrong password and an unknown user, every bad token -- other key, expired, `alg: none`, unknown
-role, no expiry -- 401 before 403 before the body, and JSON nested too deep refused with 400.
+role, no expiry -- 401 before 403 before the body, and JSON nested too deep or carrying a lone
+surrogate refused with 400.
 `test_issue.py` (37): the code and the 30-day expiry, the outbox row, the replay byte for byte,
 422 for a reused key, keys per issuer, 21 bodies refused with nothing written, a code collision
 redrawn, an outbox insert made to fail inside SQLite taking the voucher with it, and eight
@@ -364,12 +369,14 @@ re-sending copies that share an `event_id`. `test_simulate.py` (6): the plan dra
 parameters, the formula, a byte-identical rerun, and a scaled run leaving the committed truth
 alone. `test_lambda.py` (29): the sample batch, the derived fields, 22 malformed events -- the
 boundaries of a voucher's life among them -- and a record too deep to parse failing alone.
-`test_warehouse.py` (16): the DDL pair, the portable SQL by its text and by integer division,
+`test_warehouse.py` (19): the DDL pair, the portable SQL by its text and by integer division,
 the reconciliation, copies dropped, a lost redemption found, two exits and an orphan exit
-counted, the late sweep, nothing after `as_of` visible, an earlier `as_of` refused, and three
-life tables worked by hand. `test_graphql.py` (37): finance only, exactly three queries, each
-against the warehouse, `redeemedBy` against the service's own rows, refusals down to a year 0,
-Arabic-Indic digits and `variables` of `0`, and a resolver failure saying only `internal error`.
+counted, the late sweep, nothing after `as_of` visible and the event on it counted, an earlier
+`as_of` refused and a refused first build leaving no file, the default `as_of` after a
+redemption and after an issue, and four life tables worked by hand. `test_graphql.py` (37):
+finance only, exactly three queries, each against the warehouse, `redeemedBy` against the
+service's own rows, refusals down to a year 0, Arabic-Indic digits and `variables` of `0`, and a
+resolver failure saying only `internal error`.
 
 **Three engine differences to carry into the deploy.** Firehose's `COPY` into Redshift is at least
 once as well, which the dedupe already absorbs. The local stream keeps shard files in the order
