@@ -373,7 +373,8 @@ The book is concentrated, and the concentration is where the risk is: the 100 co
 largest liabilities hold 34.1% of the exposure proxy at a mean PD of 1.39%, and the 1,000 largest
 hold 65.1% at 1.38%, against a median PD of 0.15% across the book. The scores are MERGEd into
 `lakehouse-dwh/scored_companies` on (regcode, observation date), so next year's run adds a date
-beside this one rather than overwriting it.
+beside this one rather than overwriting it, and a re-run on the same date replaces only the scores
+that changed.
 
 **Exposure is a proxy, and there is no LGD.** The files carry no loan, no balance at default and no
 recovery, so the exposure column is the company's total liabilities at its last filing and expected
@@ -451,7 +452,7 @@ being skipped.
 ## Running it
 
 Python 3.11, a Java 17 JDK on `JAVA_HOME` and `pip install -r requirements.txt`: what Glue 5.0
-runs. The first Spark start fetches the Delta Lake jar from Maven Central and caches it. The 30
+runs. The first Spark start fetches the Delta Lake jar from Maven Central and caches it. The 31
 tests take about 70 s:
 
 ```bash
@@ -505,7 +506,7 @@ model job's Python driver peaked at 8.2 GB resident and its JVM at 3.6 GB.
 Lake 3.3.0-amzn-0: 20 yearly batches, 19 of them with statements, then the model, which came out as
 the local yearly run's, AUC 0.787, 0.750 and 0.746 on the three windows.
 
-**30 tests, no AWS and no mocks.** `test_label.py` (7), on twelve invented companies with each
+**31 tests, no AWS and no mocks.** `test_label.py` (7), on twelve invented companies with each
 answer worked by hand: the population without the terminated, the not yet registered and the
 already defaulted, every label, the insolvency-only label, a dismissal that counts only once it is
 known, the labelled years stopping at the as-of date, the embargo, and the 24-month accounts
@@ -515,12 +516,13 @@ travelling with it, the restatement share, and the yearly cadence cutting on the
 observation date. `test_scorecard.py` (7): WoE and IV by hand, special bins kept apart, an AUC tie
 counted as a half, DeLong against a stratified bootstrap, KS and PSI, the numpy logit and its
 clustered errors against statsmodels, and the validation shift hitting its target without moving
-the ranking. `test_delta.py` (10), against real Delta tables in a temporary folder: a proceeding
+the ranking. `test_delta.py` (11), against real Delta tables in a temporary folder: a proceeding
 restated by a MERGE, a stale batch replayed late that changes nothing, an as-of view a later batch
 cannot change, lats and thousands converted and group accounts dropped, Spark's availability date
 equal to the replay's, two statements for one year in one batch cut to the winner, the bare MERGE
 that refuses them, a statement batch missing a file left in `raw_zone/`, a file without a batch
-name stopping the job, and bucket keys with forward slashes on every OS.
+name stopping the job, bucket keys with forward slashes on every OS, and a re-run of one date's
+scores replacing only the ones that changed.
 
 **The failure paths, run.** Each in a scratch bucket, on the sample unless it says otherwise: a
 statement batch with its income-statement file deleted, refused before the first MERGE; a register
