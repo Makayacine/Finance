@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bond_analytics"
 version = "1.0.0"
-description = "Treasury curves and rate risk around the fixed income course's FIA module"
+description = "US Treasury and South African government bond curves and rate risk around the fixed income course's FIA module"
 requires-python = ">=3.9"
 
 [tool.setuptools]
