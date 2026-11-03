@@ -1,6 +1,6 @@
 # Finance Projects
 
-A curated collection of quantitative finance analyses, featuring exploratory data analysis, backtesting of trading strategies, and predictive modeling — alongside AWS data-engineering pipelines over banking, crypto-market, consumer-lending, small-business loan and company-accounts data.
+A curated collection of quantitative finance analyses, featuring exploratory data analysis, backtesting of trading strategies, and predictive modeling — alongside AWS data-engineering pipelines over banking, crypto-market, consumer-lending, small-business loan, company-accounts and gift-voucher data.
 
 ## Current Projects
 
@@ -11,6 +11,7 @@ A curated collection of quantitative finance analyses, featuring exploratory dat
 * **`credit-mailer-watermark-azure-sql`**: The credit-mailer pipeline ported to Azure — a Blob Storage landing zone, a Table Storage watermark and an Azure SQL Database star in T-SQL — tested offline against Azurite and SQL Server 2022, and matched row for row against the AWS version's own local run.
 * **`sba-credit-risk-ecs-dynamo`**: PD, gross charge-off severity, expected loss, IFRS 9 stage and IRB capital for the 281,077 open loans among 1,639,728 SBA 7(a) small-business loans, with FDIC bank-failure PD and a dollar EL backtest beside it, run as two ECS Fargate containers gated by Step Functions into DynamoDB.
 * **`latvia-company-credit-glue-delta`**: A 12-month PD for 115,088 Latvian companies from the annual accounts they file and the insolvency register, fitted out of time on 1,607,967 scored company-years since 2009, with the Register's files replayed as 73 quarterly batches into Delta Lake by Glue 5.0 MERGE jobs and the training rows read back from the tables by time travel.
+* **`voucher-float-kinesis-redshift`**: A gift-voucher service's issue, redemption and expiry events carried from a transactional outbox through Kinesis, a Firehose transform Lambda and Redshift to the daily outstanding liability, IFRS 15 breakage by issue month and a redemption life table, on two simulated years whose true breakage rate the young-cohort estimate recovers without bias.
 
 *(More projects coming soon.)*
 
@@ -65,13 +66,13 @@ walks every step on every path.
 
 ## AWS data-engineering pipelines
 
-Five of the projects here are AWS data-engineering pipelines. Each is self-contained: the
+Six of the projects here are AWS data-engineering pipelines. Each is self-contained: the
 exploratory notebook it grew out of, the production jobs, the orchestration, and whatever the
 destination store needs — Redshift DDL, a DynamoDB key schema, or both.
 
 ### Layout
 
-The five pipelines share a shape, so a reader who has seen one can navigate the rest:
+The six pipelines share a shape, so a reader who has seen one can navigate the rest:
 
 ```
 <project>/
@@ -101,6 +102,11 @@ that way locally. `glue-jobs/` holds the two jobs and the `lakehouse.py` they sh
 the replay, the label and the scorecard live in one `company_credit/` package that both jobs, the
 tests and the notebook import, with `tests/` and `local-development/` beside it, and a
 `local-docker-development.sh` runs the chain inside AWS's own Glue 5.0 image.
+`voucher-float-kinesis-redshift` is a stream, not a batch, so it has no `airflow-dag/` either —
+the relay runs every minute and the expiry sweep nightly on the service's own instance, and
+Firehose buffers for itself — and `kinesis-producer/` and `firehose-lambda/` take the jobs slot,
+beside the `voucher_service/` package that is its source system and `warehouse/` and `redshift/`
+for the SQL.
 
 The notebook is kept deliberately. It is where the logic was worked out, and it carries the
 executed outputs, so the production job can be diffed against something that is known to be
@@ -339,7 +345,46 @@ The interesting problems were about what the files know, and when:
 
 Full detail, the label rule and every figure are in the project README.
 
-**[`voucher-float-kinesis-redshift`](voucher-float-kinesis-redshift/README.md)**: a gift-voucher service's issue, redemption and expiry events from a transactional outbox through Kinesis, a Firehose transform Lambda and Redshift to the daily outstanding liability, IFRS 15 breakage by issue month and a redemption life table, on two simulated years whose true breakage rate, 23.97%, the young-cohort estimate recovers to within 0.04 points.
+### `voucher-float-kinesis-redshift`
+
+A gift-voucher service's lifecycle events — issued, redeemed, expired — carried from the
+service's own database through Kinesis, a Firehose transform Lambda and Redshift to the three
+numbers finance needs about voucher float: the outstanding liability every day, breakage by issue
+month, and the redemption curve. The data is two simulated years, 49,209 vouchers and 97,588
+events, because only a simulation fixes the true breakage rate, 23.97%, before the first voucher
+is issued, and so lets the estimate be checked against something other than another estimate.
+
+```
+Flask + SQLite  ->  outbox   ->  relay        ->  Kinesis  ->  Firehose + transform  ->  Redshift
+REST writes,        same txn     put_records,                  Lambda: JSON lines,       six views
+GraphQL reads       as the       keyed by                      a bad record fails
+                    change       voucher                       on its own
+```
+
+| Output | Grain | Contents |
+| --- | --- | --- |
+| `daily_liability` | UTC day | outstanding cents and vouchers, dated from the events, never from arrival |
+| `redemption_life_table` | days since issue | redeemed and expired as competing exits, open vouchers censored |
+| `breakage_by_issue_month` | issue month | realised once the cohort has closed, projected while it is open |
+| `reconciliation` | one row | the warehouse's liability against the service's own total, to the cent |
+
+The interesting problems were about dates and estimates rather than throughput:
+
+- **Counting what has happened books almost no breakage on a young cohort.** For October 2026,
+  days old, expired over resolved gives 2.4%; a life table over every voucher's age projects
+  22.5%. Across 22 month-end backtests the projection shows no bias against the true rate (mean
+  error -0.04 points), and a single cohort is typically within about a point of it (mean absolute
+  error 0.81 points, 16 of 22 within one), 2.2 at worst.
+- **A lapse is dated at expiry, not at the sweep that records it.** The sweep was down for a week
+  in March 2026, and its catch-up put a week of expiries on the stream behind redemptions dated
+  later. The warehouse builds everything from `occurred_at`, so its daily liability is the one an
+  on-time sweep would have given.
+- **At least once, then dedupe, then reconcile.** Every state change writes an outbox row in the
+  same transaction, the relay marks a row only once Kinesis has accepted it, and the warehouse
+  drops copies on `event_id`. Its liability then equals the service's own: 171,795.16 on 830
+  vouchers on both sides.
+
+Full detail, the backtest table and the deployment steps are in the project README.
 
 ### Running the pipelines
 
@@ -352,9 +397,11 @@ Java 21+. `latvia-company-credit-glue-delta` needs Python 3.11, a Java 17 JDK, `
 install -r requirements.txt` and a `duckdb>=1.4` is the whole prerequisite.
 `sba-credit-risk-ecs-dynamo` needs Python 3.12 and pandas 3, because its validator compares dtype
 names exactly and pandas 3 names a text column differently from pandas 2; its own
-`requirements.txt` covers the rest, and Docker is needed only to run the two images. The Spark jobs
-take a `--local` flag that runs them against plain filesystem paths, so every pipeline can be
-exercised end to end without an AWS account.
+`requirements.txt` covers the rest, and Docker is needed only to run the two images.
+`voucher-float-kinesis-redshift` needs Python 3.12+ and its `requirements.txt`, and nothing else:
+its `local-development/run_local.py` runs the whole chain, service to reconciliation.
+The Spark jobs take a `--local` flag that runs them against plain filesystem paths, so every
+pipeline can be exercised end to end without an AWS account.
 
 `crypto-ticks-refinery-glue-dynamo` can also be run against the runtime it actually deploys to,
 without installing any of the above:
