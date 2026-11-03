@@ -9,6 +9,12 @@ measures its DV01, duration, convexity, key-rate DV01s and carry. Each of the th
 its own GitHub Actions workflow that tests it and then deploys it. A `--local` path runs every
 stage on a laptop with no AWS account, from a committed sample of October 2026 and two crisis days.
 
+**South Africa is the second market, through the same code.** The same Lambda fetches the National
+Treasury's fixed-rate bond auction results and its debt schedule, the same Glue job parses and
+checks them, and the same ECS task prices each auction's cleared bonds with the JSE bond pricing
+formula and bootstraps a curve from them with FIA, once per auction since April 2010, then checks
+the curve's 10-year point every month against the OECD's and the IMF's South African bond yields.
+
 The curve and risk arithmetic is the fixed income course's own: `bond_analytics/FIA.py` is vendored
 unchanged, and everything here exists to feed it. FIA measures time in float years from "today" and
 has no calendar, no day count and no accrued interest, so the package adds those and lets FIA's
@@ -24,6 +30,15 @@ The point of the project is a truth check that can fail:
 > the curve in March 2020, bills 47 basis points rich the same day, and one 6.5% bond quoted seven
 > 32nds below what the bills say it is worth.**
 
+South Africa has a check of its own, from the Treasury's own numbers:
+
+> **Each new bond's first auction yield, through the JSE formula, gives back the initial issue
+> price in the Treasury's debt schedule to within 0.001 for 11 of the 12 new bonds since 2010 whose
+> first yield passes its checks, and to 0.005 for the twelfth. Over 153 months the auction curve's 10-year par yield
+> moves with the OECD's long-term rate (monthly changes correlate 0.86) and sits 31 basis points
+> below it, as the 10-year point of a rising curve should against a series of bonds "10 years and
+> over": the 15-year point sits 28 above.**
+
 ## Architecture
 
 ```
@@ -34,6 +49,9 @@ FedInvest (CSRF, 1 POST)     one object         parse, clean -> dirty,       pri
 GSW feds200628.csv           per source         validate, flag, never        securities/
 Treasury auction records     per date           change a price;              reference_curves/ by year
 NY Fed SOFR, BGCR, TGCR                         watermark per source         funding/ by year
+NT auction results (xlsx)                                                    sa_bonds/
+NT debt schedule (PDF)                                                       sa_auctions/ by year
+OECD and IMF SA yields                                                       sa_reference/ by year
       |                                                  |
       +-- start_job_run(--date_filter) ------------------+
                                                          | Glue Job State Change: SUCCEEDED
@@ -42,6 +60,9 @@ NY Fed SOFR, BGCR, TGCR                         watermark per source         fun
                                           FIA bootstrap, Svensson fit, fit errors,
                                           DV01 / key rates / carry  ->  curves/ curve_params/
                                           (and the 2008 backfill)       fit_errors/ risk/  ->  Athena
+                                          SA: JSE price, FIA bootstrap
+                                          per auction, 10-year check ->  sa_prices/ sa_curves/
+                                                                         sa_crosscheck/
 ```
 
 No Step Functions. The schedule starts the Lambda; the Lambda fetches each source with its
@@ -49,7 +70,8 @@ failures isolated, writes the raw objects and starts the Glue job for that date 
 `--date_filter`; an EventBridge rule on the job's `SUCCEEDED` state change runs the ECS task. The
 rule and the schedule are in `eventbridge/`. The same image, run with `--mode backfill`, fetches
 FedInvest from June 2008 one date at a time, loads it with the Glue job's own code, and runs the
-engine over the range.
+engine over the range; for South Africa it fetches every fiscal year's auction file and one debt
+schedule a year.
 
 ### The lab's shape, with nine changes
 
@@ -96,6 +118,10 @@ not switch these on. Setting a variable later still never deploys from a pull re
 | [Treasury Securities Auctions Data](https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/), US Treasury Fiscal Data | one record per auction since 1979: original term, issue and dated dates, first coupon date and length | US government work, public domain |
 | [GSW yield curve](https://www.federalreserve.gov/data/yield-curve-tables/feds200628.csv), Federal Reserve Board | Svensson parameters and zero yields, daily from 1961 | US government work, public domain |
 | [SOFR, BGCR, TGCR](https://markets.newyorkfed.org/api/rates/secured/all/search.json), Federal Reserve Bank of New York | the overnight repo rates, daily from 2 April 2018 | the New York Fed's Terms of Use: copying and distribution with its notice and disclaimer, in `data/sample/SOURCES.md` |
+| [Fixed-rate bond auction results](https://investor.treasury.gov.za/Debt%20Operations%20and%20Data/Historical%20Results/Fixed-rate%20bonds/), National Treasury of the Republic of South Africa | one spreadsheet per fiscal year from 2010-13: auction and settlement dates, bond, coupon and redemption year, amounts, bids, clearing yield, best and worst bid, bid-to-cover | download and copying for educational and non-commercial use, unmodified, with the Treasury acknowledged: the parsed rows are committed with `Source: National Treasury of the Republic of South Africa` on each, the spreadsheets are not |
+| [Schedule of domestic government bonds](https://investor.treasury.gov.za/Debt%20Operations%20and%20Data/Schedule%20of%20Domestic%20Debt/), National Treasury | one PDF a month: each bond's coupon, issue date and price, interest dates, redemption and nominal outstanding | as above: parsed rows committed, PDFs not |
+| [Long-term interest rates, South Africa](https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_FINMARK,4.0/ZAF.M.IRLT.PA.....), OECD | monthly, the South African Reserve Bank's yield on government bonds of 10 years and over | any use, with the OECD's citation, on every row |
+| [Government bond yield, South Africa](https://fred.stlouisfed.org/series/INTGSBZAM193N), IMF International Financial Statistics, as FRED distributes it | monthly | publishing with the IMF named as source, on every row; commercial reuse needs the IMF's permission |
 
 **FedInvest's prices are clean.** The page wants the `_csrf` token and session cookie from a GET
 before it will accept the POST of `priceDate`. On 30 October 2026 it listed 464 securities: 50
@@ -128,6 +154,13 @@ and 16 March 2020: 24 FedInvest pages (Columbus Day has no prices), the 1,765 au
 965 CUSIPs on them, the 19 GSW rows for those dates and the New York Fed's rates, gzipped at the keys
 the Lambda writes them to. The full history stays out of the repository (`data/full/` is ignored).
 
+**South Africa's rows are committed whole**, because they are small: `data/sa/nt_auctions.csv`,
+every fixed-rate bond auction from 6 April 2010 to 29 September 2026, 2,386 bond auctions on 811
+dates, and `data/sa/nt_bonds.csv`, the 35 fixed-rate bonds in the 17 debt schedules read (31 March
+each year from 2011, and 30 September 2026). `local-development/sa_download.py` fetches the
+Treasury's files with the Lambda's fetchers, parses them with the loader's parsers and writes both;
+the OECD and IMF files sit in `data/sample/raw/` with the US sample.
+
 ## The pieces
 
 **`bond_analytics/`** is the package every component imports.
@@ -152,22 +185,30 @@ the Lambda writes them to. The full history stays out of the repository (`data/f
   2, 5, 10, 20 and 30 years from triangular one-basis-point bumps of the fitted curve shifted by the
   bond's z-spread. The triangles add to one, so the five key rates add to the parallel curve DV01.
 - `quality.py` flags, `truth.py` tabulates, `schemas.py` fixes every lake table's columns.
+- `jse.py` is the JSE bond pricing formula: yield to all-in price, accrued interest actual/365,
+  the books-closed (ex-coupon) period ten days before each coupon, coupons on two fixed day-and-month
+  dates, and the same cash flows as an FIA `relative_bond`. `nt_auctions.py` and `nt_schedule.py`
+  read the Treasury's spreadsheets and PDFs and check them; `sa_reference.py` reads the OECD and IMF
+  files; `sa_curve.py` builds a curve per auction and the monthly check.
 
 **`lambda-functions/fetch.py`** is standard library and boto3, so the deployment package is the one
 file. Each source is fetched and written inside its own `try`; one failing is logged and reported in
 the response and never stops the others, and the Glue job is started for the sources that arrived.
 
 **`glue-pythonshell/load.py`** loads raw dates into the lake, in the order auctions, FedInvest, GSW,
-NY Fed, so a day's prices see that day's new CUSIPs. `load_type` is `full` or `incremental`;
+NY Fed, then the Treasury's schedule, its auctions, OECD and IMF, so a day's prices see that day's
+new CUSIPs and a day's auctions that day's bonds. `load_type` is `full` or `incremental`;
 `--date_filter` stops the load at a date, as in the lab. A page for the wrong date, a CUSIP listed
 twice or a changed header stops its own source at that date, so the watermark never skips a day,
 and fails the run once the other sources are loaded. A holiday page has no table and writes no
 partition. The loader never changes a price.
 
 **`ecs/app.py`** runs the engine over each price date after its own watermark and writes
-`curves/`, `curve_params/`, `fit_errors/` and `risk/`, one Parquet file per date.
+`curves/`, `curve_params/`, `fit_errors/` and `risk/`, one Parquet file per date; then the South
+African engine over each auction date after its own, writing `sa_prices/` and `sa_curves/` by year
+and `sa_crosscheck/`. `--market us` or `sa` runs one.
 
-**`athena/create-tables.sql`** has a table for each of the eight lake tables, with partition
+**`athena/create-tables.sql`** has a table for each of the fourteen lake tables, with partition
 projection, so a date is readable as soon as its file lands.
 
 ## What it finds
@@ -318,6 +359,138 @@ The interesting problems were about conventions the data does not state:
   issues, the ones GSW is fitted to, came out best in price and among the worst in basis points;
   inside buckets, the on-the-run issues are the outliers in both crises.
 
+## South Africa
+
+### The Treasury's figures, checked and never changed
+
+The 16 auction files hold three layouts: the 2010-13 file is one long table with amounts in
+R million and no best or worst bid; the rest have a sheet per month, a column per bond, and the
+labels down the first or the second column; the 2012-13 to 2014-15 files state yields as fractions
+(0.0757), which the loader multiplies by 100 and records as `yield_unit = fraction` on all 521 of
+those rows. 2,525 bond columns come out of the 16 files, and 2,386 bond auctions once the year the
+2010-13 and 2012-13 files share is taken once. No figure is changed. Each check that fails is a
+flag on the row, and a flagged yield stays in `sa_auctions` and out of the curve:
+
+| Flag | Rows | Example | Curve |
+| --- | --- | --- | --- |
+| `no_bid_range` | 228 | the 2010-13 long table has no best or worst bid | in |
+| `coupon_differs_from_schedule` | 51 | R186's "(5%;2026)" against its 10.5% | in |
+| `maturity_year_differs_from_schedule` | 50 | R2035's terms given as "2030" from June 2019 to January 2020, a column copied | in |
+| `date_outside_fiscal_year` | 36 | the 2018-19 file's January and February auctions dated 2018, on Mondays; the same days in 2019 are Tuesdays | out |
+| `clearing_outside_bids` | 32 | R2053 at 1.85 on 22 April 2025 against bids of 11.76 to 12.00; R2044 at 1105.0 on 29 July 2025; all three bonds on 29 August 2017 half a basis point to two below their best bid | out |
+| `files_disagree` | 16 | the long table and the 2012-13 file differ on 8 of their 44 shared dates: R2048 at 8.40 or 9.50 on 21 August 2012 | out |
+| `misdated_auction` | 15 | the 2012-13 file's February and March 2013 sheets sell R2030 and R2037 months before either was issued, at 8.5 to 9.2%, where the long table has the same weeks at 7.9 to 8.5% | out |
+| `before_issue_date` | 7 | the bonds in those auctions not yet issued, R2032 in the auction of 8 July 2014 "settling" in June, and R2053's first auction "settling" on Good Friday, 7 April 2023, four days before its issue | out |
+| `off_neighbouring_auctions` | 5 | R214 at 8.01 on 6 September 2011 between 8.59 and 8.54, with the day's other bond 23 basis points lower | out |
+| `settlement_date_doubtful` | 3 | the 8 July 2014 auction settling on 11 June | out |
+| `bond_code_unrecognised` | 1 | a bond column reading `0` in the long table | out |
+
+A row can carry more than one flag. 104 of the 2,386 rows stay out of the curve and 2,282 are
+priced; 20 auction dates are left with no usable bond, eight of them the misdated Mondays of 2018.
+The spike check needs both of a bond's neighbouring auctions within six weeks, more than 50 basis
+points from each on the same side, and the day's other bonds not moving half as far the same way:
+on 30 March 2021, when R2044, R2048 and R2037 all rose 0.6 to 0.8 percentage points, none is flagged.
+
+The debt schedule has one inconsistency of its own: R2030's interest dates are listed as 28/02 and
+31/08, but it redeems on 31 January 2030. The coupon cycle is taken from the redemption date and the
+bond is flagged; its issue price below says the redemption date is the right one.
+
+### The JSE formula, against the Treasury's issue prices
+
+There is no free South African price to test a yield-to-price formula against: JSE mark-to-market
+data carries no redistribution licence. The debt schedule has one price per bond, though, its
+initial issue price, and for a bond first sold at auction that is the first clearing yield on the
+issue date. Priced with `jse.price`:
+
+| Bond | Issued | Clearing yield | Schedule price | All-in | Clean | Gap |
+| --- | --- | --- | --- | --- | --- | --- |
+| R213 | 2010-05-28 | 9.050 | 80.922 | 82.62874 | **80.92189** | -0.00011 |
+| R214 | 2010-06-04 | 8.820 | 75.517 | 77.22692 | **75.51733** | +0.00033 |
+| R2023 | 2012-06-22 | 7.770 | 99.806 | 102.24794 | **99.80616** | +0.00016 |
+| R2037 | 2013-07-19 | 8.820 | 96.875 | 100.81035 | **96.87473** | -0.00027 |
+| R2030 | 2013-10-04 | 8.540 | 95.261 | 96.68549 | **95.26083** | -0.00017 |
+| R2032 | 2014-06-13 | 8.970 | 95.303 | **95.30336** | 93.63076 | +0.00036 |
+| R2044 | 2014-07-18 | 9.065 | 100.832 | **100.83272** | 96.80532 | +0.00072 |
+| R2035 | 2015-07-17 | 8.820 | 103.843 | **103.84342** | 100.46363 | +0.00042 |
+| R2040 | 2015-09-11 | 9.130 | 99.747 | **99.74710** | 98.71148 | +0.00010 |
+| R2033 | 2024-09-13 | 9.970 | 104.700 | **104.69510** | 100.14715 | -0.00490 |
+| R2038 | 2024-09-13 | 10.905 | 104.710 | **104.71031** | 99.76442 | +0.00031 |
+| R2039 | 2025-10-03 | 9.905 | 99.778 | 99.85878 | **99.77762** | -0.00038 |
+
+The Treasury publishes some issue prices clean and some all-in, and each matches its own kind. A
+wrong accrued would have shown in the clean ones, and a wrong discounting in all of them. R2030's
+match settles its cycle: on the schedule's 28/02 and 31/08 its accrued interest would be 34 days,
+not 65, and the clean price would miss by 0.08. R2042, the twelfth new bond since 2010, cleared at
+9.095 against bids of 10.09 to 10.15 and is flagged; R2048 was issued before its first auction,
+and R2053's first auction is the one dated Good Friday.
+
+120 of the 2,282 priced auctions settle in a books-closed period, ex-coupon, with negative accrued
+interest and no next coupon in the cash flows. No auction settles in a bond's last coupon period,
+where the formula turns to simple interest, so `jse.price` refuses that case. On the same cash flows,
+FIA's own semiannual `YTM` comes within 1.45 basis points of the JSE yield (mean -0.67): the
+difference between the JSE's broken period and FIA's actual/365 time axis.
+
+### A curve per auction, and the 10-year check
+
+Each auction date's usable bonds, priced, go to FIA's `build_from_bonds` unchanged: 791 curves, 636
+of them from three bonds, 120 from two, 33 from four and two from one, in about three seconds for
+all of them. Each curve reprices its bonds exactly and holds the zero rate flat beyond them; a tenor
+outside the shortest and the longest bond is marked `extrapolated`. Ten years lies inside the knots
+on 387 of the 791 dates.
+
+The monthly 10-year par yield, from those dates only, against the two series, in basis points:
+
+| Year | Auction dates | Inside the knots | Par less OECD | Par less IMF |
+| --- | --- | --- | --- | --- |
+| 2010 | 37 | 20 | -12.1 | -12.2 |
+| 2011 | 48 | 32 | -27.5 | -28.1 |
+| 2012 | 45 | 24 | -43.8 | -42.7 |
+| 2013 | 49 | 25 | -29.8 | -30.0 |
+| 2014 | 48 | 7 | -2.0 | -2.3 |
+| 2015 | 47 | 0 | | |
+| 2016 | 48 | 5 | +12.6 | +9.9 |
+| 2017 | 48 | 18 | -28.4 | -30.1 |
+| 2018 | 49 | 18 | -29.7 | -30.6 |
+| 2019 | 42 | 23 | -15.2 | -15.8 |
+| 2020 | 49 | 40 | -71.4 | -75.7 |
+| 2021 | 49 | 32 | -36.8 | -38.3 |
+| 2022 | 49 | 39 | -24.4 | -34.2 |
+| 2023 | 48 | 31 | -43.6 | -44.1 |
+| 2024 | 49 | 34 | -25.2 | -25.6 |
+| 2025 | 48 | 24 | -45.3 | -52.0 |
+| 2026 | 38 | 15 | -9.2 | -9.4 |
+
+Over the 153 months both sides have, the par yield is 30.6 basis points below the OECD series on
+average (mean absolute 31.6, standard deviation 24.0) and 32.6 below the IMF's (34.0); monthly
+changes correlate 0.86 with each. The two series come from the same Reserve Bank yield and differ
+by 3.0 basis points on average. The gap is a matter of maturity: the series is bonds of 10 years
+and over, and the same comparison at other tenors brackets it --
+
+| Tenor | Months | Par less OECD | Mean absolute |
+| --- | --- | --- | --- |
+| 7 years | 83 | -98.7 | 98.7 |
+| 10 years | 153 | -30.6 | 31.6 |
+| 15 years | 181 | +28.1 | 30.6 |
+| 20 years | 183 | +50.9 | 51.6 |
+
+-- so the series sits between the curve's 10- and 15-year points in an average month. The gap is
+widest in 2020, -71 basis points over the year and -128 in March, and 2020 is the year the curve
+was steepest from 10 to 15 years: 116 to 136 basis points in its five steepest months, against a
+median month's 53. In 2015 every auction sold bonds on one side of ten years, so there is no month
+to compare.
+
+The interesting problems were in the figures:
+
+- **A yield-to-price formula needed a price to be tested against.** The issue prices in the
+  Treasury's own schedule are the only free South African prices, and they come clean or all-in
+  without saying which; matching one or the other to a thousandth, bond after bond, is the test.
+- **Some wrong rows pass every check a row can make on its own.** A year of auctions copied into
+  the wrong year's sheets, with yields inside their own bids, is caught only by selling a bond
+  before it existed; a bond label swapped between two columns only by the second file that holds
+  the same day. Both checks look across rows, and both keep the figure and flag it.
+- **The schedule contradicts itself once,** on R2030's coupon dates, and the issue price says which
+  half is right.
+
 ## Running it
 
 Python 3.12+ and `pip install -r requirements.txt`. No AWS account.
@@ -336,6 +509,21 @@ it with the Glue job's code, run the engine -- in about a minute:
 ```bash
 python local-development/run_local.py
 ```
+
+That includes South Africa from `data/sa`. To fetch the Treasury's files afresh, rewrite `data/sa`
+and keep the files, then load them through the Glue job's own parsers rather than the committed
+rows:
+
+```bash
+python local-development/sa_download.py --raw _localrun/sa-raw
+```
+
+```bash
+python local-development/run_local.py --sa-raw _localrun/sa-raw
+```
+
+Both routes give the same `sa_auctions`, `sa_prices`, `sa_curves` and `sa_crosscheck`, value for
+value.
 
 The truth check, against the staged sample or, with `--fetch`, against a fresh download:
 
@@ -361,10 +549,13 @@ in this README.
 **The code you deploy, as it is.** The Lambda's `fetch_all`, the Glue job's `run` and the engine's
 `run` are called unchanged, with two folders whose files sit at the buckets' keys standing in for
 S3. `run_local.py --fetch --start <date> --end <date>` runs the fetcher against the live sources;
-it fetched all four for 2 November 2026. The engine image built from `ecs/Dockerfile` ran the 23
-sample dates with `--network none` in 55.5 seconds.
+it fetched the four US sources for 2 November 2026, and `fetch_all` fetched the four South African
+ones for 3 November 2026. `sa_download.py` fetched the 16 auction files and 17 debt schedules the
+same day. The engine image built from `ecs/Dockerfile` ran both markets in full with
+`--network none`: the 23 US sample dates in 56.8 seconds and the 811 South African auction dates
+in 3.2.
 
-**93 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
+**155 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
 by hand, a coupon on the settlement date, short and long first coupons against the Treasury's rule,
 and a round trip through FIA's `YTM`. `tests/test_sources.py` (8): the FedInvest page, a holiday
 page, a page for the wrong date, a changed header, the GSW file's preamble and Nelson-Siegel years,
@@ -373,23 +564,37 @@ published yields from its parameters, a fit that recovers the parameters that pr
 `SvenssonCurve` inside FIA, one bond per bucket, the bootstrap repricing every knot, and DV01,
 duration and convexity against finite differences. `tests/test_checks.py` (8): the quote flag on a
 seven-32nds quote and not on a common basis, the bound flag, and both new tables on data built to
-give known answers. `tests/test_wiring.py` (15): every workflow's triggers, guard, permissions,
-actions and runtimes, the event pattern against a Glue event, and every Athena column against the
-Parquet schema. `lambda-functions/test_fetch.py` (13): the CSRF handshake request by request, each
-source's checks, one failing source and one failing write isolated, the pause between backfill
-dates, and the handler on moto's S3 and Glue. `glue-pythonshell/test_load.py` (13): `awsglue`
-through `sys.modules`, dirty prices and the watermark, nothing new on a rerun, `--date_filter`, a
-full reload, a holiday, a bad page stopping its source there, a duplicate CUSIP, the flagged quote
-kept, GSW upserts and the NY Fed's averages left out -- on Python 3.9 with pandas 1.4.2, numpy
-1.22.3, boto3 1.21.21 and pyarrow 7.0.0 as well as on 3.13. `ecs/test_app.py` (10): the engine on
-moto's S3 over two sample days, our fit against GSW, a bound recorded, funding and carry by hand,
-and the backfill.
+give known answers. `tests/test_sa_sources.py` (29): the Treasury's three sheet layouts, yields as
+fractions, every spelling of the coupon and redemption, each flag on the row it was found on (R2053's
+1.85, the misdated 2013 sheets, the two files that disagree, the spike against a move across the
+curve), the debt schedule's lines, R2030's cycle, a three-legged bond, and the OECD and IMF files
+with their citations. `tests/test_sa_pricing.py` (19): eight issue prices from their first auction
+yields, the books-closed date, an ex-coupon buyer's cash flows, the leap-year coupon, the refused
+last period, FIA's bootstrap repricing each auction's bonds, and the monthly check.
+`tests/test_wiring.py` (15): every workflow's triggers, guard, permissions, actions and runtimes, the
+event pattern against a Glue event, and every Athena column against the Parquet schema.
+`lambda-functions/test_fetch.py` (19): the CSRF handshake request by request, each source's checks,
+the Treasury's file for a fiscal year, its newest schedule, a reset connection tried again and a
+404 not, one failing source and one failing write isolated, the pause between backfill dates, and
+the handler on moto's S3 and Glue. `glue-pythonshell/test_load.py` (16): `awsglue` through
+`sys.modules`, dirty prices and the watermark, nothing new on a rerun, `--date_filter`, a full
+reload, a holiday, a bad page stopping its source there, a duplicate CUSIP, the flagged quote kept,
+GSW upserts, the NY Fed's averages left out, the Treasury's files with every row sourced, a revised
+file replacing its rows, and auctions with no schedule failing only their own source -- on Python
+3.9 with pandas 1.4.2, numpy 1.22.3, boto3 1.21.21, pyarrow 7.0.0, openpyxl 3.1.5, xlrd 2.0.1 and
+pypdf 5.9.0 as well as on 3.13. `ecs/test_app.py` (15): the engine on moto's S3 over two sample
+days, our fit against GSW, a bound recorded, funding and carry by hand, the backfill, and the South
+African engine over every committed auction, its check against OECD and IMF, a rerun with nothing
+new and its backfill. All of them pass in UTC and in Africa/Johannesburg.
 
 **Engine differences to carry into the deploy.**
 - **Glue Python Shell runs Python 3.9 only.** 3.6 reached end of life on 1 June 2026 and
   `--glue-version` is ignored for Python Shell. The loader and the modules it imports are written
   for 3.9 and the `analytics` set's versions; pyarrow is not on that list, so the job adds
-  `pyarrow==7.0.0` with `--additional-python-modules`, and `bond_analytics` arrives as a wheel in
+  `pyarrow==7.0.0` with `--additional-python-modules`, with `openpyxl==3.1.5`, `xlrd==2.0.1` and
+  `pypdf==5.9.0` for the Treasury's `.xlsx`, `.xls` and PDF files; the engine image, on 3.13, pins
+  their current versions. The parsed schedules and auctions are the same on both. `bond_analytics`
+  arrives as a wheel in
   `--extra-py-files`, because Python Shell 3.9 takes no `.egg`. The Glue workflow's tests run in a
   `python:3.9-slim` container with those pins. AWS now points Python Shell workloads towards Lambda
   or ECS; this project keeps the lab's Glue job.
@@ -400,7 +605,9 @@ and the backfill.
   written with its column list from `bond_analytics/schemas.py`, which the DDL is tested against.
 - **EventBridge passes no date to the engine.** The task runs `--mode daily` and works out its
   dates from the lake and its own watermark, so a retried or duplicated `SUCCEEDED` event finds
-  nothing new rather than recomputing.
+  nothing new rather than recomputing. South Africa keeps its own watermark, `engine_sa`.
+- **The Treasury's site resets a connection now and then.** Its requests are tried three times,
+  two and then four seconds apart; a 404 is not retried.
 
 ## Deploying it
 
@@ -436,7 +643,8 @@ and the backfill.
 7. Push to `main`, or rerun each workflow: the Lambda, the Glue job and the image deploy in turn.
 8. Run the backfill once as a task with the command overridden:
    `--mode backfill --start 2008-06-02 --end <yesterday>`. It pauses two seconds between
-   FedInvest dates.
+   FedInvest dates, and then fetches South Africa's 16 auction files and one debt schedule a year,
+   two seconds apart. `--market sa --end <yesterday>` runs South Africa's alone.
 9. Run `athena/create-tables.sql` in Athena with `<lake-bucket>` filled in.
 
 Every AWS name here is account-specific and set by whoever deploys it.
@@ -449,3 +657,9 @@ Every AWS name here is account-specific and set by whoever deploys it.
   exclusions; agreeing with it says the mechanics match theirs, and the residuals are the market's.
 - **TIPS and FRNs are in the lake and out of the curves.** FedInvest gives no index ratio, and FIA
   has no floating leg.
+- **South Africa's curve is a primary-market curve.** Each is two to four bonds' clearing yields on
+  the day the Treasury sold them, joined by FIA's straight lines in the zero rate and flat beyond
+  them, and the shortest bond auctioned since 2010 had 2.82 years left. Treasury bills and
+  inflation-linked bonds, which the Treasury auctions too, are not loaded.
+- **The OECD and IMF series are not a 10-year point.** They are monthly yields on bonds of 10 years
+  and over; the check is that the curve's 10- and 15-year points bracket them and move with them.
