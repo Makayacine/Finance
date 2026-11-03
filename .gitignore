@@ -29,4 +29,4 @@ sba-credit-risk-ecs-dynamo/data/raw/
 latvia-company-credit-glue-delta/data/raw/
 
 # sovereign-curves: the full FedInvest, GSW and auction downloads; data/ keeps a committed sample
-sovereign-curves-cicd-lambda-glue-ecs/data/raw/
+sovereign-curves-cicd-lambda-glue-ecs/data/full/
