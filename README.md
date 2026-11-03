@@ -339,6 +339,7 @@ The interesting problems were about what the files know, and when:
 
 Full detail, the label rule and every figure are in the project README.
 
+**[`voucher-float-kinesis-redshift`](voucher-float-kinesis-redshift/README.md)**: a gift-voucher service's issue, redemption and expiry events from a transactional outbox through Kinesis, a Firehose transform Lambda and Redshift to the daily outstanding liability, IFRS 15 breakage by issue month and a redemption life table, on two simulated years whose true breakage rate, 23.97%, the young-cohort estimate recovers to within 0.04 points.
 
 ### Running the pipelines
 

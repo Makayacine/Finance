@@ -32,16 +32,19 @@
 -- JSON 'auto' matches the transform's keys to the columns by name, so the order the keys come
 -- out in does not matter, and a null days_to_redeem loads as NULL.
 --
--- KEEPING as_of CURRENT
+-- THE NIGHTLY CLOSE
 --
--- Schedule this in the query editor, every few minutes or before every report:
---
---   update voucher_float.warehouse_as_of set as_of = getdate();
---
--- and, when the service publishes its control total for the same moment:
+-- The warehouse reports as of the last close, and a close is the nightly expiry sweep. Straight
+-- after the sweep, take the service's count and sum of unredeemed vouchers; once the relay has
+-- drained and Firehose's buffer has passed the sweep, run these three in one transaction:
 --
 --   delete from voucher_float.service_control_total;
---   insert into voucher_float.service_control_total values (<taken_at>, <vouchers>, <cents>);
+--   insert into voucher_float.service_control_total values ('<sweep-time>', <vouchers>, <cents>);
+--   update voucher_float.warehouse_as_of set as_of = '<sweep-time>';
+--
+-- Closing on the sweep is what makes the reconciliation compare like with like: until a lapsed
+-- voucher is swept, the service still counts it unredeemed, while the warehouse, which dates the
+-- lapse at expiry, has already taken it off.
 -- =============================================================================================
 
 create schema if not exists voucher_float;
