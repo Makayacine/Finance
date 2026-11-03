@@ -168,3 +168,124 @@ def test_backfill_fetches_loads_and_runs_the_range(tmp_path):
     assert summary["fetched"] == "3 of 3 business days"
     assert summary["dates"] == 3
     assert [k.split("/")[1] for k in lake.list("risk/")] == ["date=2026-10-09", "date=2026-10-13", "date=2026-10-14"]
+
+
+# --- South Africa -------------------------------------------------------------------------------
+
+SA_ROWS = PROJECT / "data" / "sa"
+
+
+def seed_sa(raw, lake):
+    """The committed Treasury rows into the lake with the loader's writers, the two series through
+    the loader, as run_local.py does."""
+    from bond_analytics import schemas
+
+    bonds = schemas.from_csv("sa_bonds", (SA_ROWS / "nt_bonds.csv").read_text(encoding="utf-8"))
+    for b in bonds:
+        b["redemptions"] = [dt.date.fromisoformat(x) for x in b["redemptions"].split(",")]
+    load.write_sa_bonds(lake, {b["bond_code"]: b for b in bonds})
+    load.write_sa_auctions(lake, schemas.from_csv("sa_auctions", (SA_ROWS / "nt_auctions.csv").read_text(encoding="utf-8")),
+                           rebuild=True)
+    for path in SAMPLE.glob("raw/*/date=*/*.gz"):
+        if path.parts[-3] in ("oecd", "imf"):
+            raw.put(path.relative_to(SAMPLE).with_suffix("").as_posix(), gzip.decompress(path.read_bytes()))
+    load.run(raw, lake, "full", sources=("oecd", "imf"))
+
+
+@pytest.fixture(scope="module")
+def sa(tmp_path_factory):
+    root = tmp_path_factory.mktemp("sa")
+    raw, lake = load.FolderStore(root / "raw"), load.FolderStore(root / "lake")
+    seed_sa(raw, lake)
+    return lake, app.run_sa(lake, "incremental")
+
+
+def test_every_auction_since_2010_gets_a_curve_from_its_usable_bonds(sa):
+    lake, summary = sa
+    assert (summary["auction_dates"], summary["bonds_priced"], summary["bootstrap_failed"]) == (811, 2282, "none")
+    assert len(summary["no_usable_bond"]) == 20 and "2025-04-22" not in summary["no_usable_bond"]
+    prices = load.from_parquet(lake.get("sa_prices/year=2025/sa_prices.parquet"))
+    assert "R2053" not in set(prices[prices["auction_date"].astype(str) == "2025-04-22"]["bond_code"])  # its 1.85
+    assert set(prices["source"]) == {"National Treasury of the Republic of South Africa"}
+
+
+def test_a_priced_auction_is_the_jse_formula_on_the_clearing_yield(sa):
+    from bond_analytics import jse
+
+    lake, _ = sa
+    prices = load.from_parquet(lake.get("sa_prices/year=2014/sa_prices.parquet"))
+    r = prices[(prices["auction_date"].astype(str) == "2014-07-15") & (prices["bond_code"] == "R2044")].iloc[0]
+    assert r["all_in"] == pytest.approx(100.83272) and r["cum"]
+    bonds = load.read_sa_bonds(lake)
+    p = jse.price(jse.bond_from_static(bonds["R2044"]), dt.date(2014, 7, 18), 9.065)
+    assert (r["accrued"], r["clean"]) == (p.accrued, p.clean)
+
+
+def test_the_ten_year_point_tracks_the_oecd_and_imf_series(sa):
+    lake, summary = sa
+    check = load.from_parquet(lake.get("sa_crosscheck/sa_crosscheck.parquet"))
+    both = check.dropna(subset=["par_minus_oecd_bp", "par_minus_imf_bp"])
+    assert len(both) == summary["oecd_months"] == summary["imf_months"] == 153
+    assert summary["oecd_mean_bp"] == pytest.approx(-30.6, abs=0.05)
+    assert summary["imf_mean_bp"] == pytest.approx(-32.6, abs=0.05)
+    changes = both[["par_10y", "oecd_irlt"]].diff().dropna()
+    assert changes.corr().iloc[0, 1] > 0.85
+
+
+def test_a_second_run_has_no_new_auction_and_keeps_the_check(sa):
+    lake, _ = sa
+    again = app.run_sa(lake, "incremental")
+    assert again["auction_dates"] == 0
+    assert len(load.from_parquet(lake.get("sa_crosscheck/sa_crosscheck.parquet"))) == 196
+
+
+class FakeTreasury:
+    """The fetch module's South African surface: one month of auctions, one schedule, the two series."""
+
+    def __init__(self):
+        import io
+
+        import openpyxl
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "SEPTEMBER"
+        for row in [["Auction date", dt.datetime(2026, 9, 1)], ["Settlement date", dt.datetime(2026, 9, 4)],
+                    ["Bonds auctioned", "R2030", "R2040", "R2053"], ["Clearing yield", 8.1, 9.4, 10.2],
+                    ["Best bid", 8.0, 9.3, 10.1], ["Worst bid", 8.2, 9.5, 10.3]]:
+            ws.append(row)
+        buf = io.BytesIO()
+        wb.save(buf)
+        self.xlsx = buf.getvalue()
+
+    def fetch_nt_auction_history(self, pause_seconds):
+        return {"fixed-rate-bonds-2026-27.xlsx": self.xlsx}
+
+    def nt_schedules_listed(self):
+        return {dt.date(2026, 3, 31): "a.pdf", dt.date(2026, 9, 30): "b.pdf", dt.date(2026, 8, 31): "c.pdf"}
+
+    def fetch_nt_schedule_as_at(self, name):
+        return b"%PDF " + name.encode()
+
+    def fetch_oecd(self, day):
+        return b"STRUCTURE,REF_AREA,MEASURE,TIME_PERIOD,OBS_VALUE\nDATAFLOW,ZAF,IRLT,2026-09,8.947\n"
+
+    def fetch_imf(self, day):
+        return b"observation_date,INTGSBZAM193N\n2026-09-01,8.97\n"
+
+
+def test_the_sa_backfill_fetches_loads_and_builds_the_curves(tmp_path, monkeypatch):
+    from bond_analytics import nt_schedule
+
+    text = ("AS AT 30 SEPTEMBER 2026\nR2030 8.00% 04-Oct-13 95.261%   300 000 000 28/02 & 31/08 31-Jan-30 297 978 110 031\n"
+            "R2040 9.00% 11-Sep-15 99.747%   250 000 000 31/01 & 31/07 31-Jan-40 335 282 614 746\n"
+            "R2053 11.625% 11-Apr-23 99.780%  1 300 000 000 31/03 & 30/09 31-Mar-53 118 877 382 543\n")
+    monkeypatch.setattr(nt_schedule, "pdf_text", lambda body: text)
+    monkeypatch.setattr(app.time, "sleep", lambda s: None)
+    raw, lake = load.FolderStore(tmp_path / "raw"), load.FolderStore(tmp_path / "lake")
+    summary = app.backfill_sa(raw, lake, dt.date(2026, 11, 3), fetcher=FakeTreasury())
+    assert summary["schedules"] == 2  # March and the latest, not every month
+    assert (summary["auction_dates"], summary["bonds_priced"], summary["oecd_months"]) == (1, 3, 1.0)
+    assert sorted(k.split("/")[2] for k in raw.list("raw/nt_schedule/")) == ["date=2026-03-31", "date=2026-09-30"]
+    curve = load.from_parquet(lake.get("sa_curves/year=2026/sa_curves.parquet"))
+    assert len(curve) == len(app.sa_curve.GRID)

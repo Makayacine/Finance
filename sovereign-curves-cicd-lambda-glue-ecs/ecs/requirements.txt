@@ -4,3 +4,6 @@ pandas==3.0.5
 pyarrow==26.0.1
 scipy==1.18.1
 boto3==1.43.123
+openpyxl==3.1.5
+xlrd==2.0.2
+pypdf==6.17.0

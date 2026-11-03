@@ -21,6 +21,17 @@ Tables, one Parquet file per price date:
     curve_params/date=D/curve_params.parquet Svensson parameters, fit size, RMSE, any bound hit
     fit_errors/date=D/fit_errors.parquet    model less market, per security and curve
     risk/date=D/risk.parquet                DV01, duration, convexity, key rates, carry
+
+South Africa runs in the same task, after the United States, over the National Treasury's
+auction dates after its own watermark (``bond_analytics.sa_curve``): each auction's cleared bonds
+priced with the JSE formula and bootstrapped with FIA, then the monthly 10-year check against the
+OECD and IMF series. One file per year, since auctions are weekly:
+
+    sa_prices/year=Y/sa_prices.parquet      all-in, accrued, clean, DV01, duration, convexity
+    sa_curves/year=Y/sa_curves.parquet      zero and par yields per auction date, extrapolation marked
+    sa_crosscheck/sa_crosscheck.parquet     the 10-year par yield by month against OECD and IMF
+
+``--market us`` or ``--market sa`` runs one; the default runs both.
 """
 
 from __future__ import annotations
@@ -48,7 +59,7 @@ for p in (HERE, HERE.parent, HERE.parent / "glue-pythonshell", HERE.parent / "la
 import pandas as pd  # noqa: E402
 
 import load  # noqa: E402
-from bond_analytics import bootstrap, dates, market, risk, svensson, truth  # noqa: E402
+from bond_analytics import bootstrap, dates, market, risk, sa_curve, svensson, truth  # noqa: E402
 from bond_analytics.dates import Security  # noqa: E402
 from bond_analytics.securities import run_ranks  # noqa: E402
 
@@ -263,6 +274,88 @@ def run(lake, load_type: str = "incremental", start: Optional[dt.date] = None, e
     return {"dates": len(days), "seconds": round(time.perf_counter() - t0, 1), "fits_on_a_bound": bounded or "none"}
 
 
+# --- South Africa -----------------------------------------------------------------------------
+
+
+def read_sa_auctions(lake) -> pd.DataFrame:
+    return pd.DataFrame(load.read_sa_auctions(lake), columns=load.schemas.columns("sa_auctions"))
+
+
+def run_sa(lake, load_type: str = "incremental", start: Optional[dt.date] = None, end: Optional[dt.date] = None) -> dict:
+    """Curves for the auction dates in the lake: all of them (``full``), or those after the SA watermark."""
+    auctions = read_sa_auctions(lake)
+    bonds = load.read_sa_bonds(lake)
+    days = sorted({d for d in auctions["auction_date"] if (start is None or d >= start) and (end is None or d <= end)})
+    mark = load.read_watermarks(lake).get("engine_sa", {})
+    if load_type == "incremental" and mark.get("loaded_through"):
+        days = [d for d in days if d > dt.date.fromisoformat(mark["loaded_through"])]
+    elif load_type == "full":
+        lake.delete_prefix("sa_prices/")
+        lake.delete_prefix("sa_curves/")
+    t0 = time.perf_counter()
+    prices, grid, skipped, failed = [], [], [], []
+    by_day = {d: g.to_dict("records") for d, g in auctions.groupby("auction_date")}
+    for day in days:
+        try:
+            p, c = sa_curve.day_tables(day, by_day[day], bonds)
+        except (ZeroDivisionError, ValueError, OverflowError) as exc:  # FIA's Newton step, or two settlements
+            failed.append(f"{day}:{type(exc).__name__}")
+            log.warning("%s: no curve: %s: %s", day, type(exc).__name__, exc)
+            continue
+        if not c:
+            skipped.append(day.isoformat())
+        prices.extend(p)
+        grid.extend(c)
+    if prices:
+        load.upsert_by_year(lake, "sa_prices", "sa_prices.parquet", pd.DataFrame(prices),
+                            ["auction_date", "bond_code"], date_col="auction_date")
+        load.upsert_by_year(lake, "sa_curves", "sa_curves.parquet", pd.DataFrame(grid),
+                            ["auction_date", "tenor"], date_col="auction_date")
+    curves = read_table_years_by(lake, "sa_curves", "sa_curves.parquet", "auction_date")
+    reference = read_table_years(lake, "sa_reference", "sa_reference.parquet")
+    check = sa_curve.crosscheck(curves, reference) if len(curves) else pd.DataFrame(columns=load.schemas.columns("sa_crosscheck"))
+    lake.put("sa_crosscheck/sa_crosscheck.parquet", load.to_parquet(check, "sa_crosscheck"))
+    if days:
+        load.write_watermark(lake, "engine_sa", days[-1])
+    if skipped:
+        log.warning("%d auction dates had no bond whose yield passed its checks: %s", len(skipped), ", ".join(skipped))
+    out = {"auction_dates": len(days), "bonds_priced": len(prices), "seconds": round(time.perf_counter() - t0, 1),
+           "no_usable_bond": skipped or "none", "bootstrap_failed": failed or "none"}
+    out.update({k: (round(v, 1) if isinstance(v, float) else v) for k, v in sa_curve.summary(check).items()})
+    return out
+
+
+def read_table_years_by(lake, table: str, name: str, date_col: str) -> pd.DataFrame:
+    frames = [load.from_parquet(lake.get(k)) for k in lake.list(table + "/") if k.endswith(name)]
+    if not frames:
+        return pd.DataFrame()
+    df = pd.concat(frames, ignore_index=True)
+    df[date_col] = df[date_col].map(_date)
+    return df
+
+
+def backfill_sa(raw, lake, end: dt.date, pause_seconds: float = 2.0, fetcher=None) -> dict:
+    """Every fiscal year's auction file, one debt schedule a year from March 2011 and the latest,
+    and the two monthly series; then the load and the SA engine over all of it."""
+    import fetch
+
+    fetcher = fetcher or fetch
+    for name, body in fetcher.fetch_nt_auction_history(pause_seconds=pause_seconds).items():
+        raw.put(fetch.raw_key("nt_auctions", end, name), body)
+    listed = fetcher.nt_schedules_listed()
+    wanted = sorted({d for d in listed if d.month == 3 and d.day == 31 and d.year >= 2011} | {max(listed)})
+    for i, d in enumerate(wanted):
+        if i:
+            time.sleep(pause_seconds)
+        raw.put(fetch.raw_key("nt_schedule", d, "schedule.pdf"), fetcher.fetch_nt_schedule_as_at(listed[d]))
+    raw.put(fetch.raw_key("oecd", end, "irlt.csv"), fetcher.fetch_oecd(end))
+    raw.put(fetch.raw_key("imf", end, "INTGSBZAM193N.csv"), fetcher.fetch_imf(end))
+    load.run(raw, lake, "full", date_filter=end, sources=("nt_schedule", "nt_auctions", "oecd", "imf"))
+    summary = run_sa(lake, "full")
+    summary["schedules"] = len(wanted)
+    return summary
+
+
 # --- backfill ---------------------------------------------------------------------------------
 
 
@@ -297,18 +390,27 @@ def main(argv=None) -> dict:
     ap.add_argument("--lake-bucket", default=os.environ.get("LAKE_BUCKET"))
     ap.add_argument("--raw-bucket", default=os.environ.get("RAW_BUCKET"))
     ap.add_argument("--local-root", help="folders standing in for the buckets, as run_local.py uses")
+    ap.add_argument("--market", choices=("us", "sa", "both"), default="both")
     args = ap.parse_args(argv)
     if args.local_root:
         raw = load.FolderStore(Path(args.local_root) / "raw-bucket")
         lake = load.FolderStore(Path(args.local_root) / "lake-bucket")
     else:
         raw, lake = load.S3Store(args.raw_bucket) if args.raw_bucket else None, load.S3Store(args.lake_bucket)
+    summary = {}
     if args.mode == "backfill":
-        if not (args.start and args.end and raw is not None):
-            ap.error("backfill needs --start, --end and a raw bucket")
-        summary = backfill(raw, lake, args.start, args.end)
+        if not (args.end and raw is not None) or (args.market != "sa" and not args.start):
+            ap.error("backfill needs --end, a raw bucket and, for the United States, --start")
+        if args.market in ("us", "both"):
+            summary["us"] = backfill(raw, lake, args.start, args.end)
+        if args.market in ("sa", "both"):
+            summary["sa"] = backfill_sa(raw, lake, args.end)
     else:
-        summary = run(lake, "full" if args.mode == "full" else "incremental", args.start, args.end)
+        load_type = "full" if args.mode == "full" else "incremental"
+        if args.market in ("us", "both"):
+            summary["us"] = run(lake, load_type, args.start, args.end)
+        if args.market in ("sa", "both"):
+            summary["sa"] = run_sa(lake, load_type, args.start, args.end)
     log.info("engine: %s", summary)
     return summary
 
