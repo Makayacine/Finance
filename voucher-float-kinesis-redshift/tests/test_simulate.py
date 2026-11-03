@@ -92,3 +92,16 @@ def test_a_run_adds_up_and_the_service_agrees(tmp_path):
     conn.close()
     assert vouchers == keys == r["issued"]
     assert late[0] > 0 and late[2] < "2024-12-16" and late[3] == "2024-12-16T01:00:00Z"
+
+
+def test_a_scaled_run_leaves_the_committed_truth_alone(tmp_path, monkeypatch, capsys):
+    committed = tmp_path / "committed" / "simulation-truth.json"
+    committed.parent.mkdir()
+    committed.write_text("the committed truth\n")
+    monkeypatch.setattr(sim, "TRUTH", committed)
+    assert sim.default_truth_path(sim.Parameters(), tmp_path / "v.db") == committed
+    assert sim.main(["--db", str(tmp_path / "run" / "v.db"), "--scale", "0.02", "--days", "5"]) == 0
+    assert committed.read_text() == "the committed truth\n"
+    written = json.loads((tmp_path / "run" / "simulation-truth.json").read_text())
+    assert (written["parameters"]["scale"], written["parameters"]["days"]) == (0.02, 5)
+    assert "vouchers" in capsys.readouterr().out

@@ -3,6 +3,10 @@
     python local-development/simulate.py                 # about 50,000 vouchers, 1-2 minutes
     python local-development/simulate.py --scale 0.05    # a twentieth of the volume
 
+A full-scale run writes its truth to ``data/simulation-truth.json``, byte for byte the committed
+file. A run with ``--scale`` or ``--days`` writes it beside the database instead, in
+``_localrun/`` by default, so a quick run never overwrites the committed truth.
+
 WHY THE DATA IS SIMULATED
 -------------------------
 
@@ -291,6 +295,11 @@ def simulate(db_path, p=Parameters(), truth_path=None, progress=None):
     return truth
 
 
+def default_truth_path(p, db_path):
+    """The committed truth for the full-scale run, and a file beside the database for any other."""
+    return TRUTH if p == Parameters() else Path(db_path).parent / "simulation-truth.json"
+
+
 def expect(condition, voucher, step, response):
     if not condition:
         raise SimulationError(f"voucher {voucher.index}: {step} answered "
@@ -300,12 +309,13 @@ def expect(condition, voucher, step, response):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--db", default=str(LOCAL_DB))
-    parser.add_argument("--truth", default=str(TRUTH))
+    parser.add_argument("--truth", help="default: data/simulation-truth.json at full scale,"
+                        " beside --db otherwise")
     parser.add_argument("--scale", type=float, default=1.0)
     parser.add_argument("--days", type=int, default=Parameters.days)
     args = parser.parse_args(argv)
     p = Parameters(scale=args.scale, days=args.days)
-    truth = simulate(args.db, p, args.truth, progress=print)
+    truth = simulate(args.db, p, args.truth or default_truth_path(p, args.db), progress=print)
     r = truth["realised"]
     print(f"{r['issued']:,} vouchers, {r['issued_cents'] / 100:,.2f} issued;"
           f" {r['redeemed']:,} redeemed, {r['expired']:,} expired, {r['open_at_as_of']:,} open"
