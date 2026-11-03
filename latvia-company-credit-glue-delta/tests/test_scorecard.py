@@ -1,4 +1,5 @@
-"""WoE, the hand-written logit and the metrics, each against a value worked out another way."""
+"""WoE, the hand-written logit, the metrics and the liabilities bands, each against a value worked
+out another way."""
 
 import math
 
@@ -6,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from company_credit import logit, metrics, woe
+from company_credit import analysis, logit, metrics, woe
 
 
 def test_woe_and_iv_by_hand():
@@ -83,3 +84,32 @@ def test_intercept_shift_hits_the_target_rate_and_keeps_the_ranking():
     shift = logit.intercept_shift(eta, 0.002)
     assert logit.sigmoid(eta + shift).mean() == pytest.approx(0.002, rel=1e-9)
     assert np.all(np.diff(logit.sigmoid(eta + shift)) > 0)
+
+
+def test_liabilities_bands_rank_within_each_year_and_set_observed_against_predicted():
+    # Two years of 1,200 companies; liabilities 1..1,200, the largest first. Ten defaults among
+    # each year's top 100, none elsewhere; a flat PD of 1%. One row has no balance sheet.
+    year = pd.DataFrame({"liabilities": np.arange(1200, 0, -1, dtype=float)})
+    frame = pd.concat([year.assign(observation_year=2021), year.assign(observation_year=2022)],
+                      ignore_index=True)
+    frame["y"] = 0
+    frame.loc[frame.groupby("observation_year").cumcount() < 10, "y"] = 1
+    frame["pd_ttc"], frame["pd_validation"] = 0.01, 0.005
+    frame["employees"] = 3.0
+    for ratio in ("cash_ratio", "current_ratio", "equity_ratio"):
+        frame[ratio], frame[ratio + "_state"] = 0.5, "value"
+    frame.loc[0, "liabilities"] = np.nan  # 2021's largest loses its balance sheet
+
+    bands = analysis.liabilities_band(frame)
+    assert bands[0] == "the rest"
+    assert bands[1:101].eq("top 100").all() and bands[101] == "101-1,000"
+    assert (bands == "top 100").sum() == 200  # 100 a year, ranked within the year
+
+    table = analysis.by_liabilities(frame).set_index("band")
+    top = table.loc["top 100"]
+    assert (top.company_years, top.defaults) == (200, 19)
+    assert top.observed == pytest.approx(0.095)
+    assert top.oe_ttc == pytest.approx(19 / 2.0) and top.oe_validation == pytest.approx(19 / 1.0)
+    assert table.loc["all", "defaults"] == 20 and table.loc["all", "company_years"] == 2400
+    assert table.liabilities_share.drop("all").sum() == pytest.approx(1.0)
+    assert "defaults" not in analysis.by_liabilities(frame.drop(columns="y"))
