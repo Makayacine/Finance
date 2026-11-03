@@ -1,0 +1,31 @@
+{
+  "family": "sovereign-curves-engine",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {"cpuArchitecture": "X86_64", "operatingSystemFamily": "LINUX"},
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/<ecs-execution-role>",
+  "taskRoleArn": "arn:aws:iam::<account-id>:role/<engine-task-role>",
+  "containerDefinitions": [
+    {
+      "name": "engine",
+      "image": "<rendered by the workflow: the ECR image tagged with the commit SHA>",
+      "essential": true,
+      "command": ["--mode", "daily"],
+      "environment": [
+        {"name": "LAKE_BUCKET", "value": "<lake-bucket>"},
+        {"name": "RAW_BUCKET", "value": "<raw-bucket>"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/sovereign-curves-engine",
+          "awslogs-region": "<region>",
+          "awslogs-stream-prefix": "engine",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}
