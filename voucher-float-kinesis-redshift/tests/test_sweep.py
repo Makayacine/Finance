@@ -1,6 +1,9 @@
 """The expiry sweep: overdue and unredeemed only, dated at expiry, and harmless to repeat."""
 
+import sqlite3
 from datetime import timedelta
+
+import pytest
 
 from conftest import START, issue, redeem, rows
 from voucher_service import db
@@ -64,6 +67,27 @@ def test_an_expired_voucher_cannot_be_redeemed(app, client, tokens, clock):
     run_sweep(app, START + timedelta(days=30))
     clock.set(START + timedelta(days=1))  # even with a clock that has gone backwards
     assert redeem(client, tokens["merchant"], code).status_code == 409
+
+
+def test_a_failed_outbox_write_takes_the_whole_sweep_with_it(app, client, tokens):
+    for key in ("a", "b", "c"):
+        issue(client, tokens["issuer"], key=key)
+    conn = sqlite3.connect(app.config["DB_PATH"])
+    conn.execute("create trigger outbox_down before insert on outbox"
+                 " when new.event_type = 'expired' and (select count(*) from outbox"
+                 " where event_type = 'expired') = 2"  # the third expiry fails
+                 " begin select raise(abort, 'outbox unavailable'); end")
+    conn.commit()
+    with pytest.raises(sqlite3.IntegrityError):
+        run_sweep(app, START + timedelta(days=31))
+    assert rows(app, "select status, swept_at from vouchers") == \
+        [{"status": "unredeemed", "swept_at": None}] * 3
+    assert rows(app, "select count(*) as n from outbox where event_type = 'expired'") == [{"n": 0}]
+    conn.execute("drop trigger outbox_down")
+    conn.commit()
+    conn.close()
+    assert run_sweep(app, START + timedelta(days=31)) == 3
+    assert rows(app, "select count(*) as n from outbox where event_type = 'expired'") == [{"n": 3}]
 
 
 def test_the_sweep_command(app, client, tokens, capsys):

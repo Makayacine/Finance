@@ -6,7 +6,9 @@ The app is the real one with ``/graphql`` mounted, and the warehouse adapter is 
 DuckDB connection, because DuckDB will not open the same file twice in one process.
 """
 
+import contextlib
 import sqlite3
+from datetime import datetime
 
 import pytest
 
@@ -138,6 +140,33 @@ def test_an_open_cohort_is_projected(reads):
     assert cohort["breakageRate"] == pytest.approx(young["breakage_rate"])
 
 
+@pytest.mark.parametrize("days", [1, 7])
+def test_redeemed_by_is_the_share_redeemed_within_that_many_days(reads, days):
+    """Worked from the service's own rows, not from the warehouse: November 2024 is closed, so
+    nothing is censored and the life table's redeemed share is plain arithmetic -- the cents
+    redeemed less than ``days`` whole days after issue, over the cents issued."""
+    client, token, _, service_db, _ = reads
+    service = sqlite3.connect(service_db)
+    vouchers = service.execute("select amount_cents, issued_at, redeemed_at from vouchers"
+                               " where issued_at like '2024-11-%'").fetchall()
+    service.close()
+
+    def seconds(issued_at, redeemed_at):
+        return (datetime.fromisoformat(redeemed_at) - datetime.fromisoformat(issued_at))\
+            .total_seconds()
+
+    within = sum(cents for cents, issued_at, redeemed_at in vouchers
+                 if redeemed_at and seconds(issued_at, redeemed_at) < days * 86400)
+    expected = within / sum(cents for cents, _, _ in vouchers)
+    next_day = sum(cents for cents, issued_at, redeemed_at in vouchers if redeemed_at
+                   and days * 86400 <= seconds(issued_at, redeemed_at) < (days + 1) * 86400)
+    assert 0 < expected < 1 and next_day > 0  # one day too many would show
+    answer = ask(client, token, "query ($d: Int!) { cohort(month: \"2024-11\") { open"
+                                " redeemedBy(days: $d) } }", {"d": days})[1]
+    assert answer["data"]["cohort"]["open"] == 0
+    assert answer["data"]["cohort"]["redeemedBy"] == pytest.approx(expected)
+
+
 @pytest.mark.parametrize("month", ["2024-13", "2024-1", "November", "2024-11-01", "0000-01",
                                    "\u0662\u0660\u0662\u0664-\u0661\u0661"],
                          ids=["month-13", "one-digit", "name", "a-date", "year-0",
@@ -216,9 +245,16 @@ def test_without_a_warehouse_the_voucher_query_still_works(chain):
         {"data": {"voucher": None}}
 
 
-def test_the_wsgi_entry_point_reads_its_settings_from_the_environment(chain):
+def test_the_wsgi_entry_point_reads_its_settings_from_the_environment(chain, tmp_path):
     from voucher_service import wsgi
-    con, service_db, _ = chain
+    _, chain_db, _ = chain
+    # On a copy: start-up writes the rotated password's hash, and the chain is shared.
+    service_db = tmp_path / "voucher-service.db"
+    with contextlib.closing(sqlite3.connect(chain_db)) as source, \
+            contextlib.closing(sqlite3.connect(service_db)) as copy:
+        source.backup(copy)
+        shared_hash = source.execute("select password_hash from users"
+                                     " where username = 'finance'").fetchone()
     environ = {"VOUCHER_DB_PATH": str(service_db), "VOUCHER_JWT_SECRET": SECRET,
                "VOUCHER_FINANCE_PASSWORD": "rotated-finance-pass"}
     assert wsgi.warehouse_from(environ) is None
@@ -229,3 +265,6 @@ def test_the_wsgi_entry_point_reads_its_settings_from_the_environment(chain):
     client = app.test_client()
     token = login(client, "finance", "rotated-finance-pass")
     assert ask(client, token, '{ voucher(code: "VCH-00000000") { code } }')[0] == 200
+    with contextlib.closing(sqlite3.connect(chain_db)) as source:
+        assert source.execute("select password_hash from users where username = 'finance'"
+                              ).fetchone() == shared_hash

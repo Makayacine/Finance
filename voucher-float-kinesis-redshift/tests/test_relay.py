@@ -1,10 +1,10 @@
 """The relay: in outbox order, marked only once the stream has the record, and never a lost event.
 
-Most of these run against ``FolderStream``, the same class ``--local`` uses. Two need the stream to
-refuse records, and for those ``KinesisStream`` -- the AWS class itself -- is handed a client that
-answers ``put_records`` the way Kinesis does when it throttles: a ``FailedRecordCount`` and an
-``ErrorCode`` on each refused entry. That is the response shape the relay has to read correctly,
-and it is the only part of the AWS path a laptop can exercise.
+Most of these run against ``FolderStream``, the same class ``--local`` uses. Three hand
+``KinesisStream`` -- the AWS class itself -- a client that answers ``put_records`` the way Kinesis
+does and keeps what it was sent: the stream name, and each record's ``Data`` and
+``PartitionKey``. Two of them make it throttle, with a ``FailedRecordCount`` and an ``ErrorCode``
+on each refused entry. That is the response shape the relay has to read correctly.
 
 The crash test makes SQLite refuse the "mark published" update after the stream has accepted the
 batch. That is the window that turns at-least-once into duplicates, and the test checks the
@@ -112,10 +112,12 @@ class ThrottlingKinesis:
     def __init__(self, refuse):
         self.refuse = refuse
         self.accepted = []
+        self.requests = []
         self.calls = 0
 
     def put_records(self, StreamName, Records):
         self.calls += 1
+        self.requests.append((StreamName, Records))
         entries = []
         for position, record in enumerate(Records):
             if self.refuse(self.calls, position):
@@ -138,6 +140,41 @@ def test_refused_records_stay_unpublished_and_go_again(app, conn, busy):
     sent = Counter(e["event_id"] for e in client.accepted)
     assert set(sent) == {r["event_id"] for r in rows(app, "select event_id from outbox")}
     assert set(sent.values()) == {1}
+
+
+def test_kinesis_is_sent_the_event_as_data_keyed_by_its_voucher_code(app, conn, busy):
+    client = ThrottlingKinesis(refuse=lambda call, position: False)
+    relay(conn, KinesisStream("voucher-events", client=client))
+    [(stream_name, records)] = client.requests
+    assert stream_name == "voucher-events" and len(records) == 14
+    outbox = rows(app, "select * from outbox order by outbox_id")
+    for record, row in zip(records, outbox):
+        assert set(record) == {"Data", "PartitionKey"} and isinstance(record["Data"], bytes)
+        assert record["PartitionKey"] == row["voucher_code"]
+        assert json.loads(record["Data"])["event_id"] == row["event_id"]
+
+
+def test_a_call_never_carries_more_than_the_500_kinesis_takes(app, conn, tmp_path):
+    """Asked for bigger batches, the relay still sends 500 at most: Kinesis rejects a
+    ``put_records`` call of more than 500 records outright."""
+    with db.write_transaction(conn):
+        for n in range(1201):
+            code = f"VCH-{n:08x}"
+            conn.execute("insert into vouchers (code, recipient_id, amount_cents, status,"
+                         " issued_at, expires_at, issued_by) values (?, 'c', 100, 'unredeemed',"
+                         " '2026-01-15T09:00:00Z', '2026-02-14T09:00:00Z', 'issuer')", (code,))
+            db.append_event(conn, code, "issued", 100, "2026-01-15T09:00:00Z",
+                            "2026-01-15T09:00:00Z", "2026-02-14T09:00:00Z")
+    folder = FolderStream(tmp_path / "stream")
+    sizes = []
+
+    class Counting:
+        def put_records(self, records):
+            sizes.append(len(records))
+            return folder.put_records(records)
+
+    result = relay(conn, Counting(), batch_size=5000)
+    assert sizes == [500, 500, 201] and result.published == 1201
 
 
 def test_a_stream_that_keeps_refusing_is_given_up_on_with_nothing_marked(app, conn, busy):

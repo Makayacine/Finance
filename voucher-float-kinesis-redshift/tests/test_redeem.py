@@ -8,6 +8,7 @@ voucher up outside the write lock, check its status in Python, then update by co
 passes every other test in this file and fails both of these.
 """
 
+import sqlite3
 import threading
 from collections import Counter
 from datetime import timedelta
@@ -63,6 +64,27 @@ def test_a_voucher_is_unredeemable_from_its_expiry_second_before_any_sweep(app, 
     assert redeem(client, tokens["merchant"], late).status_code == 409
     assert rows(app, "select status from vouchers where code = ?", late) == \
         [{"status": "unredeemed"}]  # lapsed, not yet swept
+
+
+def test_a_failed_outbox_write_takes_the_redemption_with_it(app, client, tokens, clock):
+    code = issued(client, tokens)
+    clock.advance(days=2)
+    conn = sqlite3.connect(app.config["DB_PATH"])
+    conn.execute("create trigger outbox_down before insert on outbox"
+                 " when new.event_type = 'redeemed'"
+                 " begin select raise(abort, 'outbox unavailable'); end")
+    conn.commit()
+    failed = redeem(client, tokens["merchant"], code)
+    assert failed.status_code == 500 and body(failed) == {"error": "internal error"}
+    assert rows(app, "select status, redeemed_at, redeemed_by from vouchers") == \
+        [{"status": "unredeemed", "redeemed_at": None, "redeemed_by": None}]
+    assert [r["event_type"] for r in rows(app, "select event_type from outbox")] == ["issued"]
+    conn.execute("drop trigger outbox_down")
+    conn.commit()
+    conn.close()
+    assert redeem(client, tokens["merchant"], code).status_code == 200
+    assert [r["event_type"] for r in rows(app, "select event_type from outbox"
+                                               " order by outbox_id")] == ["issued", "redeemed"]
 
 
 def race(app, code, token, tills):

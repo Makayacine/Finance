@@ -82,6 +82,11 @@ def test_days_are_whole_days_rounded_down():
     assert json.loads(transform(same_day))["days_to_redeem"] == 0
 
 
+def test_a_redemption_in_the_second_of_issue_is_day_0():
+    row = json.loads(transform(event(event_type="redeemed", occurred_at="2026-10-05T09:14:22Z")))
+    assert (row["days_since_issue"], row["days_to_redeem"]) == (0, 0)
+
+
 def test_one_record_too_deep_to_parse_fails_alone():
     deep = base64.b64encode(b"[" * 100_000).decode()
     good = base64.b64encode(event()).decode()
@@ -109,12 +114,16 @@ def test_one_record_too_deep_to_parse_fails_alone():
     event(event_type="expired", occurred_at="2026-11-03T09:14:22Z"),  # expired before expiry
     event(event_type="redeemed", occurred_at="2026-10-05T09:14:21Z"),  # redeemed before issue
     event(expires_at="2026-10-05T09:14:22Z"),                         # expires at issue
+    event(occurred_at="2026-10-05T09:14:21Z"),                         # issued before issue
+    event(event_type="expired", occurred_at="2026-11-04T09:14:23Z"),  # expired after expiry
+    event(event_type="redeemed", occurred_at="2026-11-04T09:14:22Z"),  # redeemed at expiry
     b'{"event_id": NaN}',
     b"\xff\xfe not utf-8",
     b"[]",
 ], ids=["bool", "zero", "negative", "past-int64", "string-amount", "uppercase-uuid", "bad-uuid",
         "uppercase-code", "foreign-code", "list-type", "space-stamp", "feb-30", "issue-drift",
-        "early-expiry", "redeemed-before-issue", "zero-term", "nan", "not-utf8", "array"])
+        "early-expiry", "redeemed-before-issue", "zero-term", "backdated-issue", "late-expiry",
+        "redeemed-at-expiry", "nan", "not-utf8", "array"])
 def test_malformed_events_are_refused(payload):
     with pytest.raises(Malformed):
         transform(payload)
