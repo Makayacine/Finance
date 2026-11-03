@@ -174,14 +174,15 @@ def merge_scores(spark, bucket, live, trained, scored_at=None):
     """
     obs = panel.observation_date(int(live.observation_year.iloc[0]))
     scored_at = scored_at or datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
-    out = live.assign(observation_date=obs, model_trained=f"{trained[0]}-{trained[1]}",
-                      scored_at=scored_at)
-    out = out[SCORED_COLUMNS].copy()
+    out = live.assign(observation_date=obs, model_trained=f"{trained[0]}-{trained[1]}")
+    out = out[SCORED_COLUMNS[:-1]].copy()
     out["fiscal_year"] = out.fiscal_year.astype("int64")
     out["statement_id"] = out.statement_id.astype("int64")
+    # scored_at goes in as text, which Spark reads in the session's UTC. A naive pandas timestamp
+    # would be read without Arrow in the machine's own zone, and stored off by its UTC offset.
     frame = (spark.createDataFrame(out)
              .withColumn("observation_date", F.col("observation_date").cast("date"))
-             .withColumn("scored_at", F.col("scored_at").cast("timestamp")))
+             .withColumn("scored_at", F.lit(scored_at.isoformat(sep=" ")).cast("timestamp")))
     note = json.dumps({"batch_date": obs.isoformat(), "rows": len(out)})
     return lh.merge_batch(spark, lh.table_path(bucket, "scored_companies"), frame,
                           ["regcode", "observation_date"], ["scored_at"], SCORE_VALUES, note)
