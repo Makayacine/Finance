@@ -1,7 +1,9 @@
 """South African government bonds: the JSE's yield-to-price formula, and FIA bonds from it.
 
-South African bonds trade on yield and settle on price. The JSE's Bond Pricing Formula turns one
-into the other:
+South African bonds trade on yield and settle on price. The JSE's bond pricing formula turns one
+into the other, as the Bond Exchange of South Africa set it out in "Bond Pricing Formula -
+Specifications", version 2, 24 August 2005, which the JSE publishes at
+https://jse.co.za/sites/default/files/media/documents/2019-04/BondPricingFormula-Final.pdf:
 
 - coupons are semiannual, on two fixed day-and-month dates (28/02 and 31/08 for R2048, leap
   year or not), and the last one falls on the redemption date;
@@ -13,21 +15,27 @@ into the other:
 - the all-in price discounts at ``f = 1 / (1 + y/200)``: the next coupon when cum, then ``N``
   more half-years of coupons and the redemption, all brought back over the broken period
   ``(NCD - settlement) / (NCD - LCD)`` as ``f`` to that power;
-- the all-in price and the accrued interest are rounded to five decimals, and the clean price is
-  the difference.
+- rounding goes in the specification's order: the accrued interest is rounded to five decimals,
+  the clean price is the unrounded all-in price less the unrounded accrued, rounded to five, and
+  the all-in price is the rounded clean price plus the rounded accrued. Rounding the all-in price
+  first and taking the difference moves both by 0.00001 on about a quarter of dates.
 
 Inside a bond's last coupon period the formula changes to simple interest. No auction since 2010
 settled there (the shortest bond auctioned had 2.82 years left), so ``price`` refuses that case
 rather than carry a branch no auction reaches.
 
-The check is the Treasury's own: its debt schedule gives each bond's initial issue price, and the
-first auction's clearing yield, priced here for the issue's settlement date, reproduces it to
-within 0.001 for 11 of the 12 bonds first sold at an auction since 2010 whose yield passes its
-checks, and R2033's to 0.005 (``tests/test_sa_pricing.py`` holds eight). The Treasury publishes some issue prices
-clean (R213, R2030) and some all-in (R2032, R2044), and each matches its own kind.
+Two checks hold the code to the formula. The specification's own worked example, R186 at 7.5% for
+settlement on 26 August 2005, comes out as it prints it: broken period 0.639344262295082, all-in
+133.54709, accrued 1.89863, clean 131.64846. And the Treasury's debt schedule gives each bond's
+initial issue price: the first auction's clearing yield, priced here for the issue's settlement
+date, reproduces it to within 0.001 for 11 of the 12 bonds first sold at an auction since 2010
+whose yield passes its checks, and R2033's to 0.005. ``tests/test_sa_pricing.py`` holds the
+example and eight of the issue prices. The Treasury publishes some issue prices clean (R213,
+R2030) and some all-in (R2032, R2044), and each matches its own kind.
 
-A three-legged bond (R186, R2044 and R2048 before they were split) is priced on its middle leg,
-the convention the Treasury describes, so here it is a bullet to that date.
+A bond with several redemption dates (R186, R2044 and R2048 before they were split) is priced to
+its middle one, as the specification and the Treasury both set out, so here it is a bullet to that
+date.
 
 ``to_relative_bond`` gives FIA the same cash flows, each payment's time its actual days from
 settlement over 365, priced at the all-in price, so FIA's bootstrap and risk run on it unchanged.
@@ -111,10 +119,13 @@ def price(bond: Bond, settle: dt.date, yield_pct: float, rounded: bool = True) -
     all_in = f**bp * ((half if cum else 0.0) + half * annuity + FACE * f**n)
     days = (settle - lcd).days if cum else (settle - ncd).days
     accrued = days * bond.coupon / YEAR_DAYS
-    if rounded:
-        all_in, accrued = round(all_in, 5), round(accrued, 5)
-    clean = round(all_in - accrued, 5) if rounded else all_in - accrued
-    return Price(settle, ncd, lcd, cum, n, bp, all_in, accrued, clean)
+    if not rounded:
+        return Price(settle, ncd, lcd, cum, n, bp, all_in, accrued, all_in - accrued)
+    # The specification's order: the accrued interest and the clean price, the latter from the two
+    # unrounded figures, are rounded to five decimals; the all-in price is their sum.
+    accrued_5 = round(accrued, 5)
+    clean_5 = round(all_in - accrued, 5)
+    return Price(settle, ncd, lcd, cum, n, bp, round(clean_5 + accrued_5, 5), accrued_5, clean_5)
 
 
 def dv01(bond: Bond, settle: dt.date, yield_pct: float) -> float:

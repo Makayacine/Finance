@@ -397,7 +397,18 @@ bond is flagged; its issue price below says the redemption date is the right one
 
 ### The JSE formula, against the Treasury's issue prices
 
-There is no free South African price to test a yield-to-price formula against: JSE mark-to-market
+`bond_analytics/jse.py` is the formula as the Bond Exchange of South Africa specified it in
+[Bond Pricing Formula - Specifications](https://jse.co.za/sites/default/files/media/documents/2019-04/BondPricingFormula-Final.pdf),
+version 2, 24 August 2005, which the JSE publishes: cum or ex by the books-closed date, the broken
+period over the coupon period, accrued interest actual/365, a bond with several redemption dates
+priced to its middle one, and the specification's order of rounding, in which the clean price is
+rounded from the unrounded figures and the all-in price is the rounded clean price plus the rounded
+accrued. Rounding the all-in price first instead moves both prices by 0.00001 for 569 of the 2,282
+auctions priced here. The code reproduces the specification's worked example, R186 at 7.5% for
+settlement on 26 August 2005, to every figure it prints: broken period 0.639344262295082, all-in
+133.54709, accrued 1.89863, clean 131.64846.
+
+Beyond that example there is no free South African price to test it against: JSE mark-to-market
 data carries no redistribution licence. The debt schedule has one price per bond, though, its
 initial issue price, and for a bond first sold at auction that is the first clearing yield on the
 issue date. Priced with `jse.price`:
@@ -415,7 +426,7 @@ issue date. Priced with `jse.price`:
 | R2040 | 2015-09-11 | 9.130 | 99.747 | **99.74710** | 98.71148 | +0.00010 |
 | R2033 | 2024-09-13 | 9.970 | 104.700 | **104.69510** | 100.14715 | -0.00490 |
 | R2038 | 2024-09-13 | 10.905 | 104.710 | **104.71031** | 99.76442 | +0.00031 |
-| R2039 | 2025-10-03 | 9.905 | 99.778 | 99.85878 | **99.77762** | -0.00038 |
+| R2039 | 2025-10-03 | 9.905 | 99.778 | 99.85877 | **99.77761** | -0.00039 |
 
 The Treasury publishes some issue prices clean and some all-in, and each matches its own kind. A
 wrong accrued would have shown in the clean ones, and a wrong discounting in all of them. R2030's
@@ -552,10 +563,10 @@ S3. `run_local.py --fetch --start <date> --end <date>` runs the fetcher against 
 it fetched the four US sources for 2 November 2026, and `fetch_all` fetched the four South African
 ones for 3 November 2026. `sa_download.py` fetched the 16 auction files and 17 debt schedules the
 same day. The engine image built from `ecs/Dockerfile` ran both markets in full with
-`--network none`: the 23 US sample dates in 56.8 seconds and the 811 South African auction dates
-in 3.2.
+`--network none`: the 23 US sample dates in 60.0 seconds and the 811 South African auction dates
+in 3.4.
 
-**155 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
+**157 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
 by hand, a coupon on the settlement date, short and long first coupons against the Treasury's rule,
 and a round trip through FIA's `YTM`. `tests/test_sources.py` (8): the FedInvest page, a holiday
 page, a page for the wrong date, a changed header, the GSW file's preamble and Nelson-Siegel years,
@@ -568,9 +579,10 @@ give known answers. `tests/test_sa_sources.py` (29): the Treasury's three sheet 
 fractions, every spelling of the coupon and redemption, each flag on the row it was found on (R2053's
 1.85, the misdated 2013 sheets, the two files that disagree, the spike against a move across the
 curve), the debt schedule's lines, R2030's cycle, a three-legged bond, and the OECD and IMF files
-with their citations. `tests/test_sa_pricing.py` (19): eight issue prices from their first auction
-yields, the books-closed date, an ex-coupon buyer's cash flows, the leap-year coupon, the refused
-last period, FIA's bootstrap repricing each auction's bonds, and the monthly check.
+with their citations. `tests/test_sa_pricing.py` (21): the specification's worked example, its
+order of rounding, eight issue prices from their first auction yields, the books-closed date, an
+ex-coupon buyer's cash flows, the leap-year coupon, the refused last period, FIA's bootstrap
+repricing each auction's bonds, and the monthly check.
 `tests/test_wiring.py` (15): every workflow's triggers, guard, permissions, actions and runtimes, the
 event pattern against a Glue event, and every Athena column against the Parquet schema.
 `lambda-functions/test_fetch.py` (19): the CSRF handshake request by request, each source's checks,
