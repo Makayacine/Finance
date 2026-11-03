@@ -167,8 +167,10 @@ ISSUE, RETRY, REDEEM, SWEEP = 0, 1, 2, 3
 def schedule(p, vouchers):
     start = from_text(p.start)
     as_of = start + timedelta(days=p.days)
-    first, last = (date.fromisoformat(d) for d in p.sweep_outage)
-    outage = {first + timedelta(days=i) for i in range((last - first).days + 1)}
+    outage = set()
+    if p.sweep_outage:
+        first, last = (date.fromisoformat(d) for d in p.sweep_outage)
+        outage = {first + timedelta(days=i) for i in range((last - first).days + 1)}
     actions = []
     for v in vouchers:
         actions.append((v.issued_at, ISSUE, v.index))
