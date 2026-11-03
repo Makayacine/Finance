@@ -1,11 +1,13 @@
 """Shared fixtures: a fresh service database per test, a settable clock, and the three logins.
 
 Every test runs the real app over a real SQLite file in a temporary folder, through Flask's test
-client: the same routes, transactions and SQL the server runs. Nothing is mocked. Where a test
-needs a failure, it makes the database fail -- a trigger that aborts an insert -- rather than
-patching the code that would see it.
+client: the same routes, transactions and SQL the server runs. Where a test needs a failure, it
+makes the database fail -- a trigger that aborts an insert -- rather than patching the code that
+would see it. The one stand-in anywhere is in ``test_relay.py``: a client that answers
+``put_records`` the way a throttled Kinesis stream does.
 """
 
+import importlib.util
 import json
 import sqlite3
 import sys
@@ -94,3 +96,13 @@ def counts(app):
 
 def body(response):
     return json.loads(response.get_data(as_text=True))
+
+
+def load_module(relative_path, name):
+    """Import a file by path. The lab names its entrypoints with hyphens -- ``outbox-relay.py`` --
+    and a hyphen is not a Python identifier, so the cost is paid here, once."""
+    spec = importlib.util.spec_from_file_location(name, PROJECT / relative_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
