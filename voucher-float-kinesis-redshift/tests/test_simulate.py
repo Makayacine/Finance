@@ -16,9 +16,8 @@ from datetime import date
 
 import pytest
 
-from conftest import load_module
+from conftest import sim
 
-sim = load_module("local-development/simulate.py", "simulate")
 SMALL = sim.Parameters(scale=0.05, days=70, sweep_outage=("2024-12-09", "2024-12-15"))
 
 

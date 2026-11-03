@@ -17,10 +17,9 @@ from collections import Counter, defaultdict
 
 import pytest
 
-from conftest import issue, load_module, redeem, rows
+from conftest import issue, redeem, relay_module, rows
 from voucher_service import db
 
-relay_module = load_module("kinesis-producer/outbox-relay.py", "outbox_relay")
 FolderStream, KinesisStream, relay = (relay_module.FolderStream, relay_module.KinesisStream,
                                       relay_module.relay)
 
