@@ -82,6 +82,16 @@ def test_days_are_whole_days_rounded_down():
     assert json.loads(transform(same_day))["days_to_redeem"] == 0
 
 
+def test_one_record_too_deep_to_parse_fails_alone():
+    deep = base64.b64encode(b"[" * 100_000).decode()
+    good = base64.b64encode(event()).decode()
+    answer = lambda_handler({"records": [{"recordId": "deep", "data": deep},
+                                         {"recordId": "good", "data": good}]}, None)
+    assert [(r["recordId"], r["result"]) for r in answer["records"]] == \
+        [("deep", "ProcessingFailed"), ("good", "Ok")]
+    assert answer["records"][0]["data"] == deep
+
+
 @pytest.mark.parametrize("payload", [
     event(amount_cents=True),
     event(amount_cents=0),

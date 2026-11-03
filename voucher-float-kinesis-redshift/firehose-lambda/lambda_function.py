@@ -70,7 +70,9 @@ def transform(payload):
     """One stream record's bytes -> one output line, or ``Malformed``."""
     try:
         event = json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
+        # RecursionError: a record nested deeper than the parser's stack, "[" * 100000. It is
+        # this record's fault, and must not fail the batch it came in.
         raise Malformed("not JSON") from exc
     if not isinstance(event, dict) or set(event) != FIELDS:
         raise Malformed("fields")

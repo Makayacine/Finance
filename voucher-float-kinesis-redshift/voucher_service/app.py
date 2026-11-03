@@ -110,8 +110,17 @@ def now():
     return current_app.config["CLOCK"]().replace(microsecond=0)
 
 
+def json_body():
+    """The request's JSON, or None if it is not JSON. A body nested deeper than the parser's
+    recursion limit -- sixteen kilobytes of ``[`` is enough -- is not JSON either."""
+    try:
+        return request.get_json(silent=True)
+    except RecursionError:
+        return None
+
+
 def login():
-    body = request.get_json(silent=True)
+    body = json_body()
     if not isinstance(body, dict) or set(body) != {"username", "password"}:
         return error(400)
     username, password = body["username"], body["password"]
@@ -144,7 +153,7 @@ def request_hash(body):
 @auth.require_role("issuer")
 def issue_voucher():
     key = request.headers.get("Idempotency-Key")
-    body = request.get_json(silent=True)
+    body = json_body()
     if key is None or not config.IDEMPOTENCY_KEY_PATTERN.fullmatch(key) \
             or not valid_issue_body(body):
         return error(400)
@@ -218,8 +227,7 @@ def redeem_voucher(code):
 
 @auth.require_role("finance")
 def graphql():
-    status, body = schema.execute(request.get_json(silent=True), get_db(),
-                                  current_app.config["WAREHOUSE"])
+    status, body = schema.execute(json_body(), get_db(), current_app.config["WAREHOUSE"])
     response = jsonify(body)
     response.status_code = status
     return response
