@@ -135,6 +135,9 @@ class CashFlowMatrix:
         return (pv * self.times).sum(axis=1) / pv.sum(axis=1)
 
 
+PARAM_NAMES = ("beta0", "beta1", "beta2", "beta3", "tau1", "tau2")
+
+
 @dataclass
 class SvenssonFit:
     params: tuple
@@ -142,6 +145,7 @@ class SvenssonFit:
     n_bonds: int
     starts: int
     cost: float
+    at_bound: tuple = ()  # the parameters that ended on a bound of the search
 
 
 LOWER = np.array([0.0, -30.0, -60.0, -60.0, 0.05, 0.05])
@@ -181,4 +185,13 @@ def fit(bonds: List["FIA.relative_bond"], start: Optional[Sequence[float]] = Non
             best = res
     resid = residuals(best.x)
     rmse_bp = float(np.sqrt(np.mean(resid**2)) * 100.0)
-    return SvenssonFit(tuple(float(v) for v in best.x), rmse_bp, len(bonds), len(starts), float(best.cost))
+    return SvenssonFit(
+        tuple(float(v) for v in best.x), rmse_bp, len(bonds), len(starts), float(best.cost), params_at_bound(best.x)
+    )
+
+
+def params_at_bound(x, tol: float = 1e-6) -> tuple:
+    """Names of the parameters within ``tol`` of the search bounds: a constrained fit, said aloud."""
+    x = np.asarray(x, dtype=float)
+    hit = (np.abs(x - LOWER) <= tol * np.maximum(1.0, np.abs(LOWER))) | (np.abs(x - UPPER) <= tol * np.maximum(1.0, np.abs(UPPER)))
+    return tuple(name for name, h in zip(PARAM_NAMES, hit) if h)
