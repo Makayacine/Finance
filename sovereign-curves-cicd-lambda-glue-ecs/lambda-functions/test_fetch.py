@@ -19,6 +19,13 @@ DAY = dt.date(2026, 10, 30)
 FORM = b'<form><input type="hidden" name="_csrf" value="tok-123" /></form>'
 PAGE = b"<h2>Prices For: October 30, 2026</h2><table class=\"data1\"></table>"
 GSW = b'"Note"\n\nDate,BETA0,BETA1\n2026-10-23,1,2\n'
+XLSX = b"PK\x03\x04 a workbook"
+PDF = b"%PDF-1.4 a schedule"
+OECD = b"STRUCTURE,REF_AREA,MEASURE,TIME_PERIOD,OBS_VALUE\nDATAFLOW,ZAF,IRLT,2026-09,8.947\n"
+IMF = b"observation_date,INTGSBZAM193N\n2026-09-01,8.97\n"
+LISTING = (b'<a href="../">up</a><a href="Schedule of domestic government bonds as at 30 September 2026.pdf">x</a>'
+           b'<a href="Schedule of domestic government bonds as at 31 Janaury 2023.pdf">x</a>'
+           b'<a href="Schedule of domestic government bonds as at 31 October 2026.pdf">x</a>')
 
 
 class Response:
@@ -102,6 +109,10 @@ def scripted_sources(fail=()):
         "gsw": make("gsw", GSW),
         "auctions": make("auctions", b'{"data": []}'),
         "nyfed": make("nyfed", b'{"refRates": []}'),
+        "nt_auctions": make("nt_auctions", XLSX),
+        "nt_schedule": make("nt_schedule", PDF),
+        "oecd": make("oecd", OECD),
+        "imf": make("imf", IMF),
     }
 
 
@@ -116,7 +127,11 @@ class IsolationTest(unittest.TestCase):
         self.assertEqual(sorted(written), [
             "raw/auctions/date=2026-10-30/auctions.json",
             "raw/fedinvest/date=2026-10-30/prices.html",
+            "raw/imf/date=2026-10-30/INTGSBZAM193N.csv",
+            "raw/nt_auctions/date=2026-10-30/fixed-rate-bonds-2026-27.xlsx",
+            "raw/nt_schedule/date=2026-10-30/schedule.pdf",
             "raw/nyfed/date=2026-10-30/rates.json",
+            "raw/oecd/date=2026-10-30/irlt.csv",
         ])
 
     def test_a_failed_write_is_isolated_too(self):
@@ -134,6 +149,57 @@ class IsolationTest(unittest.TestCase):
         self.assertEqual(pauses, [2.0, 2.0])
         self.assertEqual(list(out), days)
         self.assertEqual(list(out[DAY]), ["fedinvest"])
+
+
+class SouthAfricaTest(unittest.TestCase):
+    def test_the_auction_file_is_the_fiscal_years(self):
+        self.assertEqual(fetch.nt_fiscal_year(dt.date(2027, 3, 31)), "2026-27")
+        self.assertEqual(fetch.nt_auctions_name(DAY), "fixed-rate-bonds-2026-27.xlsx")
+        self.assertEqual(fetch.nt_auctions_name(dt.date(2019, 5, 1)), "fixed-rate-bonds-2019-20.xls")
+        opener = ScriptedOpener(XLSX)
+        self.assertEqual(fetch.fetch_nt_auctions(DAY, opener), XLSX)
+        self.assertEqual(opener.requests[0], fetch.NT_AUCTIONS_URL + "Fixed-rate%20bond%20auctions%20-%202026-27.xlsx")
+
+    def test_a_page_in_place_of_a_spreadsheet_is_refused(self):
+        with self.assertRaises(fetch.FetchError):
+            fetch.fetch_nt_auctions(DAY, ScriptedOpener(b"<html>not found</html>"))
+
+    def test_the_schedule_is_the_newest_dated_on_or_before_the_day(self):
+        listed = fetch.nt_schedules_listed(ScriptedOpener(LISTING))
+        self.assertEqual(sorted(listed), [dt.date(2023, 1, 31), dt.date(2026, 9, 30), dt.date(2026, 10, 31)])
+        opener = ScriptedOpener(LISTING, PDF)
+        self.assertEqual(fetch.fetch_nt_schedule(DAY, opener), PDF)
+        self.assertTrue(opener.requests[1].endswith("as%20at%2030%20September%202026.pdf"))
+        with self.assertRaises(fetch.FetchError):
+            fetch.fetch_nt_schedule(DAY, ScriptedOpener(LISTING, b"<html></html>"))
+
+    def test_a_reset_connection_is_tried_again_but_a_404_is_not(self):
+        reset = fetch.urllib.error.URLError(ConnectionResetError(104, "Connection reset by peer"))
+        waits = []
+        opener = ScriptedOpener(reset, reset, XLSX)
+        self.assertEqual(fetch._nt_get("u", opener, sleep=waits.append), XLSX)
+        self.assertEqual(waits, [2.0, 4.0])
+        missing = fetch.urllib.error.HTTPError("u", 404, "Not Found", {}, None)
+        with self.assertRaises(fetch.urllib.error.HTTPError):
+            fetch._nt_get("u", ScriptedOpener(missing, XLSX), sleep=waits.append)
+        with self.assertRaises(fetch.urllib.error.URLError):
+            fetch._nt_get("u", ScriptedOpener(reset, reset, reset), sleep=waits.append)
+
+    def test_the_history_takes_every_fiscal_years_file_with_a_pause_between(self):
+        listing = (b'<a href="Fixed-rate bond auctions - 2010-13.xls">a</a><a href="Fixed-rate bond auctions - 2025-26.xlsx">b</a>'
+                   b'<a href="../">up</a>')
+        pauses = []
+        out = fetch.fetch_nt_auction_history(ScriptedOpener(listing, XLSX, XLSX), pause_seconds=2.0, sleep=pauses.append)
+        self.assertEqual(sorted(out), ["fixed-rate-bonds-2010-13.xls", "fixed-rate-bonds-2025-26.xlsx"])
+        self.assertEqual(pauses, [2.0])
+
+    def test_the_two_series_are_checked_for_their_own_headers(self):
+        self.assertEqual(fetch.fetch_oecd(DAY, ScriptedOpener(OECD)), OECD)
+        self.assertEqual(fetch.fetch_imf(DAY, ScriptedOpener(IMF)), IMF)
+        with self.assertRaises(fetch.FetchError):
+            fetch.fetch_oecd(DAY, ScriptedOpener(b"<html>"))
+        with self.assertRaises(fetch.FetchError):
+            fetch.fetch_imf(DAY, ScriptedOpener(b"DATE,X\n"))
 
 
 @mock_aws
@@ -158,17 +224,17 @@ class HandlerTest(unittest.TestCase):
     def test_writes_each_source_and_starts_the_load_for_that_date(self):
         result = self.run_handler(fail=("nyfed",))
         keys = sorted(o["Key"] for o in self.s3.list_objects_v2(Bucket="curves-raw")["Contents"])
-        self.assertEqual(len(keys), 3)
+        self.assertEqual(len(keys), 7)
         self.assertEqual(self.s3.get_object(Bucket="curves-raw", Key=keys[1])["Body"].read(), PAGE)
         run = self.glue.get_job_run(JobName="curves-load", RunId=result["glue_job_run_id"])["JobRun"]
         self.assertEqual(run["Arguments"]["--date_filter"], "2026-10-30")
         self.assertEqual(run["Arguments"]["--load_type"], "incremental")
-        self.assertEqual(run["Arguments"]["--sources"], "fedinvest,gsw,auctions")
+        self.assertEqual(run["Arguments"]["--sources"], "fedinvest,gsw,auctions,nt_auctions,nt_schedule,oecd,imf")
         self.assertTrue(result["sources"]["nyfed"].startswith("failed"))
 
     def test_nothing_arrived_means_no_load_and_a_failed_invocation(self):
         with self.assertRaises(fetch.FetchError):
-            self.run_handler(fail=("fedinvest", "gsw", "auctions", "nyfed"))
+            self.run_handler(fail=tuple(fetch.SOURCES))
         self.assertEqual(self.glue.get_job_runs(JobName="curves-load")["JobRuns"], [])
 
     def test_default_date_is_today_in_utc(self):

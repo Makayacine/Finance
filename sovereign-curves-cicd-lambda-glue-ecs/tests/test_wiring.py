@@ -73,8 +73,10 @@ def test_runtimes():
     assert '"MaxCapacity": 0.0625' in text and '"library-set": "analytics"' in text
     pins = dict(line.split("==") for line in (PROJECT / "glue-pythonshell" / "requirements.txt").read_text().splitlines()
                 if "==" in line)
-    assert pins == {"pandas": "1.4.2", "numpy": "1.22.3", "boto3": "1.21.21", "pyarrow": "7.0.0"}
-    assert f'"--additional-python-modules": "pyarrow=={pins["pyarrow"]}"' in text
+    assert pins == {"pandas": "1.4.2", "numpy": "1.22.3", "boto3": "1.21.21", "pyarrow": "7.0.0",
+                    "openpyxl": "3.1.5", "xlrd": "2.0.1", "pypdf": "5.9.0"}
+    added = ",".join(f"{m}=={pins[m]}" for m in ("pyarrow", "openpyxl", "xlrd", "pypdf"))
+    assert f'"--additional-python-modules": "{added}"' in text
 
 
 def test_ecs_registers_a_task_definition_and_retargets_the_rule_without_a_service():

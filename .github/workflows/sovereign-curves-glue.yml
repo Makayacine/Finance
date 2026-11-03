@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v7
       - run: pip install -r glue-pythonshell/requirements.txt
       - name: The loader and the modules it imports, on the analytics library set's versions
-        run: python -m pytest glue-pythonshell tests/test_dates.py tests/test_sources.py -v
+        run: python -m pytest glue-pythonshell tests/test_dates.py tests/test_sources.py tests/test_sa_sources.py -v
 
   deploy:
     needs: test
@@ -68,7 +68,7 @@ jobs:
             "MaxRetries": 0,
             "DefaultArguments": {
               "library-set": "analytics",
-              "--additional-python-modules": "pyarrow==7.0.0",
+              "--additional-python-modules": "pyarrow==7.0.0,openpyxl==3.1.5,xlrd==2.0.1,pypdf==5.9.0",
               "--extra-py-files": "$SCRIPTS/bond_analytics-1.0.0-py3-none-any.whl",
               "--raw_bucket": "${{ vars.SOVEREIGN_CURVES_RAW_BUCKET }}",
               "--lake_bucket": "${{ vars.SOVEREIGN_CURVES_LAKE_BUCKET }}",
