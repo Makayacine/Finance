@@ -12,7 +12,7 @@ A curated collection of quantitative finance analyses, featuring exploratory dat
 * **`sba-credit-risk-ecs-dynamo`**: PD, gross charge-off severity, expected loss, IFRS 9 stage and IRB capital for the 281,077 open loans among 1,639,728 SBA 7(a) small-business loans, with FDIC bank-failure PD and a dollar EL backtest beside it, run as two ECS Fargate containers gated by Step Functions into DynamoDB.
 * **`latvia-company-credit-glue-delta`**: A 12-month PD for 115,088 Latvian companies from the annual accounts they file and the insolvency register, fitted out of time on 1,607,967 scored company-years since 2009, with the Register's files replayed as 73 quarterly batches into Delta Lake by Glue 5.0 MERGE jobs and the training rows read back from the tables by time travel.
 * **`voucher-float-kinesis-redshift`**: A gift-voucher service's issue, redemption and expiry events carried from a transactional outbox through Kinesis, a Firehose transform Lambda and Redshift to the daily outstanding liability, IFRS 15 breakage by issue month and a redemption life table, on two simulated years whose true breakage rate the young-cohort estimate recovers without bias.
-* **`sovereign-curves-cicd-lambda-glue-ecs`**: US Treasury yield curves and interest-rate risk from the Treasury's own FedInvest prices -- FIA's exact bootstrap, a Svensson fit checked against the Fed Board's GSW curve, DV01 and key-rate DV01s for every bill, note and bond -- fetched by a Lambda, loaded by a Glue Python Shell job and computed in an ECS task, each with its own GitHub Actions workflow that tests it and then deploys it.
+* **`sovereign-curves-cicd-lambda-glue-ecs`**: US Treasury yield curves and interest-rate risk from the Treasury's own FedInvest prices -- FIA's exact bootstrap, a Svensson fit checked against the Fed Board's GSW curve, DV01 and key-rate DV01s for every bill, note and bond -- and South Africa through the same code, a curve per National Treasury bond auction since 2010 priced with the JSE formula, fetched by a Lambda, loaded by a Glue Python Shell job and computed in an ECS task, each with its own GitHub Actions workflow that tests it and then deploys it.
 
 *(More projects coming soon.)*
 
@@ -405,14 +405,23 @@ settlement, actual/actual accrued and dirty prices, and its bootstrap, `YTM`, `d
 ECS task, each from its own GitHub Actions workflow; here each workflow tests on every pull
 request and deploys only from `main`, through OIDC, once a repository variable holds its role.
 
+South Africa is the second market through the same three components: the Lambda also fetches the
+National Treasury's fixed-rate bond auction results and debt schedule and the OECD's and IMF's
+monthly South African bond yields; the Glue job parses and checks them; the ECS task prices each
+auction's cleared bonds with the JSE bond pricing formula and bootstraps a curve from them with
+FIA. The Treasury's licence allows copying for educational use, unmodified and acknowledged, so its
+parsed rows are committed with their source on every row and its spreadsheets are not.
+
 ```
 EventBridge  ->  Lambda: fetch       ->  S3 raw/  ->  Glue Python Shell: load  ->  S3 lake/ (Parquet)
 weekdays         FedInvest, GSW,         a file       clean -> dirty, flag,         prices, securities,
-                 auction records,        per source   watermark per source          reference curves
-                 NY Fed rates            per date                |  SUCCEEDED
-                                                                 v
-                                         ECS task: FIA bootstrap, Svensson fit, fit errors,
+                 auction records,        per source   watermark per source          reference curves,
+                 NY Fed rates;           per date                |  SUCCEEDED       sa_auctions,
+                 NT auctions and                                 v                  sa_bonds
+                 schedule, OECD, IMF     ECS task: FIA bootstrap, Svensson fit, fit errors,
                                          DV01, key-rate DV01s, carry  ->  curves, risk  ->  Athena
+                                         SA: JSE price, FIA bootstrap per auction,
+                                         10-year check  ->  sa_curves, sa_crosscheck
 ```
 
 | Check | 2008-09-15 | 2020-03-16 | 2026-10-23 |
@@ -421,6 +430,13 @@ weekdays         FedInvest, GSW,         a file       clean -> dirty, flag,     
 | price error per coupon period elapsed, against a half coupon of | 0.040 / 2.250 | 0.068 / 1.125 | 0.027 / 1.938 |
 | our Svensson fit less GSW, 10-year zero rate | -1.0 bp | -0.5 bp | -0.6 bp |
 | the on-the-run issue's error, worst bucket | 10-year, 19.6 bp | 30-year, 16.5 bp | 30-year, 2.9 bp |
+
+| South Africa, April 2010 to September 2026 | |
+| --- | --- |
+| bond auctions parsed from the Treasury's 16 files, and kept out of the curve by a flag | 2,386 and 104 |
+| new bonds whose first auction yield, through the JSE formula, gives the schedule's issue price to within 0.001 | 11 of 12 |
+| auction curves from FIA's bootstrap, two to four bonds each in all but two | 791 |
+| 10-year par yield less the OECD's rate on bonds of 10 years and over, mean over 153 months; at 15 years | -30.6 bp; +28.1 bp |
 
 The interesting problems were about conventions the data does not state:
 
@@ -437,6 +453,13 @@ The interesting problems were about conventions the data does not state:
   32nd. A fixed tolerance against the bills flags the whole bill-coupon basis, so the loader compares
   each quote with its neighbours': 41 of 1,188 checked quotes flagged in the sample, 40 of them three
   old 30-year bonds, every price kept as quoted.
+- **South Africa's formula had only the Treasury's own prices to be tested on.** JSE prices carry no
+  redistribution licence, but the debt schedule gives each bond's issue price, clean for some and
+  all-in for others, and the first auction's yield reproduces whichever it is. The same match
+  showed the schedule contradicting itself on R2030's coupon dates, and which half was right.
+- **Some wrong rows pass every check a row can make on its own.** A year of auctions copied into the
+  wrong year's sheets, with yields inside their own bids, shows only as bonds sold before they
+  existed; a bond label swapped between columns only in the second file holding the same day.
 
 Full detail, the truth-check tables and the deployment steps are in the project README.
 
@@ -456,7 +479,8 @@ names exactly and pandas 3 names a text column differently from pandas 2; its ow
 its `local-development/run_local.py` runs the whole chain, service to reconciliation.
 `sovereign-curves-cicd-lambda-glue-ecs` needs Python 3.12+ and its `requirements.txt` for the whole
 local chain; its Glue loader is also tested on Python 3.9 with the Glue Python Shell `analytics`
-set's pandas 1.4.2, numpy 1.22.3 and boto3 1.21.21 and pyarrow 7.0.0, from
+set's pandas 1.4.2, numpy 1.22.3 and boto3 1.21.21, and pyarrow 7.0.0, openpyxl 3.1.5, xlrd 2.0.1
+and pypdf 5.9.0 for the Parquet files and the National Treasury's spreadsheets and PDFs, from
 `glue-pythonshell/requirements.txt`, and Docker is needed only to build the engine image.
 The Spark jobs take a `--local` flag that runs them against plain filesystem paths, so every
 pipeline can be exercised end to end without an AWS account.

@@ -878,8 +878,8 @@ TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
 **After Execution** (`[pytest glue-pythonshell on 3.9.25]` | `[Glue Pins]`):
 
 ```text
-pandas 1.4.2 | numpy 1.22.3 | boto3 1.21.21 | pyarrow 7.0.0
-13 passed
+pandas 1.4.2 | numpy 1.22.3 | boto3 1.21.21 | pyarrow 7.0.0 | openpyxl 3.1.5 | xlrd 2.0.1 | pypdf 5.9.0
+16 passed
 job: pythonshell 3.9, 0.0625 DPU, library-set analytics
 
 ```
@@ -892,7 +892,7 @@ job: pythonshell 3.9, 0.0625 DPU, library-set analytics
       - uses: actions/checkout@v7
       - run: pip install -r glue-pythonshell/requirements.txt
       - name: The loader and the modules it imports, on the analytics library set's versions
-        run: python -m pytest glue-pythonshell tests/test_dates.py tests/test_sources.py -v
+        run: python -m pytest glue-pythonshell tests/test_dates.py tests/test_sources.py tests/test_sa_sources.py -v
 
 ```
 
@@ -906,7 +906,7 @@ job: pythonshell 3.9, 0.0625 DPU, library-set analytics
 * **Core Execution Mechanic (Dummy Translation):** You write in the dialect the old machine speaks, and test on that machine.
 
 
-* **Boundary / Memory Constraint:** Python Shell takes 0.0625 or 1 DPU, ignores `--glue-version`, and adds pyarrow and the package only as pip pins and wheels.
+* **Boundary / Memory Constraint:** Python Shell takes 0.0625 or 1 DPU, ignores `--glue-version`, and adds pyarrow, the spreadsheet and PDF readers and the package only as pip pins and wheels.
 
 
 * **Boundary / Memory Constraint (Dummy Translation):** The small machine comes with a fixed toolbox; you bring extra tools in its own format.
