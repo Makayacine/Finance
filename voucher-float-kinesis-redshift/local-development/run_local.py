@@ -45,17 +45,18 @@ def run(scale=1.0):
     if LOCAL.exists():
         shutil.rmtree(LOCAL)
     LOCAL.mkdir()
-    truth_path = simulate.TRUTH if scale == 1.0 else LOCAL / "simulation-truth.json"
+    params = simulate.Parameters(scale=scale)
+    service_db = LOCAL / "voucher-service.db"
     timings = {}
 
     started = time.monotonic()
-    truth = simulate.simulate(LOCAL / "voucher-service.db", simulate.Parameters(scale=scale),
-                              truth_path)
+    truth = simulate.simulate(service_db, params,
+                              simulate.default_truth_path(params, service_db))
     timings["simulate"] = time.monotonic() - started
 
     started = time.monotonic()
     relay = load_relay()
-    conn = sqlite3.connect(LOCAL / "voucher-service.db")
+    conn = sqlite3.connect(service_db)
     conn.row_factory = sqlite3.Row
     relayed = relay.relay(conn, relay.FolderStream(LOCAL / "stream" / "voucher-events"))
     conn.close()
