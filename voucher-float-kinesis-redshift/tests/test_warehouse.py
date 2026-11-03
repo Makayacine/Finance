@@ -259,3 +259,26 @@ def test_an_open_voucher_is_projected_from_its_exact_age(tmp_path):
     [cohort] = fetch(con, "select * from breakage_by_issue_month")
     assert cohort["open_cents"] == 100
     assert cohort["breakage_rate"] == pytest.approx((200 + 100 * 5 / 6) / 400)
+
+
+def test_the_control_total_is_never_stamped_earlier_than_the_service_it_read(chain, tmp_path):
+    """The service can only be read as it is now. Asked to report as of a moment before the
+    service's latest change, the warehouse refuses and keeps the as_of and total it had;
+    without an as_of, it reports as of that change."""
+    _, service_db, truth = chain
+    bucket, path = service_db.parent / "bucket", tmp_path / "w.duckdb"
+    con, _ = warehouse.build(service_db, bucket, path)
+    close = datetime.strptime(truth["as_of"], "%Y-%m-%dT%H:%M:%SZ")
+    assert con.execute("select as_of from warehouse_as_of").fetchone()[0] == close
+    before = warehouse.reconciliation(con)
+    assert before["taken_at"] == close and before["difference_cents"] == 0
+    con.close()
+
+    with pytest.raises(warehouse.ServiceMovedOn):
+        warehouse.build(service_db, bucket, path, "2024-12-20T00:00:00Z")
+    assert warehouse.main(["--service-db", str(service_db), "--bucket-dir", str(bucket),
+                           "--warehouse", str(path), "--as-of", "2024-12-20T00:00:00Z"]) == 2
+    con = warehouse.connect(path)
+    assert con.execute("select as_of from warehouse_as_of").fetchall() == [(close,)]
+    assert warehouse.reconciliation(con) == before
+    con.close()
