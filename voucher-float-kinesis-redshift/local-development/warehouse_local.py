@@ -13,9 +13,13 @@ bookkeeping Firehose does for itself on AWS. Copying an object twice would not c
 figure -- ``voucher_event`` drops copies on ``event_id`` -- but ``duplicates_dropped`` in the
 reconciliation would then count the loader's mistakes along with the relay's retries.
 
-The control total is read straight from the service database, as one query, at the moment the
-warehouse reports as of. The reconciliation is only meaningful when both sides describe the same
-moment: the outbox drained, the stream delivered and the views reading every event up to as_of.
+The control total is read straight from the service database, in one query with the moment the
+service last changed -- its latest issue, redemption or sweep. The service can only be read as it
+is now, so the total describes that moment, and it is stamped with the warehouse's as_of only
+when as_of is no earlier: an as_of before the service's latest change is refused, rather than
+put on a balance from later. Without ``--as-of`` the warehouse reports as of that change. Even
+then the reconciliation is only meaningful when both sides describe the same moment: the outbox
+drained, the stream delivered and the views reading every event up to as_of.
 """
 
 import argparse
@@ -88,16 +92,34 @@ def set_as_of(con, as_of):
     con.execute("insert into warehouse_as_of values (?)", [as_of])
 
 
-def take_control_total(con, service_db, taken_at):
-    """The service's own count and sum of unredeemed vouchers, as the other side of the check."""
+class ServiceMovedOn(ValueError):
+    """The service has changed since the moment the warehouse is asked to report as of."""
+
+
+def read_service(service_db):
+    """(unredeemed vouchers, their cents, the service's latest change), in one read."""
     with contextlib.closing(sqlite3.connect(service_db)) as service:
-        vouchers, cents = service.execute(
-            "select count(*), coalesce(sum(amount_cents), 0) from vouchers"
-            " where status = 'unredeemed'").fetchone()
+        vouchers, cents, latest = service.execute(
+            "select count(case when status = 'unredeemed' then 1 end),"
+            " coalesce(sum(case when status = 'unredeemed' then amount_cents end), 0),"
+            " max(max(issued_at), coalesce(max(redeemed_at), ''), coalesce(max(swept_at), ''))"
+            " from vouchers").fetchone()
+    if latest:
+        latest = datetime.strptime(latest, "%Y-%m-%dT%H:%M:%SZ")
+    return vouchers, cents, latest
+
+
+def take_control_total(con, service_db):
+    """The service's own count and sum of unredeemed vouchers, as the other side of the check,
+    stamped with the warehouse's as_of -- or ServiceMovedOn if the service has changed since."""
+    vouchers, cents, latest = read_service(service_db)
+    as_of = con.execute("select as_of from warehouse_as_of").fetchone()[0]
+    if latest and latest > as_of:
+        raise ServiceMovedOn(
+            f"the service last changed at {latest:%Y-%m-%dT%H:%M:%SZ}, after as_of"
+            f" {as_of:%Y-%m-%dT%H:%M:%SZ}: its total now is not its total then")
     con.execute("delete from service_control_total")
-    con.execute("insert into service_control_total values (?, ?, ?)",
-                [con.execute("select as_of from warehouse_as_of").fetchone()[0]
-                 if taken_at is None else taken_at, vouchers, cents])
+    con.execute("insert into service_control_total values (?, ?, ?)", [as_of, vouchers, cents])
 
 
 def reconciliation(con):
@@ -112,9 +134,17 @@ def build(service_db=LOCAL / "voucher-service.db", bucket_dir=LOCAL / "bucket",
     create(con)
     landed = copy_new(con, bucket_dir)
     if as_of is None:
-        as_of = con.execute("select max(occurred_at) from voucher_events_raw").fetchone()[0]
-    set_as_of(con, as_of)
-    take_control_total(con, service_db, None)
+        as_of = read_service(service_db)[2] or \
+            con.execute("select max(occurred_at) from voucher_events_raw").fetchone()[0]
+    con.execute("begin")  # as_of and the total it is checked against move together, or not at all
+    try:
+        set_as_of(con, as_of)
+        take_control_total(con, service_db)
+    except BaseException:
+        con.execute("rollback")
+        con.close()
+        raise
+    con.execute("commit")
     return con, landed
 
 
@@ -123,9 +153,14 @@ def main(argv=None):
     parser.add_argument("--service-db", default=str(LOCAL / "voucher-service.db"))
     parser.add_argument("--bucket-dir", default=str(LOCAL / "bucket"))
     parser.add_argument("--warehouse", default=str(LOCAL / "warehouse.duckdb"))
-    parser.add_argument("--as-of", help="UTC, as 2026-11-02T00:00:00Z; default: the last event")
+    parser.add_argument("--as-of", help="UTC, as 2026-11-02T00:00:00Z, no earlier than the"
+                        " service's latest change; default: that change")
     args = parser.parse_args(argv)
-    con, landed = build(args.service_db, args.bucket_dir, args.warehouse, args.as_of)
+    try:
+        con, landed = build(args.service_db, args.bucket_dir, args.warehouse, args.as_of)
+    except ServiceMovedOn as refused:
+        print(f"refused: {refused}", file=sys.stderr)
+        return 2
     check = reconciliation(con)
     con.close()
     print(f"copied {landed:,} row(s); reconciliation: {check}")
