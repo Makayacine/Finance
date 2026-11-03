@@ -34,6 +34,7 @@ def test_redeem_marks_the_voucher_and_writes_one_outbox_event(app, client, token
     assert [e["event_type"] for e in events] == ["issued", "redeemed"]
     assert events[1]["occurred_at"] == "2026-01-18T11:00:00Z"
     assert events[1]["amount_cents"] == 4200
+    assert events[1]["issued_at"] == events[0]["issued_at"] == "2026-01-15T09:00:00Z"
     assert events[1]["expires_at"] == events[0]["expires_at"]
 
 

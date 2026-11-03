@@ -33,9 +33,9 @@ def sweep(conn, now):
         rows = conn.execute(
             "update vouchers set status = 'expired', swept_at = ?"
             " where status = 'unredeemed' and expires_at <= ?"
-            " returning code, amount_cents, expires_at", (cutoff, cutoff)).fetchall()
+            " returning code, amount_cents, issued_at, expires_at", (cutoff, cutoff)).fetchall()
         # RETURNING has no defined order; the outbox's should not depend on the query plan.
         for row in sorted(rows, key=lambda r: (r["expires_at"], r["code"])):
             db.append_event(conn, row["code"], "expired", row["amount_cents"],
-                            row["expires_at"], row["expires_at"])
+                            row["expires_at"], row["issued_at"], row["expires_at"])
     return len(rows)

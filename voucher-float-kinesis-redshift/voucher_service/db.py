@@ -58,6 +58,7 @@ create table if not exists outbox (
     event_type     text not null check (event_type in ('issued', 'redeemed', 'expired')),
     amount_cents   integer not null,
     occurred_at    text not null,
+    issued_at      text not null,
     expires_at     text not null,
     published_at   text
 );
@@ -102,12 +103,18 @@ def write_transaction(conn):
     conn.execute("commit")
 
 
-def append_event(conn, voucher_code, event_type, amount_cents, occurred_at, expires_at):
-    """Write one outbox row. Call it inside the transaction that made the change it records."""
+def append_event(conn, voucher_code, event_type, amount_cents, occurred_at, issued_at,
+                 expires_at):
+    """Write one outbox row. Call it inside the transaction that made the change it records.
+
+    Every event carries the voucher's ``issued_at`` and ``expires_at``, whatever its type, so a
+    consumer can place a redemption or an expiry in its issue cohort and on its life table from
+    the event alone -- without a join, and without assuming the term is 30 days.
+    """
     event_id = str(uuid.uuid4())
     conn.execute(
         "insert into outbox (event_id, voucher_code, event_type, amount_cents, occurred_at,"
-        " expires_at) values (?, ?, ?, ?, ?, ?)",
-        (event_id, voucher_code, event_type, amount_cents, occurred_at, expires_at),
+        " issued_at, expires_at) values (?, ?, ?, ?, ?, ?, ?)",
+        (event_id, voucher_code, event_type, amount_cents, occurred_at, issued_at, expires_at),
     )
     return event_id
