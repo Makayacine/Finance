@@ -1,7 +1,8 @@
 # Sources
 
 The sample is October 2026, every business day, and the two crisis dates of the truth check,
-15 September 2008 and 16 March 2020. Each file is gzipped and sits at the key the fetch Lambda
+15 September 2008 and 16 March 2020, and the two monthly South African series the auction curve is
+checked against. The National Treasury's own rows are in `data/sa/`, with their terms. Each file is gzipped and sits at the key the fetch Lambda
 writes it to in the raw bucket, so `local-development/run_local.py` stages it unchanged.
 
 | Folder | What | Publisher | Licence |
@@ -10,6 +11,8 @@ writes it to in the raw bucket, so `local-development/run_local.py` stages it un
 | `raw/auctions/` | Treasury Securities Auctions Data, the 1,765 auction records of the 965 CUSIPs on those pages | US Department of the Treasury, Fiscal Data: <https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query> | US government work, public domain |
 | `raw/gsw/` | The Federal Reserve Board's Treasury yield curve (Gurkaynak, Sack and Wright), `feds200628.csv` as fetched on 2 November 2026, with its preamble and header and the 19 rows for the sample's dates; the file's last date is 23 October 2026 | Board of Governors of the Federal Reserve System: <https://www.federalreserve.gov/data/yield-curve-tables/feds200628.csv> | US government work, public domain |
 | `raw/nyfed/` | SOFR, BGCR, TGCR and the SOFR averages and index for each sample date, as the Markets Data API returns them | Federal Reserve Bank of New York: <https://markets.newyorkfed.org/api/rates/secured/all/search.json> | the New York Fed's Terms of Use, below |
+| `raw/oecd/` | Long-term interest rates for South Africa (IRLT), monthly from January 2010, the SDMX file as fetched on 3 November 2026 | OECD, Financial market dataset (DSD_STES@DF_FINMARK), source the South African Reserve Bank: <https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_FINMARK,4.0/ZAF.M.IRLT.PA.....> | the OECD's terms: any use, with the citation below |
+| `raw/imf/` | Government bond yield for South Africa, monthly from January 2010, as FRED distributes it (series INTGSBZAM193N), fetched on 3 November 2026 | International Monetary Fund, International Financial Statistics: <https://fred.stlouisfed.org/series/INTGSBZAM193N> | the IMF's terms: publishing and distribution with the source named; commercial reuse needs the IMF's permission |
 
 ## Federal Reserve Bank of New York
 
@@ -27,3 +30,15 @@ affiliates, and third parties from which they obtained data have no liability fo
 this material.
 
 The rates are as published, unmodified.
+
+## OECD
+
+OECD (2026), Financial market (DSD_STES@DF_FINMARK), long-term interest rates, South Africa,
+South African Reserve Bank,
+https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_FINMARK,4.0/ZAF.M.IRLT.PA.....
+(accessed on 3 November 2026).
+
+## International Monetary Fund
+
+Source: International Monetary Fund, International Financial Statistics, government bond yield for
+South Africa, via FRED series INTGSBZAM193N, https://fred.stlouisfed.org/series/INTGSBZAM193N.
