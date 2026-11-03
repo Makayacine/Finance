@@ -10,7 +10,7 @@ A curated collection of quantitative finance analyses, featuring exploratory dat
 * **`credit-mailer-watermark-glue-redshift`**: Incremental ETL with a DynamoDB watermark over 58,168 randomised loan offers from a South African lender, orchestrated by Step Functions into a Redshift star, with an off-policy bandit evaluation.
 * **`credit-mailer-watermark-azure-sql`**: The credit-mailer pipeline ported to Azure — a Blob Storage landing zone, a Table Storage watermark and an Azure SQL Database star in T-SQL — tested offline against Azurite and SQL Server 2022, and matched row for row against the AWS version's own local run.
 * **`sba-credit-risk-ecs-dynamo`**: PD, gross charge-off severity, expected loss, IFRS 9 stage and IRB capital for the 281,077 open loans among 1,639,728 SBA 7(a) small-business loans, with FDIC bank-failure PD and a dollar EL backtest beside it, run as two ECS Fargate containers gated by Step Functions into DynamoDB.
-* **`latvia-company-credit-glue-delta`**: A 12-month PD for 115,088 Latvian companies from the annual accounts they file and the insolvency register, fitted out of time on 2,354,336 company-years since 2009, with the Register's files replayed as 73 quarterly batches into Delta Lake by Glue 5.0 MERGE jobs and the training rows read back from the tables by time travel.
+* **`latvia-company-credit-glue-delta`**: A 12-month PD for 115,088 Latvian companies from the annual accounts they file and the insolvency register, fitted out of time on 1,607,967 scored company-years since 2009, with the Register's files replayed as 73 quarterly batches into Delta Lake by Glue 5.0 MERGE jobs and the training rows read back from the tables by time travel.
 
 *(More projects coming soon.)*
 
