@@ -133,7 +133,7 @@ def execute(payload, db, store):
 
     ``variables`` is an object or absent, and ``operationName`` a string or absent: a ``0``, a
     ``[]`` or a ``false`` in either is refused here rather than handed to graphql-core. A query
-    nested past the parser's recursion limit -- about 500 levels of braces -- is refused too.
+    nested past the parser's recursion limit -- a few hundred levels of braces -- is refused too.
     """
     if not isinstance(payload, dict) or not isinstance(payload.get("query"), str) \
             or not set(payload) <= {"query", "variables", "operationName"} \
