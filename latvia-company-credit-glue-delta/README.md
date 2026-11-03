@@ -451,7 +451,7 @@ being skipped.
 ## Running it
 
 Python 3.11, a Java 17 JDK on `JAVA_HOME` and `pip install -r requirements.txt`: what Glue 5.0
-runs. The first Spark start fetches the Delta Lake jar from Maven Central and caches it. The 29
+runs. The first Spark start fetches the Delta Lake jar from Maven Central and caches it. The 30
 tests take about 70 s:
 
 ```bash
@@ -505,7 +505,7 @@ model job's Python driver peaked at 8.2 GB resident and its JVM at 3.6 GB.
 Lake 3.3.0-amzn-0: 20 yearly batches, 19 of them with statements, then the model, which came out as
 the local yearly run's, AUC 0.787, 0.750 and 0.746 on the three windows.
 
-**29 tests, no AWS and no mocks.** `test_label.py` (7), on twelve invented companies with each
+**30 tests, no AWS and no mocks.** `test_label.py` (7), on twelve invented companies with each
 answer worked by hand: the population without the terminated, the not yet registered and the
 already defaulted, every label, the insolvency-only label, a dismissal that counts only once it is
 known, the labelled years stopping at the as-of date, the embargo, and the 24-month accounts
@@ -515,12 +515,12 @@ travelling with it, the restatement share, and the yearly cadence cutting on the
 observation date. `test_scorecard.py` (7): WoE and IV by hand, special bins kept apart, an AUC tie
 counted as a half, DeLong against a stratified bootstrap, KS and PSI, the numpy logit and its
 clustered errors against statsmodels, and the validation shift hitting its target without moving
-the ranking. `test_delta.py` (9), against real Delta tables in a temporary folder: a proceeding
+the ranking. `test_delta.py` (10), against real Delta tables in a temporary folder: a proceeding
 restated by a MERGE, a stale batch replayed late that changes nothing, an as-of view a later batch
 cannot change, lats and thousands converted and group accounts dropped, Spark's availability date
 equal to the replay's, two statements for one year in one batch cut to the winner, the bare MERGE
-that refuses them, a statement batch missing a file left in `raw_zone/`, and a file without a batch
-name stopping the job.
+that refuses them, a statement batch missing a file left in `raw_zone/`, a file without a batch
+name stopping the job, and bucket keys with forward slashes on every OS.
 
 **The failure paths, run.** Each in a scratch bucket, on the sample unless it says otherwise: a
 statement batch with its income-statement file deleted, refused before the first MERGE; a register
