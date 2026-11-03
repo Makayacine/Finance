@@ -507,22 +507,22 @@ Lake 3.3.0-amzn-0: 20 yearly batches, 19 of them with statements, then the model
 the local yearly run's, AUC 0.787, 0.750 and 0.746 on the three windows.
 
 **32 tests, no AWS and no mocks.** `test_label.py` (7), on twelve invented companies with each
-answer worked by hand: the population without the terminated, the not yet registered and the
-already defaulted, every label, the insolvency-only label, a dismissal that counts only once it is
-known, the labelled years stopping at the as-of date, the embargo, and the 24-month accounts
-window. `test_replay.py` (6): a company restated on termination, a proceeding restated when it
-ends, the last batch dated by the newest stamp, a statement's balance sheet and income statement
-travelling with it, the restatement share, and the yearly cadence cutting on the eve of every
-observation date. `test_scorecard.py` (8): WoE and IV by hand, special bins kept apart, an AUC tie
-counted as a half, DeLong against a stratified bootstrap, KS and PSI, the numpy logit and its
-clustered errors against statsmodels, the validation shift hitting its target without moving the
-ranking, and the liabilities bands ranked within each year with observed set against predicted. `test_delta.py` (11), against real Delta tables in a temporary folder: a proceeding
-restated by a MERGE, a stale batch replayed late that changes nothing, an as-of view a later batch
-cannot change, lats and thousands converted and group accounts dropped, Spark's availability date
-equal to the replay's, two statements for one year in one batch cut to the winner, the bare MERGE
-that refuses them, a statement batch missing a file left in `raw_zone/`, a file without a batch
-name stopping the job, bucket keys with forward slashes on every OS, and a re-run of one date's
-scores replacing only the ones that changed.
+answer worked by hand: the population without the terminated, the not yet registered and the already
+defaulted, every label, the insolvency-only label, a dismissal that counts only once it is known,
+the labelled years stopping at the as-of date, the embargo, and the 24-month accounts window.
+`test_replay.py` (6): a company restated on termination, a proceeding restated when it ends, the
+last batch dated by the newest stamp, a statement's balance sheet and income statement travelling
+with it, the restatement share, and the yearly cadence cutting on the eve of every observation date.
+`test_scorecard.py` (8): WoE and IV by hand, special bins kept apart, an AUC tie counted as a half,
+DeLong against a stratified bootstrap, KS and PSI, the numpy logit and its clustered errors against
+statsmodels, the validation shift hitting its target without moving the ranking, and the liabilities
+bands ranked within each year with observed set against predicted. `test_delta.py` (11), against
+real Delta tables in a temporary folder: a proceeding restated by a MERGE, a stale batch replayed
+late that changes nothing, an as-of view a later batch cannot change, lats and thousands converted
+and group accounts dropped, Spark's availability date equal to the replay's, two statements for one
+year in one batch cut to the winner, the bare MERGE that refuses them, a statement batch missing a
+file left in `raw_zone/`, a file without a batch name stopping the job, bucket keys with forward
+slashes on every OS, and a re-run of one date's scores replacing only the ones that changed.
 
 **The failure paths, run.** Each in a scratch bucket, on the sample unless it says otherwise: a
 statement batch with its income-statement file deleted, refused before the first MERGE; a register
