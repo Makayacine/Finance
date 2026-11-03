@@ -1,6 +1,6 @@
 # Finance Projects
 
-A curated collection of quantitative finance analyses, featuring exploratory data analysis, backtesting of trading strategies, and predictive modeling — alongside AWS data-engineering pipelines over banking, crypto-market, consumer-lending, small-business loan, company-accounts and gift-voucher data.
+A curated collection of quantitative finance analyses, featuring exploratory data analysis, backtesting of trading strategies, and predictive modeling — alongside AWS data-engineering pipelines over banking, crypto-market, consumer-lending, small-business loan, company-accounts, gift-voucher and US Treasury bond data.
 
 ## Current Projects
 
@@ -12,6 +12,7 @@ A curated collection of quantitative finance analyses, featuring exploratory dat
 * **`sba-credit-risk-ecs-dynamo`**: PD, gross charge-off severity, expected loss, IFRS 9 stage and IRB capital for the 281,077 open loans among 1,639,728 SBA 7(a) small-business loans, with FDIC bank-failure PD and a dollar EL backtest beside it, run as two ECS Fargate containers gated by Step Functions into DynamoDB.
 * **`latvia-company-credit-glue-delta`**: A 12-month PD for 115,088 Latvian companies from the annual accounts they file and the insolvency register, fitted out of time on 1,607,967 scored company-years since 2009, with the Register's files replayed as 73 quarterly batches into Delta Lake by Glue 5.0 MERGE jobs and the training rows read back from the tables by time travel.
 * **`voucher-float-kinesis-redshift`**: A gift-voucher service's issue, redemption and expiry events carried from a transactional outbox through Kinesis, a Firehose transform Lambda and Redshift to the daily outstanding liability, IFRS 15 breakage by issue month and a redemption life table, on two simulated years whose true breakage rate the young-cohort estimate recovers without bias.
+* **`sovereign-curves-cicd-lambda-glue-ecs`**: US Treasury yield curves and interest-rate risk from the Treasury's own FedInvest prices -- FIA's exact bootstrap, a Svensson fit checked against the Fed Board's GSW curve, DV01 and key-rate DV01s for every bill, note and bond -- fetched by a Lambda, loaded by a Glue Python Shell job and computed in an ECS task, each with its own GitHub Actions workflow that tests it and then deploys it.
 
 *(More projects coming soon.)*
 
@@ -66,13 +67,13 @@ walks every step on every path.
 
 ## AWS data-engineering pipelines
 
-Six of the projects here are AWS data-engineering pipelines. Each is self-contained: the
+Seven of the projects here are AWS data-engineering pipelines. Each is self-contained: the
 exploratory notebook it grew out of, the production jobs, the orchestration, and whatever the
 destination store needs — Redshift DDL, a DynamoDB key schema, or both.
 
 ### Layout
 
-The six pipelines share a shape, so a reader who has seen one can navigate the rest:
+The seven pipelines share a shape, so a reader who has seen one can navigate the rest:
 
 ```
 <project>/
@@ -107,6 +108,13 @@ the relay runs every minute and the expiry sweep nightly on the service's own in
 Firehose buffers for itself — and `kinesis-producer/` and `firehose-lambda/` take the jobs slot,
 beside the `voucher_service/` package that is its source system and `warehouse/` and `redshift/`
 for the SQL.
+`sovereign-curves-cicd-lambda-glue-ecs` has **no `airflow-dag/`** -- an EventBridge schedule starts
+its Lambda and an EventBridge rule on the Glue job's success starts its ECS task, both in
+`eventbridge/` -- and is the one project with files outside its own folder: its three GitHub Actions
+workflows live at the repository root in `.github/workflows/`, where GitHub reads them.
+`lambda-functions/`, `glue-pythonshell/` and `ecs/` take the jobs slot, each with its tests beside
+it, and the curve and risk code all three share lives in one `bond_analytics/` package around the
+fixed income course's vendored `FIA.py`, with `tests/`, `local-development/` and `athena/` beside it.
 
 The notebook is kept deliberately. It is where the logic was worked out, and it carries the
 executed outputs, so the production job can be diffed against something that is known to be
@@ -386,6 +394,52 @@ The interesting problems were about dates and estimates rather than throughput:
 
 Full detail, the backtest table and the deployment steps are in the project README.
 
+### `sovereign-curves-cicd-lambda-glue-ecs`
+
+US Treasury yield curves and interest-rate risk, built every weekday from the Treasury's own
+FedInvest end-of-day prices, with the Federal Reserve Board's GSW curve as the answer key. The
+curve and risk arithmetic is the fixed income course's own `FIA.py`, vendored unchanged; FIA has
+no calendar, no day count and no accrued interest, so a date adapter feeds it float years from T+1
+settlement, actual/actual accrued and dirty prices, and its bootstrap, `YTM`, `duration` and
+`convexity` run as written. The lab it imitates deploys a Lambda, a Glue Python Shell job and an
+ECS task, each from its own GitHub Actions workflow; here each workflow tests on every pull
+request and deploys only from `main`, through OIDC, once a repository variable holds its role.
+
+```
+EventBridge  ->  Lambda: fetch       ->  S3 raw/  ->  Glue Python Shell: load  ->  S3 lake/ (Parquet)
+weekdays         FedInvest, GSW,         a file       clean -> dirty, flag,         prices, securities,
+                 auction records,        per source   watermark per source          reference curves
+                 NY Fed rates            per date                |  SUCCEEDED
+                                                                 v
+                                         ECS task: FIA bootstrap, Svensson fit, fit errors,
+                                         DV01, key-rate DV01s, carry  ->  curves, risk  ->  Athena
+```
+
+| Check | 2008-09-15 | 2020-03-16 | 2026-10-23 |
+| --- | --- | --- | --- |
+| GSW against FedInvest, 2-3y notes, mean absolute error | 3.6 bp | 2.2 bp | 0.6 bp |
+| price error per coupon period elapsed, against a half coupon of | 0.040 / 2.250 | 0.068 / 1.125 | 0.027 / 1.938 |
+| our Svensson fit less GSW, 10-year zero rate | -1.0 bp | -0.5 bp | -0.6 bp |
+| the on-the-run issue's error, worst bucket | 10-year, 19.6 bp | 30-year, 16.5 bp | 30-year, 2.9 bp |
+
+The interesting problems were about conventions the data does not state:
+
+- **Settlement had to be read from the bills.** A clean price is continuous across a coupon date
+  whichever convention it was struck for, so no coupon check can tell T+0 from T+1. A bill a few
+  days from maturity can: on 30 October 2026 the six shortest bills yield 3.82-3.88% counted from
+  Monday's settlement, and climb from 0.95% counted from the Friday price date.
+- **A pooled table can say the opposite of the truth.** Pooled over maturities, the off-the-run
+  issues GSW is fitted to came out best in price and among the worst in basis points, because every
+  note under a year is off-the-run. Inside each maturity bucket the on-the-run issues are the
+  outliers in both crises, the 30-year 4.35 rich to the curve in March 2020.
+- **A bad quote is flagged, never fixed.** The 6.5% bond maturing 15 November 2026 was quoted seven
+  32nds below what the bills say it is worth, while two notes maturing the same day sat within a
+  32nd. A fixed tolerance against the bills flags the whole bill-coupon basis, so the loader compares
+  each quote with its neighbours': 41 of 1,188 checked quotes flagged in the sample, 40 of them three
+  old 30-year bonds, every price kept as quoted.
+
+Full detail, the truth-check tables and the deployment steps are in the project README.
+
 ### Running the pipelines
 
 Each project's README carries its own prerequisites. For bank-marketing and crypto-ticks you need
@@ -400,6 +454,10 @@ names exactly and pandas 3 names a text column differently from pandas 2; its ow
 `requirements.txt` covers the rest, and Docker is needed only to run the two images.
 `voucher-float-kinesis-redshift` needs Python 3.12+ and its `requirements.txt`, and nothing else:
 its `local-development/run_local.py` runs the whole chain, service to reconciliation.
+`sovereign-curves-cicd-lambda-glue-ecs` needs Python 3.12+ and its `requirements.txt` for the whole
+local chain; its Glue loader is also tested on Python 3.9 with the Glue Python Shell `analytics`
+set's pandas 1.4.2, numpy 1.22.3 and boto3 1.21.21 and pyarrow 7.0.0, from
+`glue-pythonshell/requirements.txt`, and Docker is needed only to build the engine image.
 The Spark jobs take a `--local` flag that runs them against plain filesystem paths, so every
 pipeline can be exercised end to end without an AWS account.
 
@@ -425,7 +483,8 @@ EMR Serverless application id, IAM execution role ARN, S3 bucket and the `redshi
 connection for the bank-marketing pipeline; S3 bucket, Glue job names and the DynamoDB table for
 the crypto-ticks one; the cluster, task definitions, subnets and security group in the state
 machine definition for the SBA one; the bucket passed as `--bucket` and the names given to its two
-Glue jobs for the Latvian one. Each project README states exactly what its own verification covers.
+Glue jobs for the Latvian one; the repository variables its three workflows read, role ARNs last,
+for the sovereign-curves one. Each project README states exactly what its own verification covers.
 
 ---
 
