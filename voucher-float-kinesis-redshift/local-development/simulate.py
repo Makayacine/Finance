@@ -37,7 +37,7 @@ service produced, through its own guards:
     answer 409.
 *   **Retries.** 2% of issue requests are sent twice with the same Idempotency-Key, as a client
     whose first response was lost would; the second must return the first voucher.
-*   **A sweep outage.** The sweep does not run from 9 to 15 March 2026 and catches up on the 16th,
+*   **A sweep outage.** The sweep is down from 9 to 15 March 2026 and catches up on the 16th,
     so a week of expiries reaches the stream dated a week before the events around them.
 
 Every response is checked against what the plan says it must be -- 201, a replay of the same
