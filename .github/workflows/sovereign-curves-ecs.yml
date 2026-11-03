@@ -1,0 +1,101 @@
+name: sovereign-curves / ECS engine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sovereign-curves-cicd-lambda-glue-ecs/ecs/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/bond_analytics/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/glue-pythonshell/load.py"
+      - "sovereign-curves-cicd-lambda-glue-ecs/lambda-functions/fetch.py"
+      - "sovereign-curves-cicd-lambda-glue-ecs/tests/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/data/sample/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/eventbridge/**"
+      - ".github/workflows/sovereign-curves-ecs.yml"
+  pull_request:
+    paths:
+      - "sovereign-curves-cicd-lambda-glue-ecs/ecs/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/bond_analytics/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/glue-pythonshell/load.py"
+      - "sovereign-curves-cicd-lambda-glue-ecs/lambda-functions/fetch.py"
+      - "sovereign-curves-cicd-lambda-glue-ecs/tests/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/data/sample/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/eventbridge/**"
+      - ".github/workflows/sovereign-curves-ecs.yml"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: sovereign-curves-cicd-lambda-glue-ecs
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -r ecs/requirements-test.txt pyyaml==6.0.3 tabulate==0.9.0
+      - run: python -m pytest ecs tests -v
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SOVEREIGN_CURVES_ECS_ROLE_ARN != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      REPOSITORY: ${{ vars.SOVEREIGN_CURVES_ECR_REPOSITORY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.SOVEREIGN_CURVES_ECS_ROLE_ARN }}
+          aws-region: ${{ vars.SOVEREIGN_CURVES_AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push the image, tagged with the commit
+        id: image
+        run: |
+          IMAGE="${{ steps.ecr.outputs.registry }}/$REPOSITORY:${{ github.sha }}"
+          docker build -f ecs/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+      - name: Fill in the account's values
+        run: |
+          jq --arg exec "${{ vars.SOVEREIGN_CURVES_ECS_EXECUTION_ROLE_ARN }}" \
+             --arg task "${{ vars.SOVEREIGN_CURVES_ENGINE_TASK_ROLE_ARN }}" \
+             --arg lake "${{ vars.SOVEREIGN_CURVES_LAKE_BUCKET }}" \
+             --arg raw "${{ vars.SOVEREIGN_CURVES_RAW_BUCKET }}" \
+             --arg region "${{ vars.SOVEREIGN_CURVES_AWS_REGION }}" \
+             '.executionRoleArn = $exec | .taskRoleArn = $task
+              | .containerDefinitions[0].environment = [{name: "LAKE_BUCKET", value: $lake}, {name: "RAW_BUCKET", value: $raw}]
+              | .containerDefinitions[0].logConfiguration.options["awslogs-region"] = $region' \
+             ecs/task-definition.json > task-definition.filled.json
+      - id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: sovereign-curves-cicd-lambda-glue-ecs/task-definition.filled.json
+          container-name: engine
+          image: ${{ steps.image.outputs.image }}
+      - name: Register the task definition
+        id: register
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+      - name: Point the Glue-succeeded rule at the new revision
+        run: |
+          jq --arg cluster "${{ vars.SOVEREIGN_CURVES_ECS_CLUSTER_ARN }}" \
+             --arg role "${{ vars.SOVEREIGN_CURVES_EVENTS_ROLE_ARN }}" \
+             --arg taskdef "${{ steps.register.outputs.task-definition-arn }}" \
+             --arg subnet "${{ vars.SOVEREIGN_CURVES_SUBNET_ID }}" \
+             --arg sg "${{ vars.SOVEREIGN_CURVES_SECURITY_GROUP_ID }}" \
+             '.[0].Arn = $cluster | .[0].RoleArn = $role | .[0].EcsParameters.TaskDefinitionArn = $taskdef
+              | .[0].EcsParameters.NetworkConfiguration.awsvpcConfiguration.Subnets = [$subnet]
+              | .[0].EcsParameters.NetworkConfiguration.awsvpcConfiguration.SecurityGroups = [$sg]' \
+             eventbridge/glue-succeeded-targets.json > targets.json
+          aws events put-targets --rule sovereign-curves-load-succeeded --targets file://targets.json

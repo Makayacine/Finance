@@ -1,0 +1,85 @@
+name: sovereign-curves / Glue Python Shell load
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sovereign-curves-cicd-lambda-glue-ecs/glue-pythonshell/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/bond_analytics/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/pyproject.toml"
+      - ".github/workflows/sovereign-curves-glue.yml"
+  pull_request:
+    paths:
+      - "sovereign-curves-cicd-lambda-glue-ecs/glue-pythonshell/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/bond_analytics/**"
+      - "sovereign-curves-cicd-lambda-glue-ecs/pyproject.toml"
+      - ".github/workflows/sovereign-curves-glue.yml"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: sovereign-curves-cicd-lambda-glue-ecs
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    # Python Shell's only runtime is 3.9, which is past end of life; its image still serves it.
+    container: public.ecr.aws/docker/library/python:3.9-slim
+    steps:
+      - uses: actions/checkout@v7
+      - run: pip install -r glue-pythonshell/requirements.txt
+      - name: The loader and the modules it imports, on the analytics library set's versions
+        run: python -m pytest glue-pythonshell tests/test_dates.py tests/test_sources.py -v
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SOVEREIGN_CURVES_GLUE_ROLE_ARN != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      JOB: ${{ vars.SOVEREIGN_CURVES_GLUE_JOB }}
+      SCRIPTS: s3://${{ vars.SOVEREIGN_CURVES_SCRIPTS_BUCKET }}/sovereign-curves
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.SOVEREIGN_CURVES_GLUE_ROLE_ARN }}
+          aws-region: ${{ vars.SOVEREIGN_CURVES_AWS_REGION }}
+      - name: Build bond_analytics as a wheel and upload it with the script
+        run: |
+          pip wheel . --no-deps -w dist
+          aws s3 cp dist/bond_analytics-1.0.0-py3-none-any.whl "$SCRIPTS/bond_analytics-1.0.0-py3-none-any.whl"
+          aws s3 cp glue-pythonshell/load.py "$SCRIPTS/load.py"
+      - name: Write the job definition
+        run: |
+          cat > job.json <<JSON
+          {
+            "Role": "${{ vars.SOVEREIGN_CURVES_GLUE_EXECUTION_ROLE_ARN }}",
+            "Command": {"Name": "pythonshell", "PythonVersion": "3.9", "ScriptLocation": "$SCRIPTS/load.py"},
+            "MaxCapacity": 0.0625,
+            "Timeout": 60,
+            "MaxRetries": 0,
+            "DefaultArguments": {
+              "library-set": "analytics",
+              "--additional-python-modules": "pyarrow==7.0.0",
+              "--extra-py-files": "$SCRIPTS/bond_analytics-1.0.0-py3-none-any.whl",
+              "--raw_bucket": "${{ vars.SOVEREIGN_CURVES_RAW_BUCKET }}",
+              "--lake_bucket": "${{ vars.SOVEREIGN_CURVES_LAKE_BUCKET }}",
+              "--load_type": "incremental"
+            }
+          }
+          JSON
+      - name: Update the job, or create it
+        run: |
+          if aws glue get-job --job-name "$JOB" > /dev/null 2>&1; then
+            aws glue update-job --job-name "$JOB" --job-update file://job.json
+          else
+            aws glue create-job --name "$JOB" --cli-input-json file://job.json
+          fi
