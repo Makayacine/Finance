@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - run: pip install boto3==1.43.123 moto==5.2.5
+      - run: pip install boto3==1.43.123 "moto[s3,glue]==5.2.5"
       - run: python -m unittest discover -v
 
   deploy:
