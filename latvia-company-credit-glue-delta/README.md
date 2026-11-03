@@ -452,7 +452,7 @@ being skipped.
 ## Running it
 
 Python 3.11, a Java 17 JDK on `JAVA_HOME` and `pip install -r requirements.txt`: what Glue 5.0
-runs. The first Spark start fetches the Delta Lake jar from Maven Central and caches it. The 31
+runs. The first Spark start fetches the Delta Lake jar from Maven Central and caches it. The 32
 tests take about 70 s:
 
 ```bash
@@ -506,17 +506,17 @@ model job's Python driver peaked at 8.2 GB resident and its JVM at 3.6 GB.
 Lake 3.3.0-amzn-0: 20 yearly batches, 19 of them with statements, then the model, which came out as
 the local yearly run's, AUC 0.787, 0.750 and 0.746 on the three windows.
 
-**31 tests, no AWS and no mocks.** `test_label.py` (7), on twelve invented companies with each
+**32 tests, no AWS and no mocks.** `test_label.py` (7), on twelve invented companies with each
 answer worked by hand: the population without the terminated, the not yet registered and the
 already defaulted, every label, the insolvency-only label, a dismissal that counts only once it is
 known, the labelled years stopping at the as-of date, the embargo, and the 24-month accounts
 window. `test_replay.py` (6): a company restated on termination, a proceeding restated when it
 ends, the last batch dated by the newest stamp, a statement's balance sheet and income statement
 travelling with it, the restatement share, and the yearly cadence cutting on the eve of every
-observation date. `test_scorecard.py` (7): WoE and IV by hand, special bins kept apart, an AUC tie
+observation date. `test_scorecard.py` (8): WoE and IV by hand, special bins kept apart, an AUC tie
 counted as a half, DeLong against a stratified bootstrap, KS and PSI, the numpy logit and its
-clustered errors against statsmodels, and the validation shift hitting its target without moving
-the ranking. `test_delta.py` (11), against real Delta tables in a temporary folder: a proceeding
+clustered errors against statsmodels, the validation shift hitting its target without moving the
+ranking, and the liabilities bands ranked within each year with observed set against predicted. `test_delta.py` (11), against real Delta tables in a temporary folder: a proceeding
 restated by a MERGE, a stale batch replayed late that changes nothing, an as-of view a later batch
 cannot change, lats and thousands converted and group accounts dropped, Spark's availability date
 equal to the replay's, two statements for one year in one batch cut to the winner, the bare MERGE

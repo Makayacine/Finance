@@ -12,6 +12,8 @@ from . import features as feat
 from . import metrics, scorecard, woe
 
 WINDOWS = {"train": config.TRAIN, "validate": config.VALIDATE, "test": config.TEST}
+# Liabilities bands: each year's scored companies ranked by total liabilities, largest first.
+BANDS = ((100, "top 100"), (1_000, "101-1,000"), (10_000, "1,001-10,000"), (None, "the rest"))
 
 
 def window_of(years):
@@ -138,12 +140,66 @@ def run(rows, live_rows=None, bulk_rows=None):
         for name, part in covered.groupby("window")
     ])
 
+    out["liabilities_bands"] = by_liabilities(scored[scored.window == "test"])
+    out["liabilities_bands_train"] = by_liabilities(scored[scored.window == "train"])
+
     if bulk_rows is not None:
         out["bulk_dating"] = bulk_dating_cost(card, rows, bulk_rows)
     if live_rows is not None:
         live, book = live_book(card, live_rows)
         out["live"], out["live_book"] = live, book
+        out["live_bands"] = by_liabilities(live)
     return out
+
+
+def liabilities_band(frame):
+    """Each row's band by total liabilities, ranked within its observation year, largest first.
+    A statement with no balance sheet has no liabilities and falls in the rest."""
+    rank = frame.groupby("observation_year").liabilities.rank(method="first", ascending=False)
+    band = pd.Series(BANDS[-1][1], index=frame.index, dtype=object)
+    lower = 0
+    for upper, name in BANDS[:-1]:
+        band[(rank > lower) & (rank <= upper)] = name
+        lower = upper
+    return band
+
+
+def by_liabilities(scored):
+    """Observed against predicted by liabilities band, and what each band's accounts look like.
+
+    The scorecard was fitted on a population whose typical member is a company of one or two
+    people, so the question is whether it carries to the few companies that hold most of the
+    liabilities. With labels (the windows), each band's observed default rate is set against its
+    mean PD at both levels; without them (the live book), only the PD and the exposure share.
+    The profile is the median of each ratio over the band's company-years, where it has a base.
+    """
+    frame = scored.assign(band=liabilities_band(scored))
+    weights = frame.liabilities.clip(lower=0).fillna(0)
+    labelled = "y" in frame and frame.y.notna().all()
+    out = []
+    for name in [name for _, name in BANDS] + ["all"]:
+        part = frame if name == "all" else frame[frame.band == name]
+        employees = part.employees.dropna()
+        row = {
+            "band": name, "company_years": len(part),
+            "liabilities_share": weights[part.index].sum() / weights.sum(),
+            "pd_ttc": part.pd_ttc.mean(), "pd_validation": part.pd_validation.mean(),
+            "median_employees": employees.median(),
+            "one_employee_or_none": (employees <= 1).mean(),
+            "median_cash_ratio": part.cash_ratio[part.cash_ratio_state == "value"].median(),
+            "median_current_ratio":
+                part.current_ratio[part.current_ratio_state == "value"].median(),
+            "median_equity_ratio":
+                part.equity_ratio[part.equity_ratio_state == "value"].median(),
+        }
+        if labelled:
+            row.update({
+                "defaults": int(part.y.sum()), "observed": part.y.mean(),
+                "oe_ttc": part.y.sum() / part.pd_ttc.sum(),
+                "oe_validation": part.y.sum() / part.pd_validation.sum(),
+            })
+        out.append(row)
+    return pd.DataFrame(out)
 
 
 def bulk_dating_cost(card, rows, bulk_rows):
