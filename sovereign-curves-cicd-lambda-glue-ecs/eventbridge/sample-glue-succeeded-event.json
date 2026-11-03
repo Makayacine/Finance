@@ -1,0 +1,17 @@
+{
+  "version": "0",
+  "id": "abcd1234-0000-0000-0000-000000000000",
+  "detail-type": "Glue Job State Change",
+  "source": "aws.glue",
+  "account": "123456789012",
+  "time": "2026-10-30T23:41:07Z",
+  "region": "us-east-1",
+  "resources": [],
+  "detail": {
+    "jobName": "<glue-job-name>",
+    "severity": "INFO",
+    "state": "SUCCEEDED",
+    "jobRunId": "jr_0123456789abcdef",
+    "message": "Job run succeeded"
+  }
+}

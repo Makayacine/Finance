@@ -1,0 +1,20 @@
+[
+  {
+    "Id": "engine-task",
+    "Arn": "arn:aws:ecs:<region>:<account-id>:cluster/<cluster>",
+    "RoleArn": "arn:aws:iam::<account-id>:role/<events-run-task-role>",
+    "EcsParameters": {
+      "TaskDefinitionArn": "arn:aws:ecs:<region>:<account-id>:task-definition/sovereign-curves-engine:<revision>",
+      "TaskCount": 1,
+      "LaunchType": "FARGATE",
+      "PlatformVersion": "LATEST",
+      "NetworkConfiguration": {
+        "awsvpcConfiguration": {
+          "Subnets": ["<subnet-id>"],
+          "SecurityGroups": ["<security-group-id>"],
+          "AssignPublicIp": "ENABLED"
+        }
+      }
+    }
+  }
+]

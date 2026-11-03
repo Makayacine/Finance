@@ -1,0 +1,6 @@
+{
+  "Name": "sovereign-curves-fetch-daily",
+  "Description": "Weekdays at 23:30 UTC, after FedInvest's end-of-day prices are up: start the fetch Lambda",
+  "ScheduleExpression": "cron(30 23 ? * MON-FRI *)",
+  "State": "ENABLED"
+}
