@@ -2,6 +2,7 @@
 duplicate keys, the curation, and the batches it must refuse."""
 
 from datetime import date
+from pathlib import PureWindowsPath
 
 import pandas as pd
 import pytest
@@ -211,3 +212,15 @@ def test_a_file_without_a_batch_name_stops_the_job(spark, bucket):
     stray.write_text("regcode;type;registered;terminated;closed\n", encoding="utf-8")
     with pytest.raises(ValueError, match="not a register_<YYYY-MM-DD>.csv batch file"):
         merge_job.run(spark, bucket, "companies")
+
+
+def test_bucket_keys_use_forward_slashes_on_every_os(bucket):
+    put(bucket, "register", "2020-09-30", pd.DataFrame({"regcode": ["40003000001"]}))
+    assert bucket.list(lh.RAW) == ["raw_zone/register/register_2020-09-30.csv"]
+    assert list(lh.pending_batches(bucket, "register")) == [date(2020, 9, 30)]
+    # The same key from a Windows path, where str() gives backslashes and pending_batches,
+    # taking the name after the last "/", would refuse every batch.
+    root = PureWindowsPath("bucket")
+    path = root / "raw_zone" / "register" / "register_2020-09-30.csv"
+    assert "\\" in str(path.relative_to(root))
+    assert lh.key_of(path, root) == "raw_zone/register/register_2020-09-30.csv"

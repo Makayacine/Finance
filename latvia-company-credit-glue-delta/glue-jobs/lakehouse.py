@@ -111,6 +111,15 @@ def _delta_from_pip():
 
 # --- the bucket ------------------------------------------------------------------------------------
 
+def key_of(path, root):
+    """The bucket key of a file under ``root``: forward slashes on every OS, as an S3 key has.
+
+    ``str()`` of a relative path is ``raw_zone\\register\\...`` on Windows, and
+    ``pending_batches`` takes the file name after the last ``/``, so every batch would be refused.
+    """
+    return path.relative_to(root).as_posix()
+
+
 class LocalBucket:
     """A folder standing in for S3. A rename on one filesystem is atomic; an S3 move is not."""
 
@@ -124,7 +133,7 @@ class LocalBucket:
         base = self.root / prefix
         if not base.exists():
             return []
-        return sorted(str(p.relative_to(self.root)) for p in base.rglob("*") if p.is_file())
+        return sorted(key_of(p, self.root) for p in base.rglob("*") if p.is_file())
 
     def move(self, source, target):
         destination = self.root / target
