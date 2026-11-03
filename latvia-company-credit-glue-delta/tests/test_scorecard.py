@@ -112,4 +112,8 @@ def test_liabilities_bands_rank_within_each_year_and_set_observed_against_predic
     assert top.oe_ttc == pytest.approx(19 / 2.0) and top.oe_validation == pytest.approx(19 / 1.0)
     assert table.loc["all", "defaults"] == 20 and table.loc["all", "company_years"] == 2400
     assert table.liabilities_share.drop("all").sum() == pytest.approx(1.0)
+    assert table.loc["all", "pd_validation_weighted"] == pytest.approx(0.005)  # a flat PD
+    defaulted = frame.liabilities.where(frame.y == 1).sum()
+    assert table.loc["all", "observed_weighted"] == pytest.approx(defaulted
+                                                                   / frame.liabilities.sum())
     assert "defaults" not in analysis.by_liabilities(frame.drop(columns="y"))

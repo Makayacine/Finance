@@ -171,6 +171,8 @@ def by_liabilities(scored):
     people, so the question is whether it carries to the few companies that hold most of the
     liabilities. With labels (the windows), each band's observed default rate is set against its
     mean PD at both levels; without them (the live book), only the PD and the exposure share.
+    Weighted by liabilities, the observed rate is the share of the band's liabilities owed by
+    companies that defaulted within the year, set beside the liabilities-weighted PD.
     The profile is the median of each ratio over the band's company-years, where it has a base.
     """
     frame = scored.assign(band=liabilities_band(scored))
@@ -184,6 +186,8 @@ def by_liabilities(scored):
             "band": name, "company_years": len(part),
             "liabilities_share": weights[part.index].sum() / weights.sum(),
             "pd_ttc": part.pd_ttc.mean(), "pd_validation": part.pd_validation.mean(),
+            "pd_validation_weighted":
+                (part.pd_validation * weights[part.index]).sum() / weights[part.index].sum(),
             "median_employees": employees.median(),
             "one_employee_or_none": (employees <= 1).mean(),
             "median_cash_ratio": part.cash_ratio[part.cash_ratio_state == "value"].median(),
@@ -195,6 +199,8 @@ def by_liabilities(scored):
         if labelled:
             row.update({
                 "defaults": int(part.y.sum()), "observed": part.y.mean(),
+                "observed_weighted":
+                    (part.y * weights[part.index]).sum() / weights[part.index].sum(),
                 "oe_ttc": part.y.sum() / part.pd_ttc.sum(),
                 "oe_validation": part.y.sum() / part.pd_validation.sum(),
             })
