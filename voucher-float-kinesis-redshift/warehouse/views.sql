@@ -25,11 +25,13 @@
 -- ONE TEXT, TWO ENGINES
 --
 -- The same file runs on the local DuckDB and on Redshift. It keeps to SQL both accept: no
--- generate_series, no QUALIFY, no datediff (Redshift and DuckDB spell it differently), every
--- window aggregate with an explicit frame (Redshift requires one with ORDER BY), division cast to
--- double precision (Redshift divides integers as integers), and ages in days from
--- extract(epoch from ...). On Redshift, run redshift/redshift-create-tables.sql first, in the
--- same session, so the unqualified names resolve to its schema.
+-- generate_series, no QUALIFY, no datediff (Redshift and DuckDB spell it differently), an
+-- explicit frame on every window aggregate with an ORDER BY (Redshift requires one), every
+-- division of two integers cast to double precision first (Redshift divides integers as
+-- integers), and ages in days from extract(epoch from ...). tests/test_warehouse.py checks the
+-- text for each, and builds the views a second time with DuckDB dividing integers as Redshift
+-- does, which must change no figure. On Redshift, run redshift/redshift-create-tables.sql
+-- first, in the same session, so the unqualified names resolve to its schema.
 -- =============================================================================================
 
 create or replace view voucher_event as
@@ -47,7 +49,8 @@ where copy_number = 1;
 
 
 -- A voucher exits at most once; the service's guards make sure of it. If two exits ever arrived,
--- the earlier would win here and reconciliation.vouchers_with_two_exits would say so.
+-- the earlier would win here -- in a tie, the expiry, as the redemption guard has it at the
+-- expiry second -- and reconciliation.vouchers_with_two_exits would say so.
 create or replace view voucher_state as
 with exits as (
     select voucher_code, event_type, occurred_at, days_since_issue,
@@ -285,9 +288,11 @@ left join projected p on p.issue_month = c.issue_month;
 
 
 -- The warehouse's outstanding liability must equal the service's own sum of unredeemed cents,
--- taken at the same as_of. Beside the difference: how many copies the dedupe dropped, exits
--- whose issue never arrived, and vouchers with two exits -- each of which should be zero, and
--- each of which would explain a difference that is not.
+-- taken at the same as_of. Beside the difference, three counts. duplicates_dropped is
+-- informational: the relay and Firehose deliver at least once by design, and voucher_event
+-- drops the copies before anything is summed, so it can be any number with a difference of 0.
+-- orphan_exits (exits whose issue never arrived) and vouchers_with_two_exits should be zero,
+-- and either would explain a difference that is not.
 create or replace view reconciliation as
 with warehouse as (
     select coalesce(sum(case when status = 'unredeemed' then amount_cents else 0 end), 0)
