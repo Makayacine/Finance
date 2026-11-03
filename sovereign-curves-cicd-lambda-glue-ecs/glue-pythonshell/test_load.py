@@ -250,3 +250,105 @@ def test_unknown_load_type_is_refused(buckets):
     raw, lake = buckets
     with pytest.raises(load.LoadError, match="load_type"):
         load.run(raw, lake, "delta")
+
+
+# --- South Africa -------------------------------------------------------------------------------
+
+SCHEDULE = """SCHEDULE OF DOMESTIC GOVERNMENT BONDS AS AT 31 MARCH 2025
+R2030 8.00% 04-Oct-13 95.261%   300 000 000 28/02 & 31/08 31-Jan-30 297 978 110 031
+R213 7.00% 28-May-10 80.922%   300 000 000 28/02 & 31/08 28-Feb-31 218 177 161 244
+R2053 11.625% 11-Apr-23 99.780%  1 300 000 000 31/03 & 30/09 31-Mar-53 118 877 382 543
+R210** 2.60% 27-Sep-07 96.289%   100 000 000 31/03 & 30/09 31-Mar-28 53 310 805 634
+"""
+SA_DAY, SA_NEXT = dt.date(2025, 4, 25), dt.date(2025, 5, 2)
+OECD_CSV = (b"STRUCTURE,REF_AREA,MEASURE,TIME_PERIOD,OBS_VALUE\n"
+            b"DATAFLOW,ZAF,IRLT,2025-03,10.61\nDATAFLOW,ZAF,IRLT,2025-04,10.95\n")
+IMF_CSV = b"observation_date,INTGSBZAM193N\n2025-03-01,10.62\n2025-04-01,10.97\n"
+
+
+def auction_xlsx(r2053_yield=1.85):
+    """April 2025 as the Treasury's sheet has it, R2053's 1.85 on the 22nd included."""
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "APRIL"
+    for row in [
+        ["Fixed-rate government bond auction results, April 2025"],
+        ["Auction date", dt.datetime(2025, 4, 15), None, None, dt.datetime(2025, 4, 22)],
+        ["Settlement date", dt.datetime(2025, 4, 18), None, None, dt.datetime(2025, 4, 25)],
+        [None],
+        ["Bonds auctioned", "R2030", "R213", "R2053", "R2030", "R2053"],
+        ["Bond coupon; redemption", "(8%;2030)", "(7%;2031)", "(11.625%;2053)", "(8%;2030)", "(11.625%;2053)"],
+        ["Total amount allocated (R)", 1.25e9, 1.25e9, 1.25e9, 1.25e9, 1.25e9],
+        ["Clearing yield", 9.6, 10.1, 11.8, 9.7, r2053_yield],
+        ["Best bid", 9.5, 10.0, 11.7, 9.6, 11.76],
+        ["Worst bid", 9.7, 10.2, 11.9, 9.8, 12.0],
+        ["Bid to cover ratio (times)", 3.1, 2.5, 2.9, 3.0, 2.4],
+    ]:
+        ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def sa_raw(raw, day=SA_DAY, r2053_yield=1.85):
+    raw.put(load.key("raw", "nt_schedule", f"date={day}", "schedule.pdf"), b"%PDF-1.4 stand-in")
+    raw.put(load.key("raw", "nt_auctions", f"date={day}", "fixed-rate-bonds-2025-26.xlsx"), auction_xlsx(r2053_yield))
+    raw.put(load.key("raw", "oecd", f"date={day}", "irlt.csv"), OECD_CSV)
+    raw.put(load.key("raw", "imf", f"date={day}", "INTGSBZAM193N.csv"), IMF_CSV)
+
+
+SA = ("nt_schedule", "nt_auctions", "oecd", "imf")
+
+
+@pytest.fixture
+def schedule_text(monkeypatch):
+    from bond_analytics import nt_schedule
+
+    monkeypatch.setattr(nt_schedule, "pdf_text", lambda body: SCHEDULE)
+
+
+def sa_auctions(lake):
+    df = load.from_parquet(lake.get("sa_auctions/year=2025/sa_auctions.parquet"))
+    return {(str(r["auction_date"])[:10], r["bond_code"]): r for r in df.to_dict("records")}
+
+
+def test_the_treasurys_files_load_with_every_row_sourced_and_the_bad_yield_flagged(buckets, schedule_text):
+    raw, lake = buckets
+    sa_raw(raw)
+    status = load.run(raw, lake, "incremental", date_filter=SA_DAY, sources=SA)
+    assert all(v.startswith("loaded") for v in status.values())
+    bonds = load.read_sa_bonds(lake)
+    assert sorted(bonds) == ["R2030", "R2053", "R213"]
+    assert bonds["R2030"]["coupon_months"] == "1,7" and bonds["R2030"]["quality_flags"] == "interest_dates_disagree_with_redemption"
+    rows = sa_auctions(lake)
+    assert len(rows) == 5 and {r["source"] for r in rows.values()} == {"National Treasury of the Republic of South Africa"}
+    bad = rows[("2025-04-22", "R2053")]
+    assert bad["clearing_yield"] == 1.85 and bad["quality_flags"] == "clearing_outside_bids"
+    assert rows[("2025-04-15", "R2053")]["quality_flags"] == ""
+    ref = load.from_parquet(lake.get("sa_reference/year=2025/sa_reference.parquet"))
+    assert sorted(zip(ref["series"], ref["percent"])) == [("imf_ifs", 10.62), ("imf_ifs", 10.97), ("oecd_irlt", 10.61), ("oecd_irlt", 10.95)]
+    assert ref["source"].str.contains("International Monetary Fund").sum() == 2
+    assert marks(lake) == {s: "2025-04-25" for s in SA}
+
+
+def test_a_revised_file_replaces_its_rows_and_the_flag_goes_with_the_figure(buckets, schedule_text):
+    raw, lake = buckets
+    sa_raw(raw)
+    load.run(raw, lake, "incremental", date_filter=SA_DAY, sources=SA)
+    sa_raw(raw, SA_NEXT, r2053_yield=11.85)
+    assert load.run(raw, lake, "incremental", sources=SA)["nt_auctions"] == f"loaded {SA_NEXT} to {SA_NEXT}"
+    fixed = sa_auctions(lake)[("2025-04-22", "R2053")]
+    assert fixed["clearing_yield"] == 11.85 and fixed["quality_flags"] == ""
+    assert len(sa_auctions(lake)) == 5
+
+
+def test_auctions_without_a_schedule_fail_their_source_only(buckets, schedule_text):
+    raw, lake = buckets
+    sa_raw(raw)
+    raw.delete_prefix("raw/nt_schedule/")
+    with pytest.raises(load.LoadError, match="nt_auctions"):
+        load.run(raw, lake, "incremental", date_filter=SA_DAY, sources=SA)
+    assert lake.get("sa_reference/year=2025/sa_reference.parquet") is not None
+    assert "nt_auctions" not in marks(lake)
