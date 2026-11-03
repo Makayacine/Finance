@@ -5,7 +5,9 @@
     db.py         the SQLite schema, write transactions, the outbox writer
     auth.py       Argon2id passwords, HS256 JWTs, role checks
     errors.py     one generic phrase per error status
-    app.py        the REST endpoints: login, issue, redeem
+    app.py        the REST endpoints: login, issue, redeem -- and /graphql
+    schema.py     the GraphQL reads: voucher, liability, cohort
+    warehouse.py  where liability and cohort are read from: DuckDB locally, Redshift on AWS
     sweep.py      the expiry sweep
 
 Every state change writes an outbox row in the transaction that makes it. Nothing here talks to

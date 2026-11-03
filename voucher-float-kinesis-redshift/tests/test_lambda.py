@@ -12,9 +12,9 @@ import json
 
 import pytest
 
-from conftest import PROJECT, load_module
+from conftest import PROJECT
+from conftest import transform as transform_module
 
-transform_module = load_module("firehose-lambda/lambda_function.py", "lambda_function")
 lambda_handler, transform, Malformed = (transform_module.lambda_handler,
                                         transform_module.transform, transform_module.Malformed)
 SAMPLE = json.loads((PROJECT / "firehose-lambda" / "sample-events" / "firehose-batch.json")

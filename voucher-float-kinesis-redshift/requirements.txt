@@ -1,5 +1,17 @@
-# Local path -- the service, the tests and the --local pipeline, on a laptop with no AWS account.
+# Local path -- the service, the tests, the --local pipeline and the notebook, on a laptop with no
+# AWS account. Python 3.12+.
 flask>=3.0
+graphene>=3.3
 argon2-cffi>=23.1
 pyjwt>=2.8
+duckdb>=1.1
 pytest
+
+# The walkthrough notebook only.
+pandas>=2.2
+matplotlib
+jupyter
+
+# boto3 is not listed: nothing on the --local path imports it. The relay's KinesisStream and the
+# service's RedshiftDataWarehouse import it inside themselves, and the Lambda needs only the
+# standard library.

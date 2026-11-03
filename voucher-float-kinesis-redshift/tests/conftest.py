@@ -106,3 +106,42 @@ def load_module(relative_path, name):
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+# The whole local chain, for the warehouse and GraphQL tests -------------------------------------
+
+sim = load_module("local-development/simulate.py", "simulate")
+relay_module = load_module("kinesis-producer/outbox-relay.py", "outbox_relay")
+firehose = load_module("local-development/firehose_local.py", "firehose_local")
+warehouse = load_module("local-development/warehouse_local.py", "warehouse_local")
+transform = load_module("firehose-lambda/lambda_function.py", "lambda_function")
+
+OUTAGE = ("2024-12-09", "2024-12-15")
+CATCH_UP = "2024-12-16T01:00:00Z"
+SMALL = sim.Parameters(scale=0.05, days=70, sweep_outage=OUTAGE)
+ON_TIME = sim.Parameters(scale=0.05, days=70, sweep_outage=())
+
+
+def run_chain(root, params=SMALL):
+    """Simulate, relay, transform, COPY and build, all under ``root``."""
+    service_db = root / "voucher-service.db"
+    truth = sim.simulate(service_db, params, root / "truth.json")
+    conn = sqlite3.connect(service_db)
+    conn.row_factory = sqlite3.Row
+    relay_module.relay(conn, relay_module.FolderStream(root / "stream"))
+    conn.close()
+    firehose.deliver(root / "stream", root / "bucket", root / "checkpoint.json")
+    con, _ = warehouse.build(service_db, root / "bucket", root / "warehouse.duckdb",
+                             truth["as_of"])
+    return con, service_db, truth
+
+
+@pytest.fixture(scope="session")
+def chain(tmp_path_factory):
+    return run_chain(tmp_path_factory.mktemp("chain"))
+
+
+def fetch(con, sql, *params):
+    cursor = con.execute(sql, list(params))
+    names = [d[0] for d in cursor.description]
+    return [dict(zip(names, row)) for row in cursor.fetchall()]

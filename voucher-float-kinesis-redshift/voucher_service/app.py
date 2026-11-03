@@ -3,6 +3,7 @@
     POST /login                       username + password  ->  a JWT carrying the role
     POST /vouchers                    issuer    amount_cents, recipient_id, Idempotency-Key  ->  201
     POST /vouchers/<code>/redeem      merchant  one conditional UPDATE  ->  200, 409 or 404
+    POST /graphql                     finance   the reads: voucher, liability, cohort (schema.py)
 
 Each write changes the ``vouchers`` table and appends to ``outbox`` in one transaction, and
 nothing in a request talks to the stream. ``python -m voucher_service sweep`` expires overdue
@@ -46,7 +47,7 @@ from datetime import timedelta
 from flask import Flask, Response, current_app, g, jsonify, request
 from werkzeug.exceptions import HTTPException
 
-from . import auth, config, db
+from . import auth, config, db, schema
 from .errors import error
 from .timeutil import to_text, utc_now
 
@@ -58,7 +59,8 @@ def new_code():
     return config.CODE_PREFIX + secrets.token_hex(4)
 
 
-def create_app(db_path, *, clock=utc_now, jwt_secret=None, users=None, code_factory=new_code):
+def create_app(db_path, *, clock=utc_now, jwt_secret=None, users=None, code_factory=new_code,
+               warehouse=None):
     app = Flask(__name__)
     app.config.update(
         DB_PATH=str(db_path),
@@ -67,6 +69,7 @@ def create_app(db_path, *, clock=utc_now, jwt_secret=None, users=None, code_fact
         MAX_CONTENT_LENGTH=config.MAX_REQUEST_BYTES,
         CLOCK=clock,
         CODE_FACTORY=code_factory,
+        WAREHOUSE=warehouse,
     )
     db.create_schema(db_path)
     conn = db.connect(db_path)
@@ -82,6 +85,7 @@ def create_app(db_path, *, clock=utc_now, jwt_secret=None, users=None, code_fact
     app.add_url_rule("/login", view_func=login, methods=["POST"])
     app.add_url_rule("/vouchers", view_func=issue_voucher, methods=["POST"])
     app.add_url_rule("/vouchers/<code>/redeem", view_func=redeem_voucher, methods=["POST"])
+    app.add_url_rule("/graphql", view_func=graphql, methods=["POST"])
     return app
 
 
@@ -210,3 +214,12 @@ def redeem_voucher(code):
         db.append_event(conn, code, "redeemed", amount, redeemed_at, voucher["issued_at"],
                         voucher["expires_at"])
     return jsonify(code=code, status="redeemed", amount_cents=amount, redeemed_at=redeemed_at)
+
+
+@auth.require_role("finance")
+def graphql():
+    status, body = schema.execute(request.get_json(silent=True), get_db(),
+                                  current_app.config["WAREHOUSE"])
+    response = jsonify(body)
+    response.status_code = status
+    return response
