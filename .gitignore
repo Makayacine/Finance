@@ -27,3 +27,6 @@ sba-credit-risk-ecs-dynamo/data/raw/
 # latvia-company-credit: the full register, annual accounts and insolvency files (~650 MB). The
 # register names individual merchants and the insolvency file names debtors; both stay here.
 latvia-company-credit-glue-delta/data/raw/
+
+# sovereign-curves: the full FedInvest, GSW and auction downloads; data/ keeps a committed sample
+sovereign-curves-cicd-lambda-glue-ecs/data/raw/
