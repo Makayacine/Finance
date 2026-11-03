@@ -484,9 +484,9 @@ The interesting problems were in the figures:
 - **A yield-to-price formula needed a price to be tested against.** The issue prices in the
   Treasury's own schedule are the only free South African prices, and they come clean or all-in
   without saying which; matching one or the other to a thousandth, bond after bond, is the test.
-- **Some wrong rows pass every check a row can make on its own.** A year of auctions copied into
-  the wrong year's sheets, with yields inside their own bids, is caught only by selling a bond
-  before it existed; a bond label swapped between two columns only by the second file that holds
+- **Some wrong rows pass every check a row can make on its own.** Two months of later auctions
+  filed under February and March 2013, with yields inside their own bids, are caught only by selling
+  a bond before it existed; a bond label swapped between two columns only by the second file that holds
   the same day. Both checks look across rows, and both keep the figure and flag it.
 - **The schedule contradicts itself once,** on R2030's coupon dates, and the issue price says which
   half is right.

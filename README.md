@@ -457,9 +457,9 @@ The interesting problems were about conventions the data does not state:
   redistribution licence, but the debt schedule gives each bond's issue price, clean for some and
   all-in for others, and the first auction's yield reproduces whichever it is. The same match
   showed the schedule contradicting itself on R2030's coupon dates, and which half was right.
-- **Some wrong rows pass every check a row can make on its own.** A year of auctions copied into the
-  wrong year's sheets, with yields inside their own bids, shows only as bonds sold before they
-  existed; a bond label swapped between columns only in the second file holding the same day.
+- **Some wrong rows pass every check a row can make on its own.** Two months of later auctions filed
+  under February and March 2013, with yields inside their own bids, show only as bonds sold before
+  they existed; a bond label swapped between columns only in the second file holding the same day.
 
 Full detail, the truth-check tables and the deployment steps are in the project README.
 
