@@ -1,7 +1,9 @@
 """The JSE yield-to-price formula, FIA's bootstrap on it, and the monthly check against OECD and IMF.
 
-The formula is held to the National Treasury's own numbers: each bond's initial issue price in
-its debt schedule, against the clearing yield of the auction that settled on the issue date.
+The formula is held to the worked example in the specification it comes from (BESA, "Bond Pricing
+Formula - Specifications", version 2, 24 August 2005) and to the National Treasury's own numbers:
+each bond's initial issue price in its debt schedule, against the clearing yield of the auction
+that settled on the issue date.
 """
 
 import datetime as dt
@@ -29,6 +31,29 @@ R2039 = bond("R2039", 9.875, D(2039, 3, 31), (3, 9), (31, 30))
 R2048 = bond("R2048", 8.75, D(2048, 2, 28), (2, 8), (28, 31))
 R209 = bond("R209", 6.25, D(2036, 3, 31), (3, 9), (31, 30))
 R2023 = bond("R2023", 7.75, D(2023, 2, 28), (2, 8), (28, 31))
+
+
+def test_the_specifications_worked_example():
+    """Example 1: R186 at a yield of 7.5% for settlement on 26 August 2005, every intermediate figure."""
+    r186 = bond("R186", 10.5, D(2026, 12, 21), (6, 12), (21, 21))
+    p = jse.price(r186, D(2005, 8, 26), 7.5)
+    assert (p.lcd, p.ncd, p.n, p.cum) == (D(2005, 6, 21), D(2005, 12, 21), 42, True)
+    assert p.broken_period == pytest.approx(0.639344262295082, abs=1e-15)
+    assert jse.price(r186, D(2005, 8, 26), 7.5, rounded=False).all_in == pytest.approx(133.547091364729, abs=1e-12)
+    assert (p.accrued, p.clean, p.all_in) == (1.89863, 131.64846, 133.54709)
+
+
+def test_rounding_goes_accrued_then_clean_then_all_in():
+    """The clean price is rounded from the unrounded figures and the all-in price is the sum of the two
+    rounded ones, so all-in less accrued is always exactly the clean price. Rounding the all-in price
+    first gives a different all-in and clean price here, each by 0.00001."""
+    r186 = bond("R186", 10.5, D(2026, 12, 21), (6, 12), (21, 21))
+    settle, y = D(2010, 3, 2), 8.385
+    p, raw = jse.price(r186, settle, y), jse.price(r186, settle, y, rounded=False)
+    assert p.clean == round(raw.all_in - raw.accrued, 5) and p.accrued == round(raw.accrued, 5)
+    assert p.all_in == round(p.clean + p.accrued, 5)
+    old_all_in = round(raw.all_in, 5)
+    assert (old_all_in, round(old_all_in - p.accrued, 5)) != (p.all_in, p.clean)
 
 
 # The schedule's issue price, the first auction's settlement and clearing yield, and which price the
