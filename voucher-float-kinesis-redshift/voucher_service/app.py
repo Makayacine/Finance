@@ -112,11 +112,14 @@ def now():
 
 def json_body():
     """The request's JSON, or None if it is not JSON. A body nested deeper than the parser's
-    recursion limit -- sixteen kilobytes of ``[`` is enough -- is not JSON either."""
+    recursion limit -- sixteen kilobytes of ``[`` is enough -- is not JSON either, and nor is one
+    holding a lone surrogate escape (``\\ud800``), a string no UTF-8 text can carry."""
     try:
-        return request.get_json(silent=True)
-    except RecursionError:
+        body = request.get_json(silent=True)
+        json.dumps(body, ensure_ascii=False).encode()
+    except (RecursionError, UnicodeEncodeError):
         return None
+    return body
 
 
 def login():
