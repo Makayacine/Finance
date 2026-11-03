@@ -13,7 +13,9 @@ The point of the project is an estimate that can be checked:
 > **On a cohort that is days old, counting what has happened says almost no breakage: 2.4% for
 > October 2026. A life table over every voucher's age says 22.5%. The simulator fixed the true
 > rate at 23.97% before the first voucher was issued, and across 22 month-end backtests the
-> young-cohort estimate averages within 0.04 points of it.**
+> young-cohort estimate shows no bias against it (mean error -0.04 points); a single cohort is
+> typically within about a point (mean absolute error 0.81 points, 16 of 22 within one), 2.2 at
+> worst.**
 
 Two halves, and the line between them is the outbox:
 
@@ -100,7 +102,7 @@ purpose: 2% of issue requests are sent twice under the same key, and the sweep i
 | Outbox events | 97,588 |
 
 One seed, and the run reproduces itself: a full-scale run rewrites `data/simulation-truth.json`
-byte for byte.
+byte for byte. A run with `--scale` or `--days` writes its truth into `_localrun/` instead.
 
 ## The service
 
@@ -122,7 +124,10 @@ that Python will happily overrun.
 timed out cannot tell whether it did. The first 201 for each (issuer, key) is stored with a hash
 of the body: the same key and body -- key order and whitespace aside -- get that response back
 byte for byte, and no second voucher. Only a 201 is stored, so a refused body can be fixed and
-retried under the same key.
+retried under the same key. The lookup and the insert share one `BEGIN IMMEDIATE` transaction,
+which takes SQLite's write lock before the lookup: eight retries racing under one key get one
+voucher between them, and eight issues under eight keys all succeed, where a plain `BEGIN`
+answers some of them 500 `database is locked`.
 
 **Redeeming is one statement.**
 
@@ -133,7 +138,10 @@ update vouchers set status = 'redeemed', redeemed_at = ?, redeemed_by = ?
 
 The guard and the write are the same statement, so no second till slips between a check and an
 update. The tests race two threads at each of 25 vouchers, and eight at one: one 200 every time.
-A read-then-write version passes every other test and fails both of those.
+A version that reads the voucher outside the write lock, checks it in Python and then updates by
+code alone passes every other test and fails both of those. (Read and checked inside the
+`BEGIN IMMEDIATE` transaction, it would pass them: the lock serialises the tills. The single
+statement needs no such care.)
 
 **The sweep dates a lapse at expiry.** A voucher stops being redeemable the second it expires; the
 nightly sweep makes the lapse an event. That event's `occurred_at` is the voucher's `expires_at`,
@@ -145,8 +153,9 @@ vouchers there is about a one-in-four chance of a repeat somewhere, so a collisi
 
 **Passwords are Argon2id** and the three users -- issuer, merchant, finance -- are seeded from
 config at start-up, their plaintext from environment variables. An unknown username still costs
-one Argon2 verification, so response time does not say which names exist. Every error body is one
-fixed phrase per status: no field names, no echo of input, no stack trace.
+one Argon2 verification, so response time does not say which names exist. Every error body from
+the REST routes is one fixed phrase per status: no field names, no echo of input, no stack trace.
+A body nested too deep for the JSON parser is a 400 like any other bad body.
 
 ### Reads are GraphQL
 
@@ -165,7 +174,10 @@ the question "what does the system of record say right now". `liability` and `co
 warehouse, where copies have been dropped and late events placed on their own days -- DuckDB
 locally, the Redshift Data API on AWS, the same three statements either way. Money is `BigInt`
 cents, because GraphQL's `Int` is 32-bit and runs out at 21,474,836.47. A failure inside a
-resolver reports `internal error` and nothing else.
+resolver reports `internal error` and nothing else, and a body that is not a GraphQL request --
+`variables` that are not an object, a query nested past the parser's limit -- gets
+`invalid request`. A query that does not parse or validate gets graphql-core's own message,
+which can name a field or repeat a value: `Cannot query field 'nope' on type 'Voucher'`.
 
 ## The pipeline
 
@@ -196,10 +208,12 @@ its earliest exit, and `daily_liability` adds each voucher on its issue day and 
 exit day. A late event corrects every past day it belongs to the next time a view is read.
 
 The same SQL text runs on DuckDB and on Redshift: no `generate_series`, no `QUALIFY`, no
-`datediff` (the two engines spell it differently), every window aggregate with an explicit frame,
-integer division cast to double, and ages from `extract(epoch from ...)`. A test holds the file to
-that list, and another holds `warehouse/landing-tables.sql` and `redshift/redshift-create-tables.sql`
-to the same columns and types.
+`datediff` (the two engines spell it differently), an explicit frame on every window aggregate
+with an `ORDER BY`, every division of two integers cast to `double precision` first, and ages
+from `extract(epoch from ...)`. A test checks the text for each of those, and another builds the
+views a second time with DuckDB dividing integers as Redshift does, which changes no figure. A
+third holds `warehouse/landing-tables.sql` and `redshift/redshift-create-tables.sql` to the same
+columns and types.
 
 ## What it finds
 
@@ -210,11 +224,14 @@ reward run doubles that day's issuance and runs off over the next 30 days. At th
 1 November 2026 it is **171,795.16 on 830 vouchers**.
 
 **The sweep outage changes none of it.** A report that dated each lapse at the sweep that
-recorded it would have overstated the 9-15 March liability by 4,581.12 to 19,187.74 and dropped
-back on the 16th. The warehouse's series runs through the outage as if the sweep had been on
-time, and `tests/test_warehouse.py` proves it end to end: the same small simulation with the sweep
-on time and a week late gives identical daily liability, and before the catch-up's events arrive
-the outage days really are overstated.
+recorded it would run a day behind the warehouse every night, outage or not: the sweep at 01:00
+records the previous day's lapses, so that report sits above the warehouse by exactly the day's
+expiries -- 4,181.12 on 8 March, 1,679.22 on 16 March. The outage added to that lag. Against the
+same report with the sweep on time, it overstated the liability by 4,181.12 on 9 March, rising to
+15,337.74 on the 15th, and from the 16th the two agree again. The warehouse's series runs through
+the outage as if the sweep had been on time, and `tests/test_warehouse.py` proves it end to end:
+the same small simulation with the sweep on time and a week late gives identical daily
+liability, and before the catch-up's events arrive the outage days really are overstated.
 
 ### Breakage by cohort
 
@@ -244,18 +261,21 @@ At each month end from January 2025 the warehouse is rewound -- `warehouse_as_of
 on the 1st, so every later event is invisible and every open voucher censored at its age then --
 and the month just ended is estimated, with 40-50% of its vouchers still open:
 
-| 22 month-end estimates | Mean error | SD | Largest miss |
-| --- | --- | --- | --- |
-| projected, against the true rate | **-0.0004** | 0.0098 | 0.0222 |
-| projected, against what the cohort went on to do | +0.0019 | 0.0118 | 0.0253 |
-| naive -- expired over resolved -- against the true rate | -0.2327 | 0.0076 | 0.2397 |
+| 22 month-end estimates | Mean error | Mean absolute error | Within a point | SD | Largest miss |
+| --- | --- | --- | --- | --- | --- |
+| projected, against the true rate | **-0.0004** | 0.0081 | 16 | 0.0098 | 0.0222 |
+| projected, against what the cohort went on to do | +0.0019 | 0.0098 | 12 | 0.0118 | 0.0253 |
+| naive -- expired over resolved -- against the true rate | -0.2327 | 0.2327 | 0 | 0.0076 | 0.2397 |
 
-The naive rate is what a report gets by counting what has happened, and it would book almost no
-breakage on a young cohort. **The backtest also caught the estimator's one bias.** An earlier
-version read an open voucher's survival at the start of its last day, ignoring the part of that
-day it had already come through without redeeming; with day 0's hazard at 13%, every young cohort
-came out about half a point low, -0.0060 against the truth. It now interpolates across the day,
-the same assumption the half-day censoring makes, and a four-voucher test pins the arithmetic.
+The mean error says the estimator has no bias; it does not say any one estimate is that close. A
+single month's projection is typically 0.8 of a point from the true rate and 2.2 at worst, because
+each young cohort is one draw of about 2,000 vouchers. The naive rate is what a report gets by
+counting what has happened, and it would book almost no breakage on a young cohort. **The backtest
+also caught the estimator's one bias.** An earlier version read an open voucher's survival at the
+start of its last day, ignoring the part of that day it had already come through without
+redeeming; with day 0's hazard at 13%, every young cohort came out about half a point low, -0.0060
+against the truth. It now interpolates across the day, the same assumption the half-day censoring
+makes, and two four-voucher tests pin the arithmetic, one for each half of it.
 
 ### The reconciliation
 
@@ -265,11 +285,15 @@ the same assumption the half-day censoring makes, and a four-voucher test pins t
 | Unredeemed vouchers | 830 | 830 |
 | Difference | | **0** |
 
-Beside it, `reconciliation` counts copies dropped, exits whose issue never arrived and vouchers
-with two exits -- each would explain a difference, and each is zero. The comparison is like with
-like only when the control total is taken straight after a sweep: until a lapsed voucher is swept
-its row still says `unredeemed`, while the warehouse, dating the lapse at expiry, has already taken
-it off.
+Beside it, `reconciliation` counts exits whose issue never arrived and vouchers with two exits --
+either would explain a difference, and both are zero -- and the copies the dedupe dropped, which
+is informational: the relay delivers at least once by design, and the copies are gone before
+anything is summed. The comparison is like with like only when the control total is taken
+straight after a sweep: until a lapsed voucher is swept its row still says `unredeemed`, while the
+warehouse, dating the lapse at expiry, has already taken it off. And the service can only be read
+as it is now, so `warehouse_local.py` refuses an `--as-of` earlier than the service's latest
+issue, redemption or sweep rather than put that label on a later balance; without one it reports
+as of that latest change.
 
 ## Running it
 
@@ -323,22 +347,29 @@ paths. The simulator drives all 49,209 vouchers through the real endpoints.
 | The transform Lambda | the same file, called in-process | all of it: the handler is the one you deploy |
 | Redshift and its `COPY` | DuckDB and `read_json` | `warehouse/views.sql`, unchanged; the landing columns and types |
 
-**145 tests, no AWS, no network.** `test_auth.py` (21): Argon2id at rest, the same 401 for a
+**176 tests, no AWS, no network.** `test_auth.py` (22): Argon2id at rest, the same 401 for a
 wrong password and an unknown user, every bad token -- other key, expired, `alg: none`, unknown
-role, no expiry -- 401 before 403 before the body. `test_issue.py` (35): the code and the 30-day
-expiry, the outbox row, the replay byte for byte, 422 for a reused key, keys per issuer, 21 bodies
-refused with nothing written, a code collision redrawn, and an outbox insert made to fail inside
-SQLite taking the voucher with it. `test_redeem.py` (10): 200, 409, 404, unredeemable from the
-expiry second, and the two races. `test_sweep.py` (6): overdue and unredeemed only, dated at
-expiry, harmless twice, the boundary second shared with redemption. `test_relay.py` (9): outbox
-order, nothing twice, one shard per voucher, batch sizes, throttled records retried through the
-AWS class itself, giving up with nothing marked, and a crash before marking re-sending copies that
-share an `event_id`. `test_simulate.py` (5): the plan drawn from its parameters, the formula, a
-byte-identical rerun. `test_lambda.py` (24): the sample batch, the derived fields, 19 malformed
-events. `test_warehouse.py` (11): the DDL pair, the portable SQL, the reconciliation, copies
-dropped, a lost redemption found, the late sweep, two life tables worked by hand.
-`test_graphql.py` (24): finance only, exactly three queries, each against the warehouse, refusals,
-and a resolver failure saying only `internal error`.
+role, no expiry -- 401 before 403 before the body, and JSON nested too deep refused with 400.
+`test_issue.py` (37): the code and the 30-day expiry, the outbox row, the replay byte for byte,
+422 for a reused key, keys per issuer, 21 bodies refused with nothing written, a code collision
+redrawn, an outbox insert made to fail inside SQLite taking the voucher with it, and eight
+requests at once under one key and under eight. `test_redeem.py` (11): 200, 409, 404,
+unredeemable from the expiry second, a failed outbox insert taking the redemption with it, and
+the two races. `test_sweep.py` (7): overdue and unredeemed only, dated at expiry, harmless twice,
+the boundary second shared with redemption, and a failed outbox insert taking the whole sweep
+with it. `test_relay.py` (11): outbox order, nothing twice, one shard per voucher, batch sizes and
+the 500-record cap, the stream name and partition key Kinesis is given, throttled records retried
+through the AWS class itself, giving up with nothing marked, and a crash before marking
+re-sending copies that share an `event_id`. `test_simulate.py` (6): the plan drawn from its
+parameters, the formula, a byte-identical rerun, and a scaled run leaving the committed truth
+alone. `test_lambda.py` (29): the sample batch, the derived fields, 22 malformed events -- the
+boundaries of a voucher's life among them -- and a record too deep to parse failing alone.
+`test_warehouse.py` (16): the DDL pair, the portable SQL by its text and by integer division,
+the reconciliation, copies dropped, a lost redemption found, two exits and an orphan exit
+counted, the late sweep, nothing after `as_of` visible, an earlier `as_of` refused, and three
+life tables worked by hand. `test_graphql.py` (37): finance only, exactly three queries, each
+against the warehouse, `redeemedBy` against the service's own rows, refusals down to a year 0,
+Arabic-Indic digits and `variables` of `0`, and a resolver failure saying only `internal error`.
 
 **Three engine differences to carry into the deploy.** Firehose's `COPY` into Redshift is at least
 once as well, which the dedupe already absorbs. The local stream keeps shard files in the order
