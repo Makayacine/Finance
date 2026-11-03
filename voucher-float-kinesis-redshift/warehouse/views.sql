@@ -67,7 +67,10 @@ select i.voucher_code,
        case when x.event_type is null
             then cast(floor((extract(epoch from a.as_of) - extract(epoch from i.issued_at))
                             / 86400.0) as integer)
-       end                                                                    as censor_day
+       end                                                                    as censor_day,
+       case when x.event_type is null
+            then (extract(epoch from a.as_of) - extract(epoch from i.issued_at)) / 86400.0
+       end                                                                    as open_age_days
 from voucher_event i
 cross join warehouse_as_of a
 left join exits x on x.voucher_code = i.voucher_code and x.exit_rank = 1
@@ -204,28 +207,53 @@ from lagged;
 --   breakage_rate            realised expiries plus, for every open voucher, its amount times
 --                            the chance a voucher of its age goes on to lapse, read from the
 --                            pooled life table:
---                                (final expired_share - expired_share before its age)
---                                / survival before its age
+--                                (final expired_share - expired_share at its age)
+--                                / survival at its age
 --                            It equals the realised rate once the cohort is closed.
+--
+-- "At its age" means to the second, not to the start of its last day. A voucher 4.6 days old
+-- has come through most of day 4 without redeeming, and early on a day matters: day 0's hazard
+-- is about 13%. So survival and expired_share are interpolated across the voucher's last day,
+-- linearly, the same assumption the half-day censoring above makes. Reading them at the start
+-- of the day instead understated every young cohort's breakage by about half a point.
 create or replace view breakage_by_issue_month as
 with pooled as (
     select day, survival, expired_share,
-           coalesce(lead(day) over (order by day), 2147483647) as next_day
+           coalesce(lag(survival) over (order by day), 1.0)       as survival_before,
+           coalesce(lag(expired_share) over (order by day), 0.0)  as expired_share_before,
+           coalesce(lead(day) over (order by day), 2147483647)    as next_day
     from redemption_life_table
     where scope = 'pooled'
 ),
 lapse_end as (
     select max(expired_share) as expired_share_end from pooled
 ),
-projected as (
-    select v.issue_month,
-           sum(v.amount_cents * (e.expired_share_end - coalesce(p.expired_share, 0))
-               / coalesce(nullif(p.survival, 0), 1.0)) as projected_expired_cents
+open_at_age as (
+    -- The pooled row whose span holds the voucher's last day. If that row is the day itself,
+    -- the day starts at the row before it; otherwise nothing happened that day and the values
+    -- hold flat across it.
+    select v.issue_month, v.amount_cents, v.open_age_days - v.censor_day as part_of_day,
+           case when p.day = v.censor_day then p.survival_before else p.survival end
+               as survival_start,
+           p.survival as survival_end,
+           case when p.day = v.censor_day then p.expired_share_before else p.expired_share end
+               as expired_start,
+           p.expired_share as expired_end
     from voucher_state v
-    cross join lapse_end e
-    left join pooled p on v.censor_day - 1 >= p.day and v.censor_day - 1 < p.next_day
+    join pooled p on v.censor_day >= p.day and v.censor_day < p.next_day
     where v.status = 'unredeemed'
-    group by v.issue_month
+),
+projected as (
+    select o.issue_month,
+           sum(o.amount_cents
+               * (e.expired_share_end
+                  - (o.expired_start + o.part_of_day * (o.expired_end - o.expired_start)))
+               / nullif(o.survival_start
+                        + o.part_of_day * (o.survival_end - o.survival_start), 0))
+               as projected_expired_cents
+    from open_at_age o
+    cross join lapse_end e
+    group by o.issue_month
 ),
 cohorts as (
     select issue_month,

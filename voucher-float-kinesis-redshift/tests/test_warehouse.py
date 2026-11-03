@@ -220,3 +220,42 @@ def test_the_life_table_worked_by_hand(tmp_path):
                  fetch(con, "select * from daily_liability order by day")]
     assert liability == [(date(2026, 1, 1), 200), (date(2026, 1, 3), 100),
                          (date(2026, 1, 26), 200), (date(2026, 1, 31), 100)]
+
+
+def test_an_open_voucher_is_projected_from_its_exact_age(tmp_path):
+    """Three vouchers from 1 January -- one redeems on day 0, two lapse on day 30 -- and a fourth
+    issued twelve hours before as_of, still open halfway through its day 0.
+
+    Day 0: 400 at risk, 100 redeemed, 100 censored at half exposure, so the hazard is
+    100 / 350 and S(0) = 5/7; the two lapses make the final expired share 5/7. Voucher 4 has
+    come through half of day 0 without redeeming, so its survival is 1 - 0.5 * 2/7 = 6/7 and its
+    chance of lapsing (5/7) / (6/7) = 5/6. Reading survival at the start of the day instead would
+    give 5/7 and understate the cohort's breakage."""
+    con = warehouse.connect(tmp_path / "w.duckdb")
+    warehouse.create(con)
+    start = datetime(2026, 1, 1, 9)
+    as_of = start + timedelta(days=30, hours=1)
+    late_issue = as_of - timedelta(hours=12)
+    events = []
+
+    def event(voucher, kind, issued_at, at):
+        days = (at - issued_at).days
+        events.append((f"00000000-0000-4000-8000-{len(events):012d}", f"VCH-0000000{voucher}",
+                       kind, 100, at, issued_at, issued_at + timedelta(days=30),
+                       date(2026, 1, 1), days, days if kind == "redeemed" else None))
+
+    for voucher in (1, 2, 3):
+        event(voucher, "issued", start, start)
+    event(4, "issued", late_issue, late_issue)
+    event(1, "redeemed", start, start + timedelta(hours=2))
+    event(2, "expired", start, start + timedelta(days=30))
+    event(3, "expired", start, start + timedelta(days=30))
+    con.executemany("insert into voucher_events_raw values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    events)
+    warehouse.set_as_of(con, as_of)
+
+    [day0] = fetch(con, "select * from redemption_life_table where scope = 'pooled' and day = 0")
+    assert day0["survival"] == pytest.approx(5 / 7)
+    [cohort] = fetch(con, "select * from breakage_by_issue_month")
+    assert cohort["open_cents"] == 100
+    assert cohort["breakage_rate"] == pytest.approx((200 + 100 * 5 / 6) / 400)
