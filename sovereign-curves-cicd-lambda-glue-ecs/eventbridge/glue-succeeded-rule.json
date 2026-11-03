@@ -1,0 +1,6 @@
+{
+  "Name": "sovereign-curves-load-succeeded",
+  "Description": "The Glue load finished: run the curve and risk engine over the new price dates",
+  "EventPattern": "{\"source\": [\"aws.glue\"], \"detail-type\": [\"Glue Job State Change\"], \"detail\": {\"jobName\": [\"<glue-job-name>\"], \"state\": [\"SUCCEEDED\"]}}",
+  "State": "ENABLED"
+}

@@ -1,0 +1,7 @@
+[
+  {
+    "Id": "fetch-lambda",
+    "Arn": "arn:aws:lambda:<region>:<account-id>:function:<fetch-function>",
+    "Input": "{}"
+  }
+]
