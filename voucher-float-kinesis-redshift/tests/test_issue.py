@@ -4,10 +4,18 @@ A refused request must leave no trace -- no voucher, no outbox row, and no store
 client can fix the body and retry under the same key. A failure halfway through must leave no
 trace either: the test below makes the outbox insert itself fail, inside SQLite, and checks the
 voucher went with it.
+
+The two concurrency tests release eight requests at once, each on its own test client and so its
+own SQLite connection. Retries racing under one key must get one voucher between them, and
+requests under different keys must all succeed: both need ``BEGIN IMMEDIATE``, which makes a
+second writer wait for the lock. A plain ``BEGIN`` takes the lock only at the first write, and a
+transaction that has read and then finds another writer committed ahead of it is refused with
+"database is locked" rather than made to wait.
 """
 
 import re
 import sqlite3
+import threading
 import uuid
 from datetime import timedelta
 
@@ -160,3 +168,38 @@ def test_issue_and_expiry_follow_the_service_clock(client, tokens, clock):
     voucher = issue(client, tokens["issuer"]).get_json()
     assert voucher["issued_at"] == "2027-02-19T12:00:00Z"
     assert voucher["expires_at"] == "2027-03-21T12:00:00Z"
+
+
+def all_at_once(app, token, keys):
+    """One issue request per key, released together by a barrier; the responses in key order."""
+    barrier = threading.Barrier(len(keys))
+    responses = [None] * len(keys)
+
+    def send(position):
+        client = app.test_client()
+        barrier.wait()
+        responses[position] = issue(client, token, key=keys[position])
+
+    threads = [threading.Thread(target=send, args=(n,)) for n in range(len(keys))]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    return responses
+
+
+def test_retries_racing_under_one_key_get_one_voucher(app, tokens):
+    for round_ in range(5):
+        responses = all_at_once(app, tokens["issuer"], [f"retry-{round_}"] * 8)
+        assert [r.status_code for r in responses] == [201] * 8
+        assert len({r.get_data() for r in responses}) == 1
+        assert sum(r.headers.get("Idempotent-Replayed") == "true" for r in responses) == 7
+    assert counts(app) == {"vouchers": 5, "outbox": 5, "idempotency_keys": 5}
+
+
+def test_issues_racing_under_different_keys_all_succeed(app, tokens):
+    for round_ in range(5):
+        responses = all_at_once(app, tokens["issuer"], [f"k-{round_}-{n}" for n in range(8)])
+        assert [r.status_code for r in responses] == [201] * 8
+        assert len({r.get_json()["code"] for r in responses}) == 8
+    assert counts(app) == {"vouchers": 40, "outbox": 40, "idempotency_keys": 40}
