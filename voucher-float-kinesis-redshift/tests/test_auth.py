@@ -53,6 +53,17 @@ def test_a_malformed_login_body_is_400(client, payload):
     assert response.status_code == 400 and body(response) == {"error": "invalid request"}
 
 
+def test_json_nested_past_the_parsers_limit_is_400_not_500(app, client, tokens):
+    deep = "[" * 15_000  # inside the 16 KB limit, far past Python's recursion limit
+    response = client.post("/login", data=deep, content_type="application/json")
+    assert response.status_code == 400 and body(response) == {"error": "invalid request"}
+    response = client.post("/vouchers", data=deep, content_type="application/json",
+                           headers={"Authorization": f"Bearer {tokens['issuer']}",
+                                    "Idempotency-Key": "deep"})
+    assert response.status_code == 400 and body(response) == {"error": "invalid request"}
+    assert rows(app, "select count(*) as n from vouchers") == [{"n": 0}]
+
+
 def test_no_token_is_401_on_both_writes(client):
     for response in (client.post("/vouchers", json={}), redeem(client, "", "VCH-00000000")):
         assert response.status_code == 401

@@ -30,7 +30,8 @@ from graphql import GraphQLError
 
 from . import config
 
-MONTH = re.compile(r"(\d{4})-(\d{2})")
+# [0-9], not \d: \d matches every Unicode digit, and int() reads Arabic-Indic digits too.
+MONTH = re.compile(r"([0-9]{4})-([0-9]{2})")
 
 
 class Event(graphene.ObjectType):
@@ -112,7 +113,7 @@ class Query(graphene.ObjectType):
 
     def resolve_cohort(root, info, month):
         match = MONTH.fullmatch(month)
-        if not match or not 1 <= int(match.group(2)) <= 12:
+        if not match or int(match.group(1)) < 1 or not 1 <= int(match.group(2)) <= 12:
             raise GraphQLError("invalid request")
         first_day = date(int(match.group(1)), int(match.group(2)), 1)
         found = warehouse(info).cohort(first_day)
@@ -128,15 +129,23 @@ schema = graphene.Schema(query=Query, auto_camelcase=True)
 
 def execute(payload, db, store):
     """Run one GraphQL request; returns (status, body). Errors the resolvers did not raise on
-    purpose are reported as "internal error" and nothing else."""
+    purpose are reported as "internal error" and nothing else.
+
+    ``variables`` is an object or absent, and ``operationName`` a string or absent: a ``0``, a
+    ``[]`` or a ``false`` in either is refused here rather than handed to graphql-core. A query
+    nested past the parser's recursion limit -- about 500 levels of braces -- is refused too.
+    """
     if not isinstance(payload, dict) or not isinstance(payload.get("query"), str) \
             or not set(payload) <= {"query", "variables", "operationName"} \
-            or not isinstance(payload.get("variables") or {}, dict) \
-            or not isinstance(payload.get("operationName") or "", str):
+            or not isinstance(payload.get("variables", {}), (dict, type(None))) \
+            or not isinstance(payload.get("operationName", ""), (str, type(None))):
         return 400, {"error": "invalid request"}
-    result = schema.execute(payload["query"], variable_values=payload.get("variables"),
-                            operation_name=payload.get("operationName"),
-                            context_value={"db": db, "warehouse": store})
+    try:
+        result = schema.execute(payload["query"], variable_values=payload.get("variables"),
+                                operation_name=payload.get("operationName"),
+                                context_value={"db": db, "warehouse": store})
+    except RecursionError:
+        return 400, {"error": "invalid request"}
     body = {"data": result.data}
     if result.errors:
         errors = []

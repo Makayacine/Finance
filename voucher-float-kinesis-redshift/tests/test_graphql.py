@@ -138,7 +138,10 @@ def test_an_open_cohort_is_projected(reads):
     assert cohort["breakageRate"] == pytest.approx(young["breakage_rate"])
 
 
-@pytest.mark.parametrize("month", ["2024-13", "2024-1", "November", "2024-11-01"])
+@pytest.mark.parametrize("month", ["2024-13", "2024-1", "November", "2024-11-01", "0000-01",
+                                   "\u0662\u0660\u0662\u0664-\u0661\u0661"],
+                         ids=["month-13", "one-digit", "name", "a-date", "year-0",
+                              "arabic-indic-digits"])
 def test_a_malformed_month_is_refused(reads, month):
     client, token, _, _, _ = reads
     status, answer = ask(client, token, "query ($m: String!) { cohort(month: $m) { issued } }",
@@ -158,11 +161,31 @@ def test_a_month_with_no_vouchers_is_null_and_bad_days_are_refused(reads):
 @pytest.mark.parametrize("payload", [
     None, [], {"query": 42}, {"query": "{ __typename }", "extra": 1},
     {"query": "{ __typename }", "variables": "not an object"},
-])
+    *({"query": "{ __typename }", "variables": falsy} for falsy in (0, [], "", False)),
+    *({"query": "{ __typename }", "operationName": falsy} for falsy in (0, [], False)),
+], ids=["null", "array", "query-not-a-string", "extra-key", "variables-a-string",
+        "variables-0", "variables-[]", "variables-empty-string", "variables-false",
+        "operation-0", "operation-[]", "operation-false"])
 def test_a_malformed_request_is_400(reads, payload):
     client, token, _, _, _ = reads
     response = client.post("/graphql", json=payload, headers=bearer(token))
     assert response.status_code == 400 and body(response) == {"error": "invalid request"}
+
+
+def test_variables_and_an_operation_name_may_be_null(reads):
+    client, token, _, _, _ = reads
+    response = client.post("/graphql", headers=bearer(token), json={
+        "query": "{ __typename }", "variables": None, "operationName": None})
+    assert response.status_code == 200 and body(response) == {"data": {"__typename": "Query"}}
+
+
+def test_nesting_past_either_parsers_limit_is_400_not_500(reads):
+    client, token, _, _, _ = reads
+    deep_json = client.post("/graphql", data="[" * 15_000, content_type="application/json",
+                            headers=bearer(token))
+    assert deep_json.status_code == 400 and body(deep_json) == {"error": "invalid request"}
+    deep_query = ask(client, token, "{" + "a{" * 600 + "}" * 601)
+    assert deep_query == (400, {"error": "invalid request"})
 
 
 def test_a_query_that_does_not_parse_or_validate_is_400(reads):
