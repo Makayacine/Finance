@@ -17,11 +17,12 @@ import re
 import sqlite3
 import uuid
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
-from conftest import (CATCH_UP, ON_TIME, PROJECT, SMALL, fetch, firehose, run_chain, sim,
-                      transform, warehouse)
+from conftest import (CATCH_UP, ON_TIME, PROJECT, SMALL, fetch, firehose, issue, redeem,
+                      relay_module, run_chain, sim, transform, warehouse)
 
 
 def ddl_columns(path):
@@ -94,7 +95,7 @@ def test_the_views_keep_to_sql_redshift_also_runs():
     found = windows(code)
     aggregates = [(name, frame) for name, frame in found
                   if name in ("sum", "count", "avg", "min", "max")]
-    assert len(aggregates) >= 10 and {"lag", "lead", "row_number"} <= {n for n, _ in found}
+    assert len(aggregates) >= 10 and {"lag", "row_number"} <= {n for n, _ in found}
     for name, frame in aggregates:
         if "order by" in frame:
             assert "rows between" in frame, (name, frame)
@@ -350,16 +351,18 @@ def test_an_open_voucher_is_projected_from_its_exact_age(tmp_path):
 
 def test_nothing_dated_after_as_of_is_visible(chain, tmp_path):
     """The backtest rewinds as_of to each month end and trusts the views to hide every later
-    event. Rewound to midday on 20 December, the warehouse must hold exactly the service's
-    events up to that second, and its open vouchers must be the service's open vouchers then."""
+    event. Rewound to the second of the last event before midday on 20 December -- so the event
+    on the boundary must be visible -- the warehouse must hold exactly the service's events up
+    to that second, and its open vouchers must be the service's open vouchers then."""
     _, service_db, _ = chain
     con = warehouse.connect(tmp_path / "w.duckdb")
     warehouse.create(con)
     warehouse.copy_new(con, service_db.parent / "bucket")
-    mid = "2024-12-20T12:00:00Z"
+    service = sqlite3.connect(service_db)
+    mid = service.execute("select max(occurred_at) from outbox where occurred_at <= ?",
+                          ("2024-12-20T12:00:00Z",)).fetchone()[0]
     warehouse.set_as_of(con, mid)
 
-    service = sqlite3.connect(service_db)
     events = service.execute("select count(*) from outbox where occurred_at <= ?",
                              (mid,)).fetchone()[0]
     later = service.execute("select count(*) from outbox where occurred_at > ?",
@@ -371,8 +374,8 @@ def test_nothing_dated_after_as_of_is_visible(chain, tmp_path):
     assert later > 100 and open_count > 30
 
     assert con.execute("select count(*) from voucher_event").fetchone()[0] == events
-    assert con.execute("select max(occurred_at) from voucher_event").fetchone()[0] <= \
-        datetime(2024, 12, 20, 12)
+    assert con.execute("select max(occurred_at) from voucher_event").fetchone()[0] == \
+        datetime.strptime(mid, "%Y-%m-%dT%H:%M:%SZ")
     state = fetch(con, "select count(*) as vouchers, sum(amount_cents) as cents"
                        " from voucher_state where status = 'unredeemed'")[0]
     assert state == {"vouchers": open_count, "cents": open_cents}
@@ -464,6 +467,36 @@ def test_an_open_voucher_is_projected_from_its_exact_expired_share_too(tmp_path)
     assert cohort["breakage_rate"] == pytest.approx((200 + 100 * 7 / 12) / 400)
 
 
+def test_an_open_voucher_starts_its_last_day_with_the_lapses_before_it(tmp_path):
+    """The start of the interpolation: an expiry on a day before the open voucher's last one.
+    Voucher 1 (a 1-day term) lapses on day 1; voucher 2 redeems on day 3; voucher 3 lapses on
+    day 10; voucher 4 is open, 3.5 days old, so it is censored on day 3 at half exposure.
+
+    Day 1: 400 at risk, 100 expires: S(1) = 3/4, expired share 1/4. Day 3: 300 at risk less half
+    of 100 censored, 100 redeems: S(3) = 3/4 * 3/5 = 9/20. Day 10: the last 100 lapses, so the
+    final expired share is 1/4 + 9/20 = 7/10. Halfway through day 3 voucher 4 has S = 3/5 and
+    the expired share the day started with, 1/4, so its chance of lapsing is
+    (7/10 - 1/4) / (3/5) = 3/4. Starting the day from an expired share of 0 would give 23/24."""
+    t0 = datetime(2026, 1, 1, 9)
+    as_of = t0 + timedelta(days=10, hours=1)
+    late = as_of - timedelta(hours=84)
+    con = hand_built(tmp_path, as_of, [
+        (1, "issued", t0, 1, t0), (1, "expired", t0, 1, t0 + timedelta(days=1)),
+        (2, "issued", t0, 10, t0), (2, "redeemed", t0, 10, t0 + timedelta(days=3)),
+        (3, "issued", t0, 10, t0), (3, "expired", t0, 10, t0 + timedelta(days=10)),
+        (4, "issued", late, 10, late),
+    ])
+    table = [(r["day"], r["censored_cents"], r["survival"], r["expired_share"]) for r in
+             fetch(con, "select * from redemption_life_table where scope = 'pooled' order by day")]
+    assert table == [(1, 0, pytest.approx(3 / 4), pytest.approx(1 / 4)),
+                     (3, 100, pytest.approx(9 / 20), pytest.approx(1 / 4)),
+                     (10, 0, 0.0, pytest.approx(7 / 10))]
+    [cohort] = fetch(con, "select * from breakage_by_issue_month")
+    assert (cohort["issued_cents"], cohort["expired_cents"], cohort["open_cents"]) == \
+        (400, 200, 100)
+    assert cohort["breakage_rate"] == pytest.approx((200 + 100 * 3 / 4) / 400)
+
+
 def test_the_control_total_is_never_stamped_earlier_than_the_service_it_read(chain, tmp_path):
     """The service can only be read as it is now. Asked to report as of a moment before the
     service's latest change, the warehouse refuses and keeps the as_of and total it had;
@@ -485,3 +518,43 @@ def test_the_control_total_is_never_stamped_earlier_than_the_service_it_read(cha
     assert con.execute("select as_of from warehouse_as_of").fetchall() == [(close,)]
     assert warehouse.reconciliation(con) == before
     con.close()
+
+    # Refused on its first build, the warehouse leaves no file: one holding events and no as_of
+    # would answer every query with zero.
+    with pytest.raises(warehouse.ServiceMovedOn):
+        warehouse.build(service_db, bucket, tmp_path / "fresh.duckdb", "2024-12-20T00:00:00Z")
+    assert not list(tmp_path.glob("fresh.duckdb*"))
+
+
+@pytest.mark.parametrize("last", ["redeemed", "issued"])
+def test_without_an_as_of_the_warehouse_reports_as_of_the_latest_change(
+        app, client, tokens, clock, tmp_path, last):
+    """The simulated chain always ends on a sweep; a service's last change can as well be a
+    redemption or an issue. Without an as_of the warehouse reports as of that change's second,
+    counts the event dated exactly then, and reconciles; a second earlier is refused."""
+    codes = [issue(client, tokens["issuer"], key=f"key-{n}").get_json()["code"]
+             for n in range(2)]
+    clock.advance(hours=1)
+    assert redeem(client, tokens["merchant"], codes[0]).status_code == 200
+    if last == "issued":
+        clock.advance(hours=1)
+        assert issue(client, tokens["issuer"], key="key-2").status_code == 201
+    latest = clock().replace(tzinfo=None)
+
+    service_db = Path(app.config["DB_PATH"])
+    conn = sqlite3.connect(service_db)
+    conn.row_factory = sqlite3.Row
+    relay_module.relay(conn, relay_module.FolderStream(tmp_path / "stream"))
+    conn.close()
+    firehose.deliver(tmp_path / "stream", tmp_path / "bucket", tmp_path / "checkpoint.json")
+    con, _ = warehouse.build(service_db, tmp_path / "bucket", tmp_path / "w.duckdb")
+    assert con.execute("select as_of from warehouse_as_of").fetchone()[0] == latest
+    assert con.execute("select max(occurred_at) from voucher_event").fetchone()[0] == latest
+    check = warehouse.reconciliation(con)
+    assert check["difference_cents"] == 0
+    assert check["warehouse_vouchers"] == {"redeemed": 1, "issued": 2}[last]
+    con.close()
+
+    with pytest.raises(warehouse.ServiceMovedOn):
+        warehouse.build(service_db, tmp_path / "bucket", tmp_path / "w.duckdb",
+                        latest - timedelta(seconds=1))

@@ -100,6 +100,9 @@ def test_a_scaled_run_leaves_the_committed_truth_alone(tmp_path, monkeypatch, ca
     committed.write_text("the committed truth\n")
     monkeypatch.setattr(sim, "TRUTH", committed)
     assert sim.default_truth_path(sim.Parameters(), tmp_path / "v.db") == committed
+    for scaled in (sim.Parameters(scale=0.02), sim.Parameters(days=5)):  # either one on its own
+        assert sim.default_truth_path(scaled, tmp_path / "v.db") == \
+            tmp_path / "simulation-truth.json"
     assert sim.main(["--db", str(tmp_path / "run" / "v.db"), "--scale", "0.02", "--days", "5"]) == 0
     assert committed.read_text() == "the committed truth\n"
     written = json.loads((tmp_path / "run" / "simulation-truth.json").read_text())

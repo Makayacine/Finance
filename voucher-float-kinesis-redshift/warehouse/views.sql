@@ -223,8 +223,7 @@ create or replace view breakage_by_issue_month as
 with pooled as (
     select day, survival, expired_share,
            coalesce(lag(survival) over (order by day), 1.0)       as survival_before,
-           coalesce(lag(expired_share) over (order by day), 0.0)  as expired_share_before,
-           coalesce(lead(day) over (order by day), 2147483647)    as next_day
+           coalesce(lag(expired_share) over (order by day), 0.0)  as expired_share_before
     from redemption_life_table
     where scope = 'pooled'
 ),
@@ -232,18 +231,13 @@ lapse_end as (
     select max(expired_share) as expired_share_end from pooled
 ),
 open_at_age as (
-    -- The pooled row whose span holds the voucher's last day. If that row is the day itself,
-    -- the day starts at the row before it; otherwise nothing happened that day and the values
-    -- hold flat across it.
+    -- The pooled row for the voucher's last day -- its own censoring always puts one there.
+    -- The day starts where the row before it ends.
     select v.issue_month, v.amount_cents, v.open_age_days - v.censor_day as part_of_day,
-           case when p.day = v.censor_day then p.survival_before else p.survival end
-               as survival_start,
-           p.survival as survival_end,
-           case when p.day = v.censor_day then p.expired_share_before else p.expired_share end
-               as expired_start,
-           p.expired_share as expired_end
+           p.survival_before as survival_start, p.survival as survival_end,
+           p.expired_share_before as expired_start, p.expired_share as expired_end
     from voucher_state v
-    join pooled p on v.censor_day >= p.day and v.censor_day < p.next_day
+    join pooled p on p.day = v.censor_day
     where v.status = 'unredeemed'
 ),
 projected as (
@@ -288,11 +282,12 @@ left join projected p on p.issue_month = c.issue_month;
 
 
 -- The warehouse's outstanding liability must equal the service's own sum of unredeemed cents,
--- taken at the same as_of. Beside the difference, three counts. duplicates_dropped is
--- informational: the relay and Firehose deliver at least once by design, and voucher_event
--- drops the copies before anything is summed, so it can be any number with a difference of 0.
--- orphan_exits (exits whose issue never arrived) and vouchers_with_two_exits should be zero,
--- and either would explain a difference that is not.
+-- taken at the same as_of. A lost event moves the difference: a redemption that never arrived
+-- leaves its voucher open here. Beside it, three counts that never move it. duplicates_dropped
+-- is informational: the relay and Firehose deliver at least once by design, and voucher_event
+-- drops the copies before anything is summed. orphan_exits (exits whose issue never arrived) and
+-- vouchers_with_two_exits should be zero: each flags a broken event history -- a voucher the
+-- views cannot place, an exit they ignore -- that leaves the as_of total as it was.
 create or replace view reconciliation as
 with warehouse as (
     select coalesce(sum(case when status = 'unredeemed' then amount_cents else 0 end), 0)
