@@ -1,0 +1,67 @@
+name: sovereign-curves / fetch Lambda
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sovereign-curves-cicd-lambda-glue-ecs/lambda-functions/**"
+      - ".github/workflows/sovereign-curves-lambda.yml"
+  pull_request:
+    paths:
+      - "sovereign-curves-cicd-lambda-glue-ecs/lambda-functions/**"
+      - ".github/workflows/sovereign-curves-lambda.yml"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: sovereign-curves-cicd-lambda-glue-ecs/lambda-functions
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install boto3==1.43.123 moto==5.2.5
+      - run: python -m unittest discover -v
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SOVEREIGN_CURVES_LAMBDA_ROLE_ARN != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      FUNCTION: ${{ vars.SOVEREIGN_CURVES_FETCH_FUNCTION }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.SOVEREIGN_CURVES_LAMBDA_ROLE_ARN }}
+          aws-region: ${{ vars.SOVEREIGN_CURVES_AWS_REGION }}
+      - name: Zip the function
+        run: zip -j function.zip fetch.py
+      - name: Does the function exist?
+        id: function
+        run: |
+          if aws lambda get-function --function-name "$FUNCTION" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Update its code
+        if: steps.function.outputs.exists == 'true'
+        run: aws lambda update-function-code --function-name "$FUNCTION" --zip-file fileb://function.zip --publish
+      - name: Create it
+        if: steps.function.outputs.exists == 'false'
+        run: >
+          aws lambda create-function --function-name "$FUNCTION"
+          --runtime python3.13 --handler fetch.lambda_handler --timeout 300 --memory-size 256
+          --role "${{ vars.SOVEREIGN_CURVES_FETCH_EXECUTION_ROLE_ARN }}"
+          --environment "Variables={RAW_BUCKET=${{ vars.SOVEREIGN_CURVES_RAW_BUCKET }},GLUE_JOB_NAME=${{ vars.SOVEREIGN_CURVES_GLUE_JOB }}}"
+          --zip-file fileb://function.zip --publish

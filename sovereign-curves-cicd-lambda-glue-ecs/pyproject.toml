@@ -1,0 +1,14 @@
+# Packages bond_analytics as a wheel: Glue Python Shell 3.9 takes extra libraries in
+# --extra-py-files as .whl files. The Glue workflow builds it; nothing else installs it.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bond_analytics"
+version = "1.0.0"
+description = "Treasury curves and rate risk around the fixed income course's FIA module"
+requires-python = ">=3.9"
+
+[tool.setuptools]
+packages = ["bond_analytics"]
