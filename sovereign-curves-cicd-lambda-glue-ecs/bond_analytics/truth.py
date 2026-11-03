@@ -21,8 +21,9 @@ MATURITY_BUCKETS: Sequence[float] = (0.0, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0, 15.0, 2
 BUCKET_LABELS = ["0-1y", "1-2y", "2-3y", "3-5y", "5-7y", "7-10y", "10-15y", "15-20y", "20-25y", "25-30y"]
 
 
-def price_errors(quotes: List[Quote], params: Sequence[float]) -> pd.DataFrame:
-    curve = SvenssonCurve(params)
+def price_errors(quotes: List[Quote], params) -> pd.DataFrame:
+    """``params`` is a set of Svensson parameters, or any curve FIA's ``price`` accepts."""
+    curve = params if hasattr(params, "discount_factor") else SvenssonCurve(params)
     rows = []
     for q in quotes:
         model = q.bond.price(curve)

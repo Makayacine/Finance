@@ -35,7 +35,7 @@ from typing import Dict, Iterable, List, Optional
 
 import pandas as pd
 
-from bond_analytics import dates, gsw, quality
+from bond_analytics import dates, gsw, quality, schemas
 from bond_analytics.fedinvest import parse_prices, parse_us_date, security_from_row
 from bond_analytics.securities import static_by_cusip
 
@@ -115,9 +115,19 @@ class FolderStore:
             self._path(k).unlink()
 
 
-def to_parquet(df: pd.DataFrame) -> bytes:
+def to_parquet(df: pd.DataFrame, table: Optional[str] = None) -> bytes:
+    """Parquet bytes; with ``table``, in that table's fixed schema from ``bond_analytics.schemas``."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    if table is None:
+        arrow = pa.Table.from_pandas(df, preserve_index=False)
+    else:
+        cols = schemas.columns(table)
+        frame = df[cols].astype(object).where(df[cols].notna(), None)
+        arrow = pa.Table.from_pandas(frame, schema=schemas.arrow_schema(table), preserve_index=False)
     buf = io.BytesIO()
-    df.to_parquet(buf, engine="pyarrow", index=False)
+    pq.write_table(arrow, buf)
     return buf.getvalue()
 
 
@@ -163,8 +173,7 @@ def dates_to_load(raw, lake, source: str, load_type: str, date_filter: Optional[
 
 # --- securities -------------------------------------------------------------------------------
 
-SECURITY_COLUMNS = ["cusip", "auction_type", "original_term", "issue_date", "dated_date", "first_coupon_date",
-                    "first_period", "inflation_indexed", "floating"]
+SECURITY_COLUMNS = schemas.columns("securities")
 
 
 def read_static(lake) -> Dict[str, Dict[str, object]]:
@@ -196,17 +205,13 @@ def load_auctions(raw, lake, days: List[dt.date], rebuild: bool) -> None:
         if old is None or (old["issue_date"] or dt.date.max) >= (rec["issue_date"] or dt.date.max):
             current[cusip] = rec
     df = pd.DataFrame(list(current.values()), columns=SECURITY_COLUMNS).sort_values("cusip")
-    lake.put("securities/securities.parquet", to_parquet(df))
+    lake.put("securities/securities.parquet", to_parquet(df, "securities"))
     log.info("securities: %d CUSIPs after %d auction records", len(df), len(records))
 
 
 # --- prices -----------------------------------------------------------------------------------
 
-PRICE_COLUMNS = [
-    "price_date", "settle_date", "cusip", "kind", "security_type", "coupon", "maturity", "call_date", "callable",
-    "buy", "sell", "clean", "accrued", "dirty", "years", "original_term", "issue_date", "first_period",
-    "bill_curve_gap", "neighbour_gap_ticks", "quality_flags",
-]
+PRICE_COLUMNS = schemas.columns("prices")
 
 
 def clean_prices(html: str, day: dt.date, static: Dict[str, Dict[str, object]]) -> pd.DataFrame:
@@ -261,7 +266,7 @@ def load_fedinvest(raw, lake, days: List[dt.date], static) -> Optional[dt.date]:
             lake.delete_prefix(key("prices", f"date={d.isoformat()}") + "/")
             log.info("fedinvest %s: no prices published", d)
         else:
-            lake.put(part, to_parquet(df))
+            lake.put(part, to_parquet(df, "prices"))
             flagged = int((df["quality_flags"] != "").sum())
             log.info("fedinvest %s: %d securities, %d flagged", d, len(df), flagged)
         write_watermark(lake, "fedinvest", d)
@@ -273,6 +278,7 @@ def load_fedinvest(raw, lake, days: List[dt.date], static) -> Optional[dt.date]:
 
 
 def upsert_by_year(lake, table: str, name: str, df: pd.DataFrame, key_cols: List[str]) -> None:
+    df = df.reindex(columns=schemas.columns(table))
     for year, part in df.groupby(df["date"].map(lambda d: d.year)):
         k = key(table, f"year={year}", name)
         old = from_parquet(lake.get(k))
@@ -280,7 +286,7 @@ def upsert_by_year(lake, table: str, name: str, df: pd.DataFrame, key_cols: List
             old["date"] = old["date"].map(lambda v: v if isinstance(v, dt.date) else pd.Timestamp(v).date())
             part = pd.concat([old, part], ignore_index=True)
         part = part.drop_duplicates(subset=key_cols, keep="last").sort_values(key_cols)
-        lake.put(k, to_parquet(part.reset_index(drop=True)))
+        lake.put(k, to_parquet(part.reset_index(drop=True), table))
 
 
 def load_gsw(raw, lake, days: List[dt.date], rebuild: bool) -> None:
