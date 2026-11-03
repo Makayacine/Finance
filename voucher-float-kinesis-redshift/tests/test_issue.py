@@ -38,10 +38,10 @@ def test_issue_writes_the_voucher_and_its_outbox_row_in_one_go(app, client, toke
     assert voucher["issued_by"] == "issuer"
     assert uuid.UUID(event["event_id"]).version == 4
     assert {k: event[k] for k in ("voucher_code", "event_type", "amount_cents", "occurred_at",
-                                  "expires_at", "published_at")} == {
+                                  "issued_at", "expires_at", "published_at")} == {
         "voucher_code": code, "event_type": "issued", "amount_cents": 1999,
-        "occurred_at": voucher["issued_at"], "expires_at": voucher["expires_at"],
-        "published_at": None}
+        "occurred_at": voucher["issued_at"], "issued_at": voucher["issued_at"],
+        "expires_at": voucher["expires_at"], "published_at": None}
 
 
 def test_the_same_key_and_body_returns_the_original_201_and_issues_nothing(app, client, tokens,

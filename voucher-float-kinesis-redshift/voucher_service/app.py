@@ -162,7 +162,8 @@ def issue_voucher():
         issued_at = to_text(issued)
         expires_at = to_text(issued + timedelta(days=config.TERM_DAYS))
         code = insert_voucher(conn, body, issued_at, expires_at)
-        db.append_event(conn, code, "issued", body["amount_cents"], issued_at, expires_at)
+        db.append_event(conn, code, "issued", body["amount_cents"], issued_at, issued_at,
+                        expires_at)
         payload = json.dumps({
             "code": code, "status": "unredeemed", "amount_cents": body["amount_cents"],
             "recipient_id": body["recipient_id"], "issued_at": issued_at,
@@ -199,11 +200,13 @@ def redeem_voucher(code):
         changed = conn.execute(
             "update vouchers set status = 'redeemed', redeemed_at = ?, redeemed_by = ?"
             " where code = ? and status = 'unredeemed' and expires_at > ?"
-            " returning amount_cents, expires_at",
+            " returning amount_cents, issued_at, expires_at",
             (redeemed_at, g.username, code, redeemed_at)).fetchall()
         if not changed:
             known = conn.execute("select 1 from vouchers where code = ?", (code,)).fetchone()
             return error(409 if known else 404)
-        amount, expires_at = changed[0]["amount_cents"], changed[0]["expires_at"]
-        db.append_event(conn, code, "redeemed", amount, redeemed_at, expires_at)
+        voucher = changed[0]
+        amount = voucher["amount_cents"]
+        db.append_event(conn, code, "redeemed", amount, redeemed_at, voucher["issued_at"],
+                        voucher["expires_at"])
     return jsonify(code=code, status="redeemed", amount_cents=amount, redeemed_at=redeemed_at)

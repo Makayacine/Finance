@@ -39,6 +39,7 @@ def test_the_expired_event_is_dated_at_expiry_not_at_the_sweep(app, client, toke
     [event] = rows(app, "select * from outbox where event_type = 'expired'")
     assert event["voucher_code"] == code and event["amount_cents"] == 777
     assert event["occurred_at"] == event["expires_at"] == "2026-02-14T09:00:00Z"
+    assert event["issued_at"] == "2026-01-15T09:00:00Z"
     assert voucher["swept_at"] == "2026-03-01T09:00:00Z"
 
 
