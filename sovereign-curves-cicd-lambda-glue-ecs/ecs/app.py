@@ -12,7 +12,8 @@ in ``prices/`` after the engine's watermark gets, in turn,
   SOFR from April 2018, the 4-week bill before.
 
 ``--mode backfill --start 2008-06-02 --end <date>`` is the same image doing what a Lambda's 15
-minutes cannot: it fetches FedInvest one date at a time with a pause between them, loads the
+minutes cannot: it fetches FedInvest one date at a time with a pause between them, and the whole
+auction history, GSW's file and the New York Fed's rates for the range once each; it loads the
 raw zone with the Glue job's own code, then runs the engine over the range.
 
 Tables, one Parquet file per price date:
@@ -375,7 +376,8 @@ def backfill(raw, lake, start: dt.date, end: dt.date, pause_seconds: float = 2.0
     history = fetcher.fetch_auction_history()
     raw.put(fetch.raw_key("auctions", end, "auctions.json"), history)
     raw.put(fetch.raw_key("gsw", end, "feds200628.csv"), fetcher.fetch_gsw(end))
-    load.run(raw, lake, "incremental", date_filter=end, sources=("auctions", "fedinvest", "gsw"))
+    raw.put(fetch.raw_key("nyfed", end, "rates.json"), fetcher.fetch_nyfed(end, start=start))
+    load.run(raw, lake, "incremental", date_filter=end, sources=("auctions", "fedinvest", "gsw", "nyfed"))
     summary = run(lake, "full", start, end)
     summary["fetched"] = f"{len(fetched)} of {len(days)} business days"
     return summary

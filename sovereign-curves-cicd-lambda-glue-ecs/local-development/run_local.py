@@ -8,8 +8,8 @@ Two local folders stand in for the two buckets, with every file at its S3 key:
 The fetch step is the committed sample by default: ``data/sample`` holds October 2026 and the
 two crisis dates of the truth check, gzipped, at the same keys. ``--fetch`` runs the Lambda's
 own fetcher for each business day from ``--start`` to ``--end`` instead, one FedInvest POST a
-day with a pause between them. Then the Glue job's ``run`` loads the raw zone, and the ECS
-engine builds the curves, the fit errors and the risk.
+day with a pause between them, and the whole auction history once. Then the Glue job's ``run``
+loads the raw zone, and the ECS engine builds the curves, the fit errors and the risk.
 
 South Africa comes from ``data/sa``: the National Treasury's auction and bond rows, parsed by
 ``sa_download.py`` with the loader's own parsers, since the Treasury's licence keeps its
@@ -89,7 +89,11 @@ def stage_fetch(raw: load.FolderStore, start: dt.date, end: dt.date) -> dict:
             days.append(d)
         d += dt.timedelta(days=1)
     status = fetch.backfill(days, raw.put, sources=("fedinvest", "nyfed"))
-    status[end] = fetch.fetch_all(end, raw.put, sources=("gsw", "auctions", "nt_schedule", "nt_auctions", "oecd", "imf"))
+    # the whole auction history, as the backfill takes it: the daily 14 days would leave every
+    # older CUSIP in the range without its static
+    raw.put(fetch.raw_key("auctions", end, "auctions.json"), fetch.fetch_auction_history())
+    status.setdefault(end, {}).update(
+        fetch.fetch_all(end, raw.put, sources=("gsw", "nt_schedule", "nt_auctions", "oecd", "imf")))
     return status
 
 

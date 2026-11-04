@@ -7,6 +7,7 @@ two days cover a curve with an answer key and one without.
 
 import datetime as dt
 import gzip
+import json
 import sys
 import warnings
 from pathlib import Path
@@ -159,15 +160,27 @@ class FakeFetcher:
     def fetch_gsw(self, day):
         return gzip.decompress((SAMPLE / "raw/gsw/date=2026-11-02/feds200628.csv.gz").read_bytes())
 
+    def fetch_nyfed(self, day, start=None):
+        """The range in one body, as the API answers it: the sample's days from ``start`` to ``day``."""
+        self.nyfed = (start, day)
+        rates = []
+        for path in sorted((SAMPLE / "raw" / "nyfed").glob("date=*/rates.json.gz")):
+            if start <= dt.date.fromisoformat(path.parent.name[5:]) <= day:
+                rates.extend(json.loads(gzip.decompress(path.read_bytes()))["refRates"])
+        return json.dumps({"refRates": rates}).encode()
+
 
 def test_backfill_fetches_loads_and_runs_the_range(tmp_path):
     raw, lake = load.FolderStore(tmp_path / "raw"), load.FolderStore(tmp_path / "lake")
     fake = FakeFetcher()
     summary = app.backfill(raw, lake, dt.date(2026, 10, 9), dt.date(2026, 10, 14), pause_seconds=2.0, fetcher=fake)
     assert fake.calls == [(dt.date(2026, 10, 9), dt.date(2026, 10, 14), 2.0)]  # Columbus Day, the 12th, not asked
+    assert fake.nyfed == (dt.date(2026, 10, 9), dt.date(2026, 10, 14))  # the range in one request
     assert summary["fetched"] == "3 of 3 business days"
     assert summary["dates"] == 3
     assert [k.split("/")[1] for k in lake.list("risk/")] == ["date=2026-10-09", "date=2026-10-13", "date=2026-10-14"]
+    for day in ("2026-10-09", "2026-10-13", "2026-10-14"):  # SOFR, not the 4-week bill it falls back to
+        assert set(table(lake, "curve_params", day)["funding_source"]) == {"SOFR"}
 
 
 # --- South Africa -------------------------------------------------------------------------------

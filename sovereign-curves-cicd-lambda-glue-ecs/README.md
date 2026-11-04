@@ -69,9 +69,9 @@ No Step Functions. The schedule starts the Lambda; the Lambda fetches each sourc
 failures isolated, writes the raw objects and starts the Glue job for that date with
 `--date_filter`; an EventBridge rule on the job's `SUCCEEDED` state change runs the ECS task. The
 rule and the schedule are in `eventbridge/`. The same image, run with `--mode backfill`, fetches
-FedInvest from June 2008 one date at a time, loads it with the Glue job's own code, and runs the
-engine over the range; for South Africa it fetches every fiscal year's auction file and one debt
-schedule a year.
+FedInvest from June 2008 one date at a time and the auction history, GSW's file and the New York
+Fed's rates once each, loads them with the Glue job's own code, and runs the engine over the
+range; for South Africa it fetches every fiscal year's auction file and one debt schedule a year.
 
 ### The lab's shape, with nine changes
 
@@ -566,7 +566,7 @@ same day. The engine image built from `ecs/Dockerfile` ran both markets in full 
 `--network none`: the 23 US sample dates in 60.0 seconds and the 811 South African auction dates
 in 3.4.
 
-**157 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
+**158 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
 by hand, a coupon on the settlement date, short and long first coupons against the Treasury's rule,
 and a round trip through FIA's `YTM`. `tests/test_sources.py` (8): the FedInvest page, a holiday
 page, a page for the wrong date, a changed header, the GSW file's preamble and Nelson-Siegel years,
@@ -585,19 +585,20 @@ ex-coupon buyer's cash flows, the leap-year coupon, the refused last period, FIA
 repricing each auction's bonds, and the monthly check.
 `tests/test_wiring.py` (15): every workflow's triggers, guard, permissions, actions and runtimes, the
 event pattern against a Glue event, and every Athena column against the Parquet schema.
-`lambda-functions/test_fetch.py` (19): the CSRF handshake request by request, each source's checks,
+`lambda-functions/test_fetch.py` (20): the CSRF handshake request by request, each source's checks,
 the Treasury's file for a fiscal year, its newest schedule, a reset connection tried again and a
-404 not, one failing source and one failing write isolated, the pause between backfill dates, and
-the handler on moto's S3 and Glue. `glue-pythonshell/test_load.py` (16): `awsglue` through
+404 not, the NY Fed's day or a whole range in one request, one failing source and one failing
+write isolated, the pause between backfill dates, and the handler on moto's S3 and Glue.
+`glue-pythonshell/test_load.py` (16): `awsglue` through
 `sys.modules`, dirty prices and the watermark, nothing new on a rerun, `--date_filter`, a full
 reload, a holiday, a bad page stopping its source there, a duplicate CUSIP, the flagged quote kept,
 GSW upserts, the NY Fed's averages left out, the Treasury's files with every row sourced, a revised
 file replacing its rows, and auctions with no schedule failing only their own source -- on Python
 3.9 with pandas 1.4.2, numpy 1.22.3, boto3 1.21.21, pyarrow 7.0.0, openpyxl 3.1.5, xlrd 2.0.1 and
 pypdf 5.9.0 as well as on 3.13. `ecs/test_app.py` (15): the engine on moto's S3 over two sample
-days, our fit against GSW, a bound recorded, funding and carry by hand, the backfill, and the South
-African engine over every committed auction, its check against OECD and IMF, a rerun with nothing
-new and its backfill. All of them pass in UTC and in Africa/Johannesburg.
+days, our fit against GSW, a bound recorded, funding and carry by hand, the backfill funded at
+SOFR, and the South African engine over every committed auction, its check against OECD and IMF,
+a rerun with nothing new and its backfill. All of them pass in UTC and in Africa/Johannesburg.
 
 **Engine differences to carry into the deploy.**
 - **Glue Python Shell runs Python 3.9 only.** 3.6 reached end of life on 1 June 2026 and
