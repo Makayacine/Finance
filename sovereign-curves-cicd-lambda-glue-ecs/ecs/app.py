@@ -11,7 +11,7 @@ in ``prices/`` after the engine's watermark gets, in turn,
   at 2, 5, 10, 20 and 30 years on the fitted curve, and 30-day carry against the funding rate:
   SOFR from April 2018, the 4-week bill before.
 
-``--mode backfill --start 2008-06-02 --end <date>`` is the same image doing what a Lambda's 15
+``--mode backfill --start 2008-09-02 --end <date>`` is the same image doing what a Lambda's 15
 minutes cannot: it fetches FedInvest one date at a time with a pause between them, and the whole
 auction history, GSW's file and the New York Fed's rates for the range once each; it loads the
 raw zone with the Glue job's own code, then runs the engine over the range.

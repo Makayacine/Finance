@@ -56,7 +56,7 @@ RAW_FILES = {
     "nt_schedule": "schedule.pdf", "nt_auctions": "fixed-rate-bonds-*", "oecd": "irlt.csv", "imf": "INTGSBZAM193N.csv",
 }
 WATERMARKS = "control/watermarks.json"
-FEDINVEST_START = dt.date(2008, 6, 1)
+FEDINVEST_START = dt.date(2008, 9, 1)  # its pages from 30 May to 29 August 2008 leave every type and maturity blank
 FUNDING_RATES = ("SOFR", "BGCR", "TGCR")
 
 
