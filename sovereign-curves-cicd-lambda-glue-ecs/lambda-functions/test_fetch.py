@@ -96,6 +96,13 @@ class SourceChecksTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             fetch.fetch_nyfed(DAY, ScriptedOpener(b'{"error": "x"}'))
 
+    def test_nyfed_asks_for_the_day_or_a_range_from_start(self):
+        opener = ScriptedOpener(b'{"refRates": []}', b'{"refRates": []}')
+        fetch.fetch_nyfed(DAY, opener)
+        fetch.fetch_nyfed(DAY, opener, start=dt.date(2008, 6, 2))
+        self.assertIn("startDate=2026-10-30&endDate=2026-10-30", opener.requests[0])
+        self.assertIn("startDate=2008-06-02&endDate=2026-10-30", opener.requests[1])
+
 
 def scripted_sources(fail=()):
     def make(name, body):
