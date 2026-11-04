@@ -136,6 +136,21 @@ def test_carry_is_coupon_income_less_financing():
     assert app.carry(quote("bill", 0.0, dt.date(2015, 9, 3), 99.9), 3.0) is None
 
 
+def test_a_date_with_no_price_gets_no_curve_and_the_run_goes_on(tmp_path):
+    """FedInvest's end-of-day column is zero on every row of 12 September and 21 November 2014."""
+    raw, lake = load.FolderStore(tmp_path / "raw"), load.FolderStore(tmp_path / "lake")
+    stage(raw)
+    load.run(raw, lake, "full")
+    k = "prices/date=2026-10-23/prices.parquet"
+    prices = load.from_parquet(lake.get(k))
+    prices["dirty"] = float("nan")  # what the loader writes for a quote with no price
+    lake.put(k, load.to_parquet(prices, "prices"))
+    summary = app.run(lake, "full")
+    assert summary["unpriced"] == ["2026-10-23"]
+    assert [k.split("/")[1] for k in lake.list("risk/")] == ["date=2026-10-26"]
+    assert load.read_watermarks(lake)["engine"]["loaded_through"] == "2026-10-26"
+
+
 class FakeFetcher:
     """The fetch module's backfill surface, answering from the committed sample."""
 
