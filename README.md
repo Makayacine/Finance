@@ -62,6 +62,9 @@ Actions workflow that tests it on every pull request and deploys it from `main` 
 | GSW against FedInvest, 2-3y notes, mean absolute error | 3.6 bp | 2.2 bp | 0.6 bp |
 | Our Svensson fit less GSW, 10-year zero rate | -1.0 bp | -0.5 bp | -0.6 bp |
 
+Run over the full history, 4,545 dates from September 2008 to November 2026, our fit's zero rates
+sit a median 0.3-1.4 bp from GSW's at 2 to 30 years.
+
 In South Africa, FIA's bootstrap builds 791 auction curves, and each new bond's first auction
 yield, through the JSE formula, gives back the Treasury's published issue price to within 0.001 for
 11 of 12 bonds.

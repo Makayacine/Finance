@@ -361,6 +361,37 @@ The interesting problems were about conventions the data does not state:
   issues, the ones GSW is fitted to, came out best in price and among the worst in basis points;
   inside buckets, the on-the-run issues are the outliers in both crises.
 
+## Full 2008-2026 history
+
+Everything above comes from the committed sample. The same code then ran over every FedInvest date
+from 2 September 2008 to 3 November 2026, on a laptop. The pages for the 4,650 business days from 1
+May 2008 were fetched with the Lambda's own request, four sessions at a time with a two-second
+pause, in about two and a half hours, and the Glue job's `run` loaded those from 2 September 2008 in
+12 minutes. The engine's per-date step ran over the 4,547 price dates on 12 processes in 57 minutes,
+in 24 date ranges that each start five dates early, so that every range's first fit is warm-started
+as it would be in one serial run. Over October 2026 that split gave the same four tables as one
+serial `app.run`, to the last digit. The data stays out of the repository; `--mode backfill --start
+2008-09-02` rebuilds it.
+
+4,545 dates have curves. The other two, 12 September and 21 November 2014, have no end-of-day price
+on FedInvest and are the run's `unpriced` dates. GSW has a curve for 4,541 of the 4,545.
+
+Zero rates against GSW's, the median absolute gap over those 4,541 dates, in basis points:
+
+| Curve | 2y | 5y | 10y | 30y |
+| --- | --- | --- | --- | --- |
+| our Svensson fit | 0.61 | 0.31 | 0.52 | 1.41 |
+| FIA's bootstrap | 1.18 | 1.13 | 3.18 | 8.08 |
+
+- **The 30-year point is where the two Svensson fits part most.** The median gap there is 13.0 bp
+  over 2012 and 6.3 and 5.9 bp over 2022 and 2023, and under 2 bp in 12 of the 19 years.
+- **The worst fit is the crisis.** The RMSE peaks at 26.9 bp on 11 December 2008, and every day
+  from 8 to 12 December is above 26 bp; the median is 19.7 bp from September to December 2008 and
+  3.2 bp over all 4,545 dates.
+- **Most fits end on no bound: 3,327 of 4,545.** Of the other 1,218, 576 end with `beta3` on its
+  bound of 60 either way, 300 with `beta0`, the long-run level, at zero, 186 with `beta2` on a
+  bound, and 156 on another parameter or two at once. Each is in `curve_params` and `fit_errors`.
+
 ## South Africa
 
 ### The Treasury's figures, checked and never changed
@@ -670,6 +701,7 @@ Every AWS name here is account-specific and set by whoever deploys it.
 
 - **It is 23 days.** The tables above are for the three truth-check dates and October 2026; the
   backfill fills in every day from September 2008, and the same tables run over all of them in Athena.
+  [Full 2008-2026 history](#full-2008-2026-history) has the figures from that run.
 - **GSW is an answer key, not the truth.** It is fitted to off-the-run notes and bonds with its own
   exclusions; agreeing with it says the mechanics match theirs, and the residuals are the market's.
 - **TIPS and FRNs are in the lake and out of the curves.** FedInvest gives no index ratio, and FIA
