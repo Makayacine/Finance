@@ -69,7 +69,7 @@ No Step Functions. The schedule starts the Lambda; the Lambda fetches each sourc
 failures isolated, writes the raw objects and starts the Glue job for that date with
 `--date_filter`; an EventBridge rule on the job's `SUCCEEDED` state change runs the ECS task. The
 rule and the schedule are in `eventbridge/`. The same image, run with `--mode backfill`, fetches
-FedInvest from June 2008 one date at a time and the auction history, GSW's file and the New York
+FedInvest from September 2008 one date at a time and the auction history, GSW's file and the New York
 Fed's rates once each, loads them with the Glue job's own code, and runs the engine over the
 range; for South Africa it fetches every fiscal year's auction file and one debt schedule a year.
 
@@ -566,7 +566,7 @@ same day. The engine image built from `ecs/Dockerfile` ran both markets in full 
 `--network none`: the 23 US sample dates in 60.0 seconds and the 811 South African auction dates
 in 3.4.
 
-**158 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
+**159 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
 by hand, a coupon on the settlement date, short and long first coupons against the Treasury's rule,
 and a round trip through FIA's `YTM`. `tests/test_sources.py` (8): the FedInvest page, a holiday
 page, a page for the wrong date, a changed header, the GSW file's preamble and Nelson-Siegel years,
@@ -589,16 +589,16 @@ event pattern against a Glue event, and every Athena column against the Parquet 
 the Treasury's file for a fiscal year, its newest schedule, a reset connection tried again and a
 404 not, the NY Fed's day or a whole range in one request, one failing source and one failing
 write isolated, the pause between backfill dates, and the handler on moto's S3 and Glue.
-`glue-pythonshell/test_load.py` (16): `awsglue` through
-`sys.modules`, dirty prices and the watermark, nothing new on a rerun, `--date_filter`, a full
-reload, a holiday, a bad page stopping its source there, a duplicate CUSIP, the flagged quote kept,
-GSW upserts, the NY Fed's averages left out, the Treasury's files with every row sourced, a revised
-file replacing its rows, and auctions with no schedule failing only their own source -- on Python
-3.9 with pandas 1.4.2, numpy 1.22.3, boto3 1.21.21, pyarrow 7.0.0, openpyxl 3.1.5, xlrd 2.0.1 and
-pypdf 5.9.0 as well as on 3.13. `ecs/test_app.py` (15): the engine on moto's S3 over two sample
-days, our fit against GSW, a bound recorded, funding and carry by hand, the backfill funded at
-SOFR, and the South African engine over every committed auction, its check against OECD and IMF,
-a rerun with nothing new and its backfill. All of them pass in UTC and in Africa/Johannesburg.
+`glue-pythonshell/test_load.py` (17): `awsglue` through `sys.modules`, dirty prices and the
+watermark, nothing new on a rerun, `--date_filter`, a full reload, a holiday, the blank pages of
+summer 2008 skipped, a bad page stopping its source there, a duplicate CUSIP, the flagged quote
+kept, GSW upserts, the NY Fed's averages left out, the Treasury's files with every row sourced, a
+revised file replacing its rows, and auctions with no schedule failing only their own source -- on
+Python 3.9 with pandas 1.4.2, numpy 1.22.3, boto3 1.21.21, pyarrow 7.0.0, openpyxl 3.1.5, xlrd 2.0.1
+and pypdf 5.9.0 as well as on 3.13. `ecs/test_app.py` (15): the engine on moto's S3 over two sample
+days, our fit against GSW, a bound recorded, funding and carry by hand, the backfill funded at SOFR,
+and the South African engine over every committed auction, its check against OECD and IMF, a rerun
+with nothing new and its backfill. All of them pass in UTC and in Africa/Johannesburg.
 
 **Engine differences to carry into the deploy.**
 - **Glue Python Shell runs Python 3.9 only.** 3.6 reached end of life on 1 June 2026 and
@@ -655,9 +655,10 @@ a rerun with nothing new and its backfill. All of them pass in UTC and in Africa
    The ECS workflow writes that rule's target on every deploy.
 7. Push to `main`, or rerun each workflow: the Lambda, the Glue job and the image deploy in turn.
 8. Run the backfill once as a task with the command overridden:
-   `--mode backfill --start 2008-06-02 --end <yesterday>`. It pauses two seconds between
-   FedInvest dates, and then fetches South Africa's 16 auction files and one debt schedule a year,
-   two seconds apart. `--market sa --end <yesterday>` runs South Africa's alone.
+   `--mode backfill --start 2008-09-02 --end <yesterday>`. FedInvest's pages before September
+   2008 leave every security's type and maturity blank, so the loader starts there. It pauses two
+   seconds between FedInvest dates, and then fetches South Africa's 16 auction files and one debt
+   schedule a year, two seconds apart. `--market sa --end <yesterday>` runs South Africa's alone.
 9. Run `athena/create-tables.sql` in Athena with `<lake-bucket>` filled in.
 
 Every AWS name here is account-specific and set by whoever deploys it.
@@ -665,7 +666,7 @@ Every AWS name here is account-specific and set by whoever deploys it.
 ## What the sample cannot say
 
 - **It is 23 days.** The tables above are for the three truth-check dates and October 2026; the
-  backfill fills in every day from June 2008, and the same tables run over all of them in Athena.
+  backfill fills in every day from September 2008, and the same tables run over all of them in Athena.
 - **GSW is an answer key, not the truth.** It is fitted to off-the-run notes and bonds with its own
   exclusions; agreeing with it says the mechanics match theirs, and the residuals are the market's.
 - **TIPS and FRNs are in the lake and out of the curves.** FedInvest gives no index ratio, and FIA

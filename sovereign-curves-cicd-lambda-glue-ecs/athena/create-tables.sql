@@ -36,7 +36,7 @@ TBLPROPERTIES (
   'projection.enabled' = 'true',
   'projection.date.type' = 'date',
   'projection.date.format' = 'yyyy-MM-dd',
-  'projection.date.range' = '2008-06-01,NOW',
+  'projection.date.range' = '2008-09-01,NOW',
   'projection.date.interval' = '1',
   'projection.date.interval.unit' = 'DAYS',
   'storage.location.template' = 's3://<lake-bucket>/prices/date=${date}/'
@@ -140,7 +140,7 @@ TBLPROPERTIES (
   'projection.enabled' = 'true',
   'projection.date.type' = 'date',
   'projection.date.format' = 'yyyy-MM-dd',
-  'projection.date.range' = '2008-06-01,NOW',
+  'projection.date.range' = '2008-09-01,NOW',
   'projection.date.interval' = '1',
   'projection.date.interval.unit' = 'DAYS',
   'storage.location.template' = 's3://<lake-bucket>/curves/date=${date}/'
@@ -170,7 +170,7 @@ TBLPROPERTIES (
   'projection.enabled' = 'true',
   'projection.date.type' = 'date',
   'projection.date.format' = 'yyyy-MM-dd',
-  'projection.date.range' = '2008-06-01,NOW',
+  'projection.date.range' = '2008-09-01,NOW',
   'projection.date.interval' = '1',
   'projection.date.interval.unit' = 'DAYS',
   'storage.location.template' = 's3://<lake-bucket>/curve_params/date=${date}/'
@@ -207,7 +207,7 @@ TBLPROPERTIES (
   'projection.enabled' = 'true',
   'projection.date.type' = 'date',
   'projection.date.format' = 'yyyy-MM-dd',
-  'projection.date.range' = '2008-06-01,NOW',
+  'projection.date.range' = '2008-09-01,NOW',
   'projection.date.interval' = '1',
   'projection.date.interval.unit' = 'DAYS',
   'storage.location.template' = 's3://<lake-bucket>/fit_errors/date=${date}/'
@@ -243,7 +243,7 @@ TBLPROPERTIES (
   'projection.enabled' = 'true',
   'projection.date.type' = 'date',
   'projection.date.format' = 'yyyy-MM-dd',
-  'projection.date.range' = '2008-06-01,NOW',
+  'projection.date.range' = '2008-09-01,NOW',
   'projection.date.interval' = '1',
   'projection.date.interval.unit' = 'DAYS',
   'storage.location.template' = 's3://<lake-bucket>/risk/date=${date}/'

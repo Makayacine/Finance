@@ -962,7 +962,7 @@ engine rerun on the same lake: 0 dates
 * **Core Execution Mechanic (Dummy Translation):** The doorbell rings only when this kitchen says the meal is ready.
 
 
-* **Boundary / Memory Constraint:** Lambda stops at 15 minutes, and the backfill fetches every business day since June 2008 with a two-second pause between them, so it runs as the same ECS image with `--mode backfill`.
+* **Boundary / Memory Constraint:** Lambda stops at 15 minutes, and the backfill fetches every business day since September 2008 with a two-second pause between them, so it runs as the same ECS image with `--mode backfill`.
 
 
 * **Boundary / Memory Constraint (Dummy Translation):** The short-order cook handles one plate; the banquet goes to the kitchen with no clock on the wall.

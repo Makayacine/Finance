@@ -166,6 +166,18 @@ def test_a_holiday_writes_nothing_and_moves_the_watermark(buckets):
     assert marks(lake)["fedinvest"] == "2026-10-12"
 
 
+def test_fedinvest_starts_with_the_first_page_that_names_each_security(buckets):
+    """FedInvest's pages to 29 August 2008 leave every row's type and maturity blank: skipped, not failed."""
+    raw, lake = buckets
+    early, first = dt.date(2008, 8, 29), dt.date(2008, 9, 2)
+    blank = ('<h2>Prices For: August 29, 2008</h2><table class="data1">' + HEADER + "<tr><td>912795E72</td><td></td>"
+             "<td>0.000%</td><td></td><td></td><td>0.000000</td><td>99.971333</td><td>99.985250</td></tr></table>")
+    put_raw(raw, "fedinvest", early, blank.encode("latin-1"))
+    put_raw(raw, "fedinvest", first, page(first))
+    assert load.run(raw, lake, "incremental", sources=["fedinvest"]) == {"fedinvest": "loaded 2008-09-02 to 2008-09-02"}
+    assert [k.split("/")[1] for k in lake.list("prices/")] == ["date=2008-09-02"]
+
+
 def test_a_bad_page_stops_its_source_there_and_fails_the_run(buckets):
     raw, lake = buckets
     put_raw(raw, "fedinvest", D1, page(D1))
