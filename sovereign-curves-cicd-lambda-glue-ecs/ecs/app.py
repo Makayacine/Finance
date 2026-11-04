@@ -256,11 +256,15 @@ def run(lake, load_type: str = "incremental", start: Optional[dt.date] = None, e
     static = load.read_static(lake)
     gsw_by_date = read_gsw(lake)
     sofr = read_sofr(lake)
-    bounded = []
+    bounded, unpriced = [], []
     t0 = time.perf_counter()
     for day in days:
         prices = load.from_parquet(lake.get(load.key("prices", f"date={day.isoformat()}", "prices.parquet")))
         quotes = quotes_for_day(prices, static, day)
+        if not quotes:  # FedInvest's end-of-day column is zero on every row of 12 September and 21 November 2014
+            unpriced.append(day.isoformat())
+            log.warning("%s: no security has a price; no curve for this date", day)
+            continue
         tables, warm = engine_day(day, quotes, gsw_by_date.get(day), sofr, warm)
         for name in TABLES:
             lake.put(load.key(name, f"date={day.isoformat()}", f"{name}.parquet"), load.to_parquet(tables[name], name))
@@ -272,7 +276,8 @@ def run(lake, load_type: str = "incremental", start: Optional[dt.date] = None, e
         log.info("%s: %d securities", day, len(quotes))
     if bounded:
         log.warning("%d of %d Svensson fits ended on a bound; each is in curve_params and fit_errors", len(bounded), len(days))
-    return {"dates": len(days), "seconds": round(time.perf_counter() - t0, 1), "fits_on_a_bound": bounded or "none"}
+    return {"dates": len(days), "seconds": round(time.perf_counter() - t0, 1), "fits_on_a_bound": bounded or "none",
+            "unpriced": unpriced or "none"}
 
 
 # --- South Africa -----------------------------------------------------------------------------

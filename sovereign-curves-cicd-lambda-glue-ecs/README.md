@@ -313,7 +313,9 @@ not: the two humps' decay parameters are close (GSW's own are 3.98 and 4.94), th
 off, and ours ends with `beta3` on its bound of 60. **A fit on a bound is recorded, never silent:**
 `curve_params` and every `fit_errors` row carry `params_at_bound`, and the run logs a count. In the
 sample, 21 of 23 fits end with `beta0`, the long-run level, at zero -- where GSW's own fit puts it,
-5.5e-13 on 23 October -- one with `beta3`, and one on no bound.
+5.5e-13 on 23 October -- one with `beta3`, and one on no bound. A date on which no security has a
+price gets no curve and is listed in the run's summary as `unpriced`; FedInvest's end-of-day column
+is zero on every row of 12 September and 21 November 2014.
 
 Against FedInvest, notes and bonds three months or more from maturity, every sample day:
 
@@ -566,7 +568,7 @@ same day. The engine image built from `ecs/Dockerfile` ran both markets in full 
 `--network none`: the 23 US sample dates in 60.0 seconds and the 811 South African auction dates
 in 3.4.
 
-**159 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
+**160 tests.** `tests/test_dates.py` (15): holidays, T+1 settlement, the end-of-month rule, accrued
 by hand, a coupon on the settlement date, short and long first coupons against the Treasury's rule,
 and a round trip through FIA's `YTM`. `tests/test_sources.py` (8): the FedInvest page, a holiday
 page, a page for the wrong date, a changed header, the GSW file's preamble and Nelson-Siegel years,
@@ -595,10 +597,11 @@ summer 2008 skipped, a bad page stopping its source there, a duplicate CUSIP, th
 kept, GSW upserts, the NY Fed's averages left out, the Treasury's files with every row sourced, a
 revised file replacing its rows, and auctions with no schedule failing only their own source -- on
 Python 3.9 with pandas 1.4.2, numpy 1.22.3, boto3 1.21.21, pyarrow 7.0.0, openpyxl 3.1.5, xlrd 2.0.1
-and pypdf 5.9.0 as well as on 3.13. `ecs/test_app.py` (15): the engine on moto's S3 over two sample
-days, our fit against GSW, a bound recorded, funding and carry by hand, the backfill funded at SOFR,
-and the South African engine over every committed auction, its check against OECD and IMF, a rerun
-with nothing new and its backfill. All of them pass in UTC and in Africa/Johannesburg.
+and pypdf 5.9.0 as well as on 3.13. `ecs/test_app.py` (16): the engine on moto's S3 over two sample
+days, our fit against GSW, a bound recorded, a date with no price skipped, funding and carry by
+hand, the backfill funded at SOFR, and the South African engine over every committed auction, its
+check against OECD and IMF, a rerun with nothing new and its backfill. All of them pass in UTC and
+in Africa/Johannesburg.
 
 **Engine differences to carry into the deploy.**
 - **Glue Python Shell runs Python 3.9 only.** 3.6 reached end of life on 1 June 2026 and
