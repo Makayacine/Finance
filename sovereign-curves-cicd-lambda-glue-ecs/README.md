@@ -586,7 +586,8 @@ docker run --rm --network none -v "$PWD/_localrun:/data" sovereign-curves-engine
 ```
 
 `sovereign-curves-walkthrough.ipynb` builds `_localrun/` if it is not there and walks every figure
-in this README.
+in this README. Its section 12, the full 2008-2026 history, reads that run's lake from the folder
+named by the environment variable `SOVEREIGN_CURVES_FULL_LAKE`, and is skipped when it is not set.
 
 ## What the local run covers
 
